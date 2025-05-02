@@ -1,0 +1,79 @@
+// MTP Photography Website - MySQL Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  photos      Photo[] // Relation to Photo model
+
+  @@map("categories")
+}
+
+model Tag {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  createdAt DateTime   @default(now()) @map("created_at")
+  photos    PhotoTag[] // Relation through PhotoTag junction model
+
+  @@map("tags")
+}
+
+model Photo {
+  id           Int        @id @default(autoincrement())
+  title        String
+  description  String?    @db.Text
+  categoryId   Int        @map("category_id")
+  uploadDate   DateTime   @default(now()) @map("upload_date")
+  fileUrl      String     @map("file_url") @db.VarChar(1024)
+  thumbnailUrl String     @map("thumbnail_url") @db.VarChar(1024)
+  width        Int        @default(1200)
+  height       Int        @default(800)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
+  category     Category   @relation(fields: [categoryId], references: [id])
+  tags         PhotoTag[] // Relation through PhotoTag junction model
+
+  @@index([categoryId], name: "idx_photos_category")
+  @@index([title], name: "idx_photos_title")
+  @@map("photos")
+}
+
+model PhotoTag {
+  photoId Int   @map("photo_id")
+  tagId   Int   @map("tag_id")
+  photo   Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  tag     Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([photoId, tagId])
+  @@map("photo_tags")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      Role     @default(viewer)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+enum Role {
+  admin
+  editor
+  viewer
+}

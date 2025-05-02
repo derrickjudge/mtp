@@ -1,17 +1,22 @@
-// This configuration is only used for Jest testing
-// Next.js will use its own built-in configuration for normal operations
+// Babel configuration for Jest tests
 module.exports = {
   presets: [
-    ['@babel/preset-env', { targets: { node: 'current' } }],
-    ['@babel/preset-react', { runtime: 'automatic' }],
-    '@babel/preset-typescript',
+    ['@babel/preset-env', { 
+      targets: { node: 'current' },
+      modules: 'commonjs' // Force CommonJS modules for Jest compatibility
+    }],
+    ['@babel/preset-react', { 
+      runtime: 'automatic' 
+    }],
+    ['@babel/preset-typescript', { 
+      isTSX: true, 
+      allExtensions: true 
+    }],
   ],
-  // This is needed for testing
-  env: {
-    test: {
-      plugins: [
-        'babel-plugin-transform-import-meta',
-      ],
-    },
-  },
+  plugins: [
+    'babel-plugin-transform-import-meta',
+    '@babel/plugin-syntax-jsx',
+    '@babel/plugin-transform-runtime',
+    '@babel/plugin-transform-modules-commonjs',
+  ],
 };

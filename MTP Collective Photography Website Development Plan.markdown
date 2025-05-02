@@ -11,12 +11,12 @@ This development plan outlines a structured 10-day schedule for a single develop
 
 ## Scope
 The plan focuses on core features outlined in the Product Requirements Document (PRD), excluding optional features like a blog or online shop unless prioritized. It covers:
-- Backend development with Node.js, MongoDB, and AWS S3.
+- Backend development with Node.js, MySQL, and AWS S3.
 - Frontend development with React, Next.js, and Tailwind CSS.
 - Authentication, testing, optimization, and deployment.
 
 ## Assumptions
-- You have access to necessary accounts (AWS, MongoDB Atlas, Vercel) or can set them up quickly.
+- You have access to necessary accounts (AWS, MySQL database, Vercel) or can set them up quickly.
 - AI tools (e.g., GitHub Copilot) will assist in coding, reducing development time.
 - You have a basic design plan (e.g., color scheme, typography) or will define it during development.
 - A standard workday is approximately 8 hours, with tasks scoped accordingly.
@@ -28,8 +28,8 @@ The plan focuses on core features outlined in the Product Requirements Document 
 - **Tasks:**
   - Initialize a Next.js project with Tailwind CSS for styling ([Next.js](https://nextjs.org/docs), [Tailwind CSS](https://tailwindcss.com/docs)).
   - Set up a Git repository for version control and make the initial commit.
-  - Configure MongoDB Atlas or a local MongoDB instance and define schemas for photos (ID, title, description, category, tags, file URL, thumbnail URL), categories (ID, name, description), and users (ID, username, password, role) ([MongoDB Atlas](https://www.mongodb.com/cloud/atlas)).
-  - Install necessary dependencies (e.g., mongoose, aws-sdk).
+  - Set up a MySQL database (local, AWS RDS, or PlanetScale) and define relational schema with tables for photos, categories, tags, photo_tags (junction table), and users with proper foreign key constraints.
+  - Install necessary dependencies (e.g., mysql2, prisma/sequelize/typeorm, aws-sdk).
 - **Notes:** Ensure AWS credentials are set up for S3 integration later. Use AI tools to generate boilerplate code for the Next.js project.
 
 ### Day 2: Backend Development
@@ -37,14 +37,14 @@ The plan focuses on core features outlined in the Product Requirements Document 
 - **Tasks:**
   - Develop API routes for photo CRUD operations (Create, Read, Update, Delete) using Next.js API routes or Express.js.
   - Implement photo upload functionality to AWS S3, generating thumbnails for gallery display ([AWS S3](https://docs.aws.amazon.com/s3/index.html)).
-  - Ensure metadata (title, description, category, tags) is stored in MongoDB upon upload.
+  - Ensure metadata (title, description, category, tags) is stored in MySQL database upon upload, maintaining proper relational integrity.
 - **Notes:** Optimize images during upload using a library like sharp to reduce file size. Test API endpoints with tools like Postman.
 
 ### Day 3: Authentication Implementation
 - **Goal:** Secure the admin panel with user authentication.
 - **Tasks:**
   - Set up JSON Web Token (JWT) authentication for secure user access ([JSON Web Tokens](https://jwt.io/)).
-  - Create API endpoints for user registration and login, storing hashed passwords in MongoDB.
+  - Create API endpoints for user registration and login, storing hashed passwords in MySQL database.
   - Protect admin routes to ensure only authenticated users can access photo management features.
 - **Notes:** Use bcrypt for password hashing and middleware to verify JWTs. AI can assist in generating authentication boilerplate.
 
@@ -69,7 +69,7 @@ The plan focuses on core features outlined in the Product Requirements Document 
 - **Tasks:**
   - Create a responsive grid layout for photo thumbnails using a library like React Photo Gallery.
   - Implement filtering by category (Concerts, Cars, Nature) with dynamic updates.
-  - Integrate with backend APIs to fetch and display photos from MongoDB and S3.
+  - Integrate with backend APIs to fetch and display photos from MySQL database and S3.
 - **Notes:** Ensure the grid adapts to mobile screens. Test API integration to verify photo retrieval.
 
 ### Day 7: Frontend Development - Contact and Gallery Enhancements

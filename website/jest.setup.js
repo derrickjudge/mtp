@@ -1,6 +1,21 @@
 // Import testing libraries
 require('@testing-library/jest-dom');
 
+// Simple mock declarations - no JSX that could cause parsing errors
+jest.mock('next/image', () => ({
+  __esModule: true,
+  default: function MockImage(props) {
+    return { type: 'img', props };
+  }
+}));
+
+jest.mock('next/link', () => ({
+  __esModule: true,
+  default: function MockLink(props) {
+    return { type: 'a', props };
+  }
+}));
+
 // Polyfill for TextEncoder/TextDecoder that's missing in JSDOM
 if (typeof TextEncoder === 'undefined') {
   const util = require('util');

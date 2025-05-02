@@ -1,7 +1,7 @@
 # To-Do List for MTP Collective Photography Website
 
 ## Introduction
-This to-do list outlines all tasks required to build a custom photography website for MTP Collective (or Monkey Take Photo), showcasing your concert, car, and nature photography. The list is designed for a single developer, aligning with the 10-day development plan and Product Requirements Document (PRD). It ensures the website is responsive, edgy, and built from scratch using modern web technologies (React, Node.js, MongoDB, AWS S3) with AI-assisted coding. Tasks are organized by phase, with dependencies considered to streamline development.
+This to-do list outlines all tasks required to build a custom photography website for MTP Collective (or Monkey Take Photo), showcasing your concert, car, and nature photography. The list is designed for a single developer, aligning with the 10-day development plan and Product Requirements Document (PRD). It ensures the website is responsive, edgy, and built from scratch using modern web technologies (React, Node.js, MySQL, AWS S3) with AI-assisted coding. Tasks are organized by phase, with dependencies considered to streamline development.
 
 ## To-Do List
 
@@ -9,23 +9,23 @@ This to-do list outlines all tasks required to build a custom photography websit
 - [ ] Initialize a Next.js project with TypeScript support.
 - [ ] Install and configure Tailwind CSS for styling.
 - [ ] Set up a Git repository and make the initial commit.
-- [ ] Create a MongoDB Atlas account and set up a database.
-- [ ] Define MongoDB schemas for photos (ID, title, description, category, tags, file URL, thumbnail URL), categories (ID, name, description), and users (ID, username, password, role).
-- [ ] Install dependencies (mongoose, aws-sdk, sharp).
+- [ ] Set up MySQL database on your preferred hosting (local, AWS RDS, or PlanetScale).
+- [ ] Create SQL schemas for photos, categories, tags, photo_tags junction table, and users with proper relationships and foreign key constraints.
+- [ ] Install dependencies (mysql2, prisma/sequelize/typeorm, aws-sdk, sharp).
 - [ ] Verify AWS account setup for S3 integration.
 - [ ] Write a README with project setup instructions.
 
 ### Phase 2: Backend Development (Day 2)
 - [ ] Create API routes for photo CRUD operations (Create, Read, Update, Delete) using Next.js API routes.
 - [ ] Implement photo upload functionality to AWS S3 with automatic thumbnail generation using sharp.
-- [ ] Store photo metadata (title, description, category, tags) in MongoDB upon upload.
+- [ ] Store photo metadata (title, description, category, tags) in MySQL database upon upload.
 - [ ] Test API endpoints using Postman to ensure correct responses.
 - [ ] Add basic error handling for API routes (e.g., invalid file types, missing fields).
 - [ ] Document API endpoints in the README.
 
 ### Phase 3: Authentication Implementation (Day 3)
 - [ ] Install dependencies for JWT authentication (jsonwebtoken, bcrypt).
-- [ ] Create API endpoints for user registration and login, storing hashed passwords in MongoDB.
+- [ ] Create API endpoints for user registration and login, storing hashed passwords in MySQL database.
 - [ ] Implement middleware to protect admin routes with JWT verification.
 - [ ] Test authentication endpoints to ensure secure access.
 - [ ] Add basic password validation (e.g., minimum length) to registration.
@@ -35,7 +35,7 @@ This to-do list outlines all tasks required to build a custom photography websit
 - [ ] Build the admin dashboard with sections for photo upload, metadata editing, and deletion.
 - [ ] Integrate React Dropzone for drag-and-drop photo uploads.
 - [ ] Connect the dashboard to backend APIs for photo management.
-- [ ] Test admin panel functionality, ensuring uploads and edits reflect in MongoDB and S3.
+- [ ] Test admin panel functionality, ensuring uploads and edits reflect in MySQL database and S3.
 - [ ] Add basic input validation (e.g., required fields) to the upload form.
 
 ### Phase 5: Frontend Development - Static Pages (Day 5)
@@ -49,7 +49,7 @@ This to-do list outlines all tasks required to build a custom photography websit
 ### Phase 6: Frontend Development - Portfolio Page (Day 6)
 - [ ] Install React Photo Gallery for a responsive thumbnail grid.
 - [ ] Create the Portfolio page with category filters (Concerts, Cars, Nature).
-- [ ] Integrate with backend APIs to fetch photos from MongoDB and S3.
+- [ ] Integrate with backend APIs to fetch photos from MySQL database and S3.
 - [ ] Implement dynamic filtering to update the grid based on category selection.
 - [ ] Ensure the grid is responsive and adapts to different screen sizes.
 - [ ] Test API integration and filtering functionality.

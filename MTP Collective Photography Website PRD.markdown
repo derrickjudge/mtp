@@ -132,10 +132,10 @@ In a competitive photography market, an online presence is essential for attract
   - Apply Tailwind CSS for rapid, responsive styling.
   - Integrate libraries like React Photo Gallery for grids and React Lightbox for full-size views.
 - **Backend Technologies:**
-  - Develop backend services using Node.js with Express.js or Next.js API routes.
-  - Use MongoDB for flexible storage of photo metadata and other data.
-- **Storage:**
-  - Store photo files and thumbnails in AWS S3 for scalability and reliability.
+  - Create robust API endpoints using Node.js with Express or Next.js API routes.
+  - Store data in MySQL database for relational data integrity and powerful querying capabilities.
+  - Use Prisma, Sequelize, or TypeORM as the ORM for database interaction.
+  - Utilize AWS S3 or similar cloud storage for securely storing high-resolution images.
   - Implement automatic thumbnail generation to optimize gallery performance.
 - **Authentication:**
   - Secure admin access using JSON Web Tokens (JWT) or equivalent mechanisms.
