@@ -46,25 +46,65 @@ This specification outlines the plan for building a custom website for MTP Colle
 | **Blog**    | Optional; for sharing stories or updates (if desired).                       |
 | **Shop**    | Optional; for selling prints with payment integration (if desired).          |
 
-### Data Model
-- **Photos:**
-  - ID (unique identifier)
-  - Title (e.g., “Rock Concert 2025”)
-  - Description (e.g., “Shot at XYZ Festival”)
-  - Category (e.g., Concerts, Cars, Nature)
-  - Tags (e.g., “live music,” “vintage cars”)
-  - Upload Date
-  - File URL (AWS S3 link)
-  - Thumbnail URL
-- **Categories:**
-  - ID
-  - Name (e.g., Concerts)
-  - Description
-- **Users (if authentication is used):**
-  - ID
-  - Username
-  - Password (hashed)
-  - Role (e.g., admin)
+### Relational Database Model (MySQL)
+
+#### Tables Structure
+
+**photos**
+```sql
+CREATE TABLE photos (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  category_id INT NOT NULL,
+  upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+  file_url VARCHAR(512) NOT NULL,
+  thumbnail_url VARCHAR(512) NOT NULL,
+  width INT DEFAULT 1200,
+  height INT DEFAULT 800,
+  FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+```
+
+**categories**
+```sql
+CREATE TABLE categories (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  description TEXT NOT NULL
+);
+```
+
+**photo_tags** (Junction table for many-to-many relationship)
+```sql
+CREATE TABLE photo_tags (
+  photo_id INT NOT NULL,
+  tag_id INT NOT NULL,
+  PRIMARY KEY (photo_id, tag_id),
+  FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+```
+
+**tags**
+```sql
+CREATE TABLE tags (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(50) NOT NULL UNIQUE
+);
+```
+
+**users** (if authentication is used)
+```sql
+CREATE TABLE users (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role ENUM('admin', 'editor', 'viewer') DEFAULT 'viewer',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
 
 ## Technical Stack
 
