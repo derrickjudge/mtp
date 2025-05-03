@@ -1,0 +1,335 @@
+/**
+ * Admin styles
+ */
+
+/* Layout */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  width: 250px;
+  background-color: #1a1a1a;
+  color: #ffffff;
+  padding: 1.5rem;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.admin-content {
+  flex: 1;
+  padding: 2rem;
+  background-color: #1e293b; /* Darker background */
+  color: #f8fafc; /* Light text */
+}
+
+.admin-content.full-width {
+  width: 100%;
+}
+
+/* Sidebar */
+.admin-sidebar-header h1 {
+  font-size: 1.5rem;
+  margin: 0;
+  padding-bottom: 0.5rem;
+}
+
+.admin-sidebar-header p {
+  font-size: 0.875rem;
+  opacity: 0.7;
+  margin: 0;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-nav {
+  margin-top: 2rem;
+}
+
+.admin-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.admin-nav li {
+  margin-bottom: 0.5rem;
+}
+
+.admin-nav a {
+  display: block;
+  padding: 0.75rem 1rem;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.admin-nav a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.admin-nav li.logout-button {
+  margin-top: 2rem;
+}
+
+.admin-nav li.logout-button a {
+  background-color: rgba(255, 0, 0, 0.2);
+}
+
+.admin-nav li.logout-button a:hover {
+  background-color: rgba(255, 0, 0, 0.3);
+}
+
+/* Admin Cards */
+.admin-card {
+  background-color: #334155; /* Dark blue-gray */
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: #f8fafc; /* Light text */
+}
+
+.admin-card-title {
+  font-size: 1.25rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Forms */
+.admin-form {
+  max-width: 500px;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #f8fafc; /* Light text */
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="email"],
+.form-group input[type="number"],
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #64748b; /* Medium blue-gray border */
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: #1e293b; /* Dark background */
+  color: #f8fafc; /* Light text */
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Buttons */
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-secondary {
+  background-color: #6b7280;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #4b5563;
+}
+
+.btn-danger {
+  background-color: #dc2626;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #b91c1c;
+}
+
+/* Tables */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #475569; /* Darker border */
+}
+
+.admin-table th {
+  font-weight: 600;
+  background-color: #475569; /* Medium blue-gray */
+  color: #f8fafc; /* Light text */
+}
+
+.admin-table tbody tr:hover {
+  background-color: #475569; /* Highlight color */
+}
+
+/* Grid for photos */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.photo-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.photo-item img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.photo-item-details {
+  padding: 1rem;
+  background-color: #ffffff;
+}
+
+.photo-item-title {
+  font-size: 1rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.photo-item-category {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.photo-item-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.photo-item-actions button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.photo-item-actions button:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Alerts */
+.alert {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.alert-success {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border-left: 4px solid #10b981;
+}
+
+.alert-error {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border-left: 4px solid #ef4444;
+}
+
+/* Login Page */
+.login-container {
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 2rem;
+  background-color: #334155; /* Dark blue-gray */
+  color: #f8fafc; /* Light text */
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.login-logo {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-logo h1 {
+  font-size: 1.75rem;
+  margin: 0;
+}
+
+.login-logo p {
+  color: #cbd5e1; /* Light blue-gray text */
+  margin: 0.5rem 0 0;
+}
+
+/* Upload Dropzone */
+.dropzone {
+  border: 2px dashed #e5e7eb;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.dropzone:hover {
+  border-color: #2563eb;
+}
+
+.dropzone p {
+  color: #6b7280;
+  margin: 0.5rem 0 0;
+}
+
+/* Tag badges */
+.tag-badge {
+  display: inline-block;
+  background-color: #e5e7eb;
+  color: #374151;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+}

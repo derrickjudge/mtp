@@ -33,6 +33,18 @@ module.exports = {
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
     },
     {
+      displayName: 'admin',
+      testEnvironment: 'jsdom',
+      testMatch: ['**/__tests__/app/admin/**/*.{js,jsx,ts,tsx}'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+    },
+    {
+      displayName: 'auth',
+      testEnvironment: 'jsdom',
+      testMatch: ['**/__tests__/auth/**/*.{js,jsx,ts,tsx}'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+    },
+    {
       displayName: 'utils',
       testEnvironment: 'jsdom',
       testMatch: ['**/__tests__/utils/**/*.{js,jsx,ts,tsx}'],
@@ -44,7 +56,9 @@ module.exports = {
       testMatch: [
         '**/__tests__/lib/**/*.{js,jsx,ts,tsx}',
         '**/__tests__/models/**/*.{js,jsx,ts,tsx}',
-        '**/__tests__/api/**/*.{js,jsx,ts,tsx}'
+        '**/__tests__/api/**/*.{js,jsx,ts,tsx}',
+        '**/__tests__/middleware.test.{js,jsx,ts,tsx}',
+        '**/__tests__/services/**/*.{js,jsx,ts,tsx}'
       ],
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
     },
