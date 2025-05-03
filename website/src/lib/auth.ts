@@ -1,18 +1,24 @@
 import jwt from 'jsonwebtoken';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import * as db from '@/lib/database';
+import bcrypt from 'bcryptjs';
 
 // Secret key for JWT - should be in .env file in production
 const JWT_SECRET = process.env.JWT_SECRET || 'mtp_collective_secret_key';
-const TOKEN_EXPIRY = '24h'; // Token valid for 24 hours
+const TOKEN_EXPIRY = process.env.JWT_EXPIRES_IN || '24h'; // Token valid for 24 hours by default
+
+// Define proper type for jwt Secret
+type JwtSecret = string | Buffer;
 
 /**
  * Generate a JWT token for authenticated users
  * @param payload - Data to encode in the token
  * @returns JWT token string
  */
-export const generateToken = (payload: { userId: string; username: string; role: string }): string => {
-  return jwt.sign(payload, JWT_SECRET, {
+export const generateToken = (payload: { userId: number; username: string; role: string }): string => {
+  // Cast JWT_SECRET to JwtSecret to resolve TypeScript error
+  return jwt.sign(payload, JWT_SECRET as JwtSecret, {
     expiresIn: TOKEN_EXPIRY,
   });
 };
@@ -24,7 +30,8 @@ export const generateToken = (payload: { userId: string; username: string; role:
  */
 export const verifyToken = (token: string): any | null => {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    // Cast JWT_SECRET to JwtSecret to resolve TypeScript error
+    return jwt.verify(token, JWT_SECRET as JwtSecret);
   } catch (error) {
     return null;
   }
@@ -32,11 +39,10 @@ export const verifyToken = (token: string): any | null => {
 
 /**
  * Set authentication token as HTTP-only cookie
- * @param response - NextResponse object
  * @param token - JWT token
- * @returns NextResponse with cookie set
  */
 export const setAuthCookie = (token: string): void => {
+  // Use synchronous cookie API for server components
   cookies().set({
     name: 'auth_token',
     value: token,
@@ -50,9 +56,9 @@ export const setAuthCookie = (token: string): void => {
 
 /**
  * Clear authentication cookie
- * @returns NextResponse with cookie cleared
  */
 export const clearAuthCookie = (): void => {
+  // Use synchronous cookie API for server components
   cookies().delete('auth_token');
 };
 
@@ -77,7 +83,7 @@ export const isAuthenticated = (req: NextRequest): NextResponse | null => {
   const user = getUserFromToken(req);
   
   if (!user) {
-    return NextResponse.redirect(new URL('/login', req.url));
+    return NextResponse.redirect(new URL('/admin/login', req.url));
   }
   
   return null;
@@ -92,7 +98,7 @@ export const isAdmin = (req: NextRequest): NextResponse | null => {
   const user = getUserFromToken(req);
   
   if (!user || user.role !== 'admin') {
-    return NextResponse.redirect(new URL('/unauthorized', req.url));
+    return NextResponse.redirect(new URL('/admin/unauthorized', req.url));
   }
   
   return null;

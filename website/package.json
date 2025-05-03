@@ -19,7 +19,9 @@
     "api:test": "node scripts/test-api.js",
     "db:clean": "node scripts/clean-duplicates.js",
     "db:reset": "npm run db:teardown:clean && npm run db:setup && npm run db:schema",
-    "db:integration-test": "node scripts/test-database.js"
+    "db:integration-test": "node scripts/test-database.js",
+    "admin:create": "node scripts/create-admin-user.js",
+    "admin:force-create": "node scripts/force-create-admin.js"
   },
   "dependencies": {
     "@prisma/client": "^6.7.0",
