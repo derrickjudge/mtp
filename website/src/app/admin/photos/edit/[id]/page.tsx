@@ -237,13 +237,30 @@ export default function EditPhoto() {
         <div style={{ display: 'flex', gap: '2rem', marginBottom: '2rem' }}>
           {/* Photo preview */}
           <div style={{ width: '300px' }}>
-            <div style={{ position: 'relative', height: '200px', marginBottom: '1rem' }}>
-              <Image
-                src={photo?.thumbnail_url || ''}
-                alt={photo?.title || ''}
-                fill
-                style={{ objectFit: 'contain' }}
-              />
+            <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+              {photo?.thumbnail_url ? (
+                <img
+                  src={photo.thumbnail_url}
+                  alt={photo?.title || 'Photo preview'}
+                  style={{ 
+                    maxWidth: '100%', 
+                    maxHeight: '250px', 
+                    objectFit: 'contain',
+                    border: '1px solid #333' 
+                  }}
+                />
+              ) : (
+                <div style={{ 
+                  width: '100%', 
+                  height: '200px', 
+                  backgroundColor: '#333',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  Image not available
+                </div>
+              )}
             </div>
             <a 
               href={photo?.file_url} 

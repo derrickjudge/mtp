@@ -3,6 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Theme settings variables - default values that will be overridden by ThemeProvider */
+  --primary-color: #000000;
+  --secondary-color: #ffffff;
 }
 
 @theme inline {
@@ -17,6 +21,27 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+}
+
+/* Theme-based styling */
+.theme-primary-bg {
+  background-color: var(--primary-color);
+}
+
+.theme-primary-text {
+  color: var(--primary-color);
+}
+
+.theme-primary-border {
+  border-color: var(--primary-color);
+}
+
+.theme-secondary-bg {
+  background-color: var(--secondary-color);
+}
+
+.theme-secondary-text {
+  color: var(--secondary-color);
 }
 
 body {

@@ -3,6 +3,7 @@ import "./globals.css";
 
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "MTP Collective | Photography",
@@ -18,9 +19,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased bg-black text-white min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-grow pt-16">{children}</main>
-        <Footer />
+        <ThemeProvider>
+          <Navbar />
+          <main className="flex-grow pt-16">{children}</main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );
