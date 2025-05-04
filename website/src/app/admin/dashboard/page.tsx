@@ -16,11 +16,19 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
   const [authStatus, setAuthStatus] = useState('Checking authentication...');
   
-  // Check authentication on load
+  // Check authentication on load and preserve it
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (token) {
       setAuthStatus('Authentication verified - token found in localStorage');
+      
+      // For better security, these should be properly handled server-side
+      // This is a client-side workaround for development purposes
+      if (!document.cookie.includes('auth_token=')) {
+        // Add the token to cookies if not already present
+        document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Strict`;
+        console.log('Added auth token to cookies for persistent sessions');
+      }
     } else {
       setAuthStatus('No authentication token found');
       // If no token, redirect to login

@@ -34,11 +34,14 @@ export default function AdminLogin() {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Store the token in localStorage
+      // Store the token in localStorage for JavaScript access
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
-      console.log('Login successful, token stored in localStorage');
+      // Also set a cookie for middleware authentication
+      document.cookie = `auth_token=${data.token}; path=/; max-age=86400; SameSite=Strict`;  // 1 day expiry
+      
+      console.log('Login successful, token stored in localStorage and cookie');
       
       // Update success status
       setLoginStatus('Login successful!');

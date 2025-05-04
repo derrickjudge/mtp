@@ -9,6 +9,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import Logout from './components/Logout';
+import Header from './components/Header';
 import './admin.css';
 
 // Metadata is configured in a separate file to avoid conflicts with client components
@@ -47,6 +48,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <li>
                 <Link href="/admin/categories">Categories</Link>
               </li>
+              <li>
+                <Link href="/admin/users">Users</Link>
+              </li>
+              <li>
+                <Link href="/admin/settings">Settings</Link>
+              </li>
               <li className="logout-button">
                 <Logout />
               </li>
@@ -56,7 +63,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       ) : null}
       
       <main className={`admin-content ${!isAuthenticated ? 'full-width' : ''}`}>
-        {children}
+        {isAuthenticated && <Header />}
+        <div className="admin-content-inner">
+          {children}
+        </div>
       </main>
     </div>
   );
