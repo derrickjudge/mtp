@@ -8,6 +8,17 @@ interface ThemeContextType {
   siteName: string;
   siteDescription: string;
   logoUrl: string;
+  contactEmail: string;
+  socialMedia?: {
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+  };
+  metaTags?: {
+    title?: string;
+    description?: string;
+    keywords?: string;
+  };
   refreshTheme: () => Promise<void>;
 }
 
@@ -17,6 +28,17 @@ const defaultTheme: ThemeContextType = {
   siteName: 'MTP Collective',
   siteDescription: 'Photography portfolio website',
   logoUrl: '',
+  contactEmail: 'contact@mtpcollective.com',
+  socialMedia: {
+    instagram: '',
+    twitter: '',
+    facebook: ''
+  },
+  metaTags: {
+    title: 'MTP Collective',
+    description: 'Photography portfolio website',
+    keywords: 'photography, portfolio'
+  },
   refreshTheme: async () => {}
 };
 
@@ -39,6 +61,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           siteName: data.siteName || defaultTheme.siteName,
           siteDescription: data.siteDescription || defaultTheme.siteDescription,
           logoUrl: data.logoUrl || defaultTheme.logoUrl,
+          contactEmail: data.contactEmail || defaultTheme.contactEmail,
+          socialMedia: data.socialMedia || defaultTheme.socialMedia,
+          metaTags: data.metaTags || defaultTheme.metaTags,
         });
       }
     } catch (error) {
