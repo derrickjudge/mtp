@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as db from '@/lib/database';
-import bcrypt from 'bcryptjs';
 import { rateLimit } from '@/lib/rateLimit';
+
+// Import mock user service
+import { getUsers, createUser, NewUser } from '@/services/mockUserService';
 
 // Create a rate limiter that allows 20 requests per minute
 const limiter = rateLimit({
@@ -26,12 +27,16 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Query the database for users, excluding passwords
-    const users = await db.query(
-      'SELECT id, username, email, role, created_at, updated_at FROM users ORDER BY id'
-    );
+    console.log('[API] GET /api/users - Fetching users');
     
-    return NextResponse.json(users);
+    // Use mock user service to get users
+    const result = await getUsers();
+    
+    if (!result.success) {
+      return NextResponse.json({ message: result.error || 'Failed to fetch users' }, { status: 500 });
+    }
+    
+    return NextResponse.json(result.data);
   } catch (err) {
     console.error('Error fetching users:', err);
     return NextResponse.json({ message: 'Server error' }, { status: 500 });
@@ -54,37 +59,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { username, email, password, role } = await req.json();
+    console.log('[API] POST /api/users - Creating user');
+    
+    const requestData = await req.json();
+    const { username, email, password, role } = requestData;
     
     // Validate required fields
     if (!username || !email || !password) {
       return NextResponse.json({ message: 'Username, email, and password are required' }, { status: 400 });
     }
     
-    // Check if username or email already exists
-    const existingUsers = await db.query(
-      'SELECT * FROM users WHERE username = ? OR email = ?',
-      [username, email]
-    );
+    // Create new user with mock service
+    const newUser: NewUser = {
+      username,
+      email,
+      password,  // In a real app, we'd hash this
+      role: role || 'user'
+    };
     
-    if (existingUsers && existingUsers.length > 0) {
-      return NextResponse.json({ message: 'Username or email already exists' }, { status: 400 });
+    const result = await createUser(newUser);
+    
+    if (!result.success) {
+      return NextResponse.json({ message: result.error || 'Failed to create user' }, { status: 400 });
     }
     
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    
-    // Insert new user
-    const result = await db.query(
-      'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
-      [username, email, hashedPassword, role || 'user']
-    );
-    
-    // Return success response with new user ID
+    // Return success response with new user
     return NextResponse.json({
       message: 'User created successfully',
-      userId: result.insertId
+      user: result.data
     }, { status: 201 });
   } catch (err) {
     console.error('Error creating user:', err);

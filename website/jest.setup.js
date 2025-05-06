@@ -1,6 +1,14 @@
 // Import testing libraries
 require('@testing-library/jest-dom');
 
+// Setup globals
+global.NextResponse = {
+  json: jest.fn().mockImplementation((data, options) => ({
+    data,
+    ...options,
+  })),
+};
+
 // Simple mock declarations - no JSX that could cause parsing errors
 jest.mock('next/image', () => ({
   __esModule: true,
@@ -15,6 +23,40 @@ jest.mock('next/link', () => ({
     return { type: 'a', props };
   }
 }));
+
+// Mock Next.js request/response functionality
+jest.mock('next/server', () => {
+  const NextResponse = {
+    json: jest.fn().mockImplementation((data, options = {}) => ({
+      data,
+      ...options,
+    })),
+    redirect: jest.fn().mockImplementation((url) => ({
+      url,
+      type: 'redirect',
+    })),
+  };
+  
+  return {
+    NextRequest: function MockNextRequest(input, init) {
+      return {
+        ...input,
+        method: (input && input.method) || 'GET',
+        headers: new Headers(input?.headers || {}),
+        cookies: {
+          get: jest.fn().mockReturnValue({ value: 'test-token' }),
+        },
+        json: jest.fn().mockResolvedValue(input?.body || {}),
+        url: 'http://localhost:3000/api' + (input?.url || ''),
+        nextUrl: {
+          pathname: '/api' + (input?.pathname || ''),
+          href: 'http://localhost:3000/api' + (input?.pathname || ''),
+        },
+      };
+    },
+    NextResponse,
+  };
+});
 
 // Polyfill for TextEncoder/TextDecoder that's missing in JSDOM
 if (typeof TextEncoder === 'undefined') {

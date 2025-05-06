@@ -22,7 +22,8 @@ interface SiteSettings {
 }
 
 export default function AdminSettings() {
-  const [settings, setSettings] = useState<SiteSettings>({
+  // Default settings with all required properties
+  const defaultSettings: SiteSettings = {
     siteName: 'MTP Collective',
     siteDescription: 'Photography portfolio website',
     contactEmail: '',
@@ -39,7 +40,9 @@ export default function AdminSettings() {
       description: 'Photography portfolio website',
       keywords: 'photography, portfolio, art'
     }
-  });
+  };
+  
+  const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,7 +59,24 @@ export default function AdminSettings() {
         // If successful, use the returned data
         if (response.ok) {
           const data = await response.json();
-          setSettings(data);
+          
+          // Ensure data has all required properties
+          const safeData = {
+            ...defaultSettings,
+            ...data,
+            // Ensure nested objects exist and are properly structured
+            socialMedia: {
+              ...defaultSettings.socialMedia,
+              ...(data.socialMedia || {})
+            },
+            metaTags: {
+              ...defaultSettings.metaTags,
+              ...(data.metaTags || {})
+            }
+          };
+          
+          setSettings(safeData);
+          console.log('Settings loaded successfully:', safeData);
         } else {
           // Handle gracefully for any error codes (404, 500, etc.)
           console.log(`Settings API returned status: ${response.status}. Using default settings.`);
@@ -112,19 +132,34 @@ export default function AdminSettings() {
     if (name.includes('.')) {
       const [section, field] = name.split('.');
       setSettings(prev => {
-        const sectionData = prev[section as keyof SiteSettings];
+        // Create a copy of the current settings
+        const updatedSettings = { ...prev };
+        
+        // Ensure the section exists, if not, initialize it
+        if (!updatedSettings[section as keyof SiteSettings]) {
+          if (section === 'socialMedia') {
+            updatedSettings.socialMedia = { instagram: '', twitter: '', facebook: '' };
+          } else if (section === 'metaTags') {
+            updatedSettings.metaTags = { title: '', description: '', keywords: '' };
+          } else {
+            // For other potential sections (though we don't expect any)
+            // Use a safer type assertion that respects the original type
+            const emptyValue = {} as any;
+            (updatedSettings as any)[section] = emptyValue;
+          }
+        }
+        
+        const sectionData = updatedSettings[section as keyof SiteSettings];
         
         // Ensure we're working with an object type for spreading
         if (sectionData && typeof sectionData === 'object') {
-          return {
-            ...prev,
-            [section]: {
-              ...sectionData,
-              [field]: value
-            }
+          updatedSettings[section as keyof SiteSettings] = {
+            ...sectionData,
+            [field]: value
           };
         }
-        return prev;
+        
+        return updatedSettings;
       });
     } else {
       setSettings(prev => ({
@@ -271,7 +306,7 @@ export default function AdminSettings() {
               id="instagram"
               name="socialMedia.instagram"
               type="text"
-              value={settings.socialMedia.instagram}
+              value={settings.socialMedia?.instagram || ''}
               onChange={handleChange}
               placeholder="@username or profile URL"
             />
@@ -283,7 +318,7 @@ export default function AdminSettings() {
               id="twitter"
               name="socialMedia.twitter"
               type="text"
-              value={settings.socialMedia.twitter}
+              value={settings.socialMedia?.twitter || ''}
               onChange={handleChange}
               placeholder="@username or profile URL"
             />
@@ -295,7 +330,7 @@ export default function AdminSettings() {
               id="facebook"
               name="socialMedia.facebook"
               type="text"
-              value={settings.socialMedia.facebook}
+              value={settings.socialMedia?.facebook || ''}
               onChange={handleChange}
               placeholder="Page URL"
             />
@@ -311,7 +346,7 @@ export default function AdminSettings() {
               id="metaTitle"
               name="metaTags.title"
               type="text"
-              value={settings.metaTags.title}
+              value={settings.metaTags?.title || ''}
               onChange={handleChange}
             />
             <small>This will appear in search engine results and browser tabs.</small>
@@ -322,7 +357,7 @@ export default function AdminSettings() {
             <textarea
               id="metaDescription"
               name="metaTags.description"
-              value={settings.metaTags.description}
+              value={settings.metaTags?.description || ''}
               onChange={handleChange}
               rows={3}
             />
@@ -335,7 +370,7 @@ export default function AdminSettings() {
               id="metaKeywords"
               name="metaTags.keywords"
               type="text"
-              value={settings.metaTags.keywords}
+              value={settings.metaTags?.keywords || ''}
               onChange={handleChange}
               placeholder="photography, portfolio, art (comma separated)"
             />

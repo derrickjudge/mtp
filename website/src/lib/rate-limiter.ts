@@ -1,18 +1,32 @@
-import { NextRequest } from 'next/server';
+/**
+ * Rate Limiter - Compatibility Layer
+ * 
+ * This module provides backward compatibility with the old rate limiter interface
+ * while using the new enhanced rate limiting functionality.
+ * 
+ * IMPORTANT: For new code, use enhancedRateLimit.ts directly.
+ * This module exists only for backward compatibility with existing code.
+ */
 
-interface RateLimitResult {
+import { NextRequest } from 'next/server';
+import { createRateLimit } from './enhancedRateLimit';
+
+export interface RateLimitResult {
   success: boolean;
   limit: number;
   remaining: number;
   reset: number; // Timestamp when the rate limit resets
 }
 
-// Simple in-memory store for rate limiting
-// In production, this should be replaced with Redis or similar
-const rateLimit = new Map<string, { count: number, reset: number }>();
+// Create a default rate limiter using the new enhanced implementation
+const defaultRateLimiter = createRateLimit('NORMAL');
 
 /**
  * Rate limiter middleware for API routes
+ * 
+ * This is a compatibility wrapper around the new enhanced rate limiter.
+ * It maintains the same interface as the old implementation but uses the new functionality.
+ * 
  * @param req The incoming request
  * @param limit Maximum number of requests allowed in the time window
  * @param windowMs Time window in milliseconds (default: 60000ms = 1 minute)
@@ -23,63 +37,76 @@ export async function rateLimiter(
   limit: number = 60,
   windowMs: number = 60000
 ): Promise<RateLimitResult> {
-  // For production, use a real IP address
-  // In development, use a placeholder
-  const ip = process.env.NODE_ENV === 'production'
-    ? req.ip || 'unknown'
-    : 'development';
+  try {
+    // Create a custom rate limiter with the specified parameters
+    const customLimiter = createRateLimit({
+      maxRequests: limit,
+      windowMs: windowMs,
+      headers: true
+    });
     
-  // Create a unique key based on the IP and the request path
-  const key = `${ip}-${req.nextUrl.pathname}`;
-  const now = Date.now();
-  
-  // Get existing rate limit data or create new entry
-  const rateData = rateLimit.get(key) || { count: 0, reset: now + windowMs };
-  
-  // If the reset time has passed, reset the counter
-  if (now > rateData.reset) {
-    rateData.count = 0;
-    rateData.reset = now + windowMs;
+    // Check the rate limit using the new implementation
+    const result = await customLimiter.check(req);
+    
+    // Return result in the format expected by the old interface
+    return {
+      success: result.success,
+      limit: result.limit,
+      remaining: result.remaining,
+      reset: result.reset
+    };
+  } catch (error) {
+    // For backward compatibility, log the error but don't throw
+    console.error('Rate limiting error:', error);
+    
+    // Return a default failed response
+    return {
+      success: false,
+      limit,
+      remaining: 0,
+      reset: Date.now() + windowMs
+    };
   }
-  
-  // Increment the counter
-  rateData.count++;
-  
-  // Store updated rate limit data
-  rateLimit.set(key, rateData);
-  
-  // Clean up old entries every few minutes to prevent memory leaks
-  occasionalCleanup();
-  
-  // Check if limit has been exceeded
-  const success = rateData.count <= limit;
-  
-  return {
-    success,
-    limit,
-    remaining: Math.max(0, limit - rateData.count),
-    reset: rateData.reset
-  };
 }
 
-// Variable to track last cleanup time
-let lastCleanup = Date.now();
-
 /**
- * Occasionally clean up old rate limit entries to prevent memory leaks
+ * Create a rate limiter with custom configuration
+ * @param config Rate limit configuration
+ * @returns The configured rate limiter function
  */
-function occasionalCleanup() {
-  const now = Date.now();
-  // Only clean up every 5 minutes
-  if (now - lastCleanup > 5 * 60 * 1000) {
-    const cleanupThreshold = now - 10 * 60 * 1000; // 10 minutes
-    
-    for (const [key, data] of rateLimit.entries()) {
-      if (data.reset < cleanupThreshold) {
-        rateLimit.delete(key);
+export function rateLimit(config: {
+  interval: number;
+  limit: number;
+  uniqueTokenPerInterval?: number;
+}) {
+  // Create a rate limiter with the specified configuration
+  const customLimiter = createRateLimit({
+    maxRequests: config.limit,
+    windowMs: config.interval,
+    headers: true,
+    uniqueTokenPerInterval: config.uniqueTokenPerInterval
+  });
+  
+  // Return an object with a check method to maintain compatibility
+  return {
+    check: async (req: NextRequest): Promise<RateLimitResult> => {
+      try {
+        const result = await customLimiter.check(req);
+        return {
+          success: result.success,
+          limit: result.limit,
+          remaining: result.remaining,
+          reset: result.reset
+        };
+      } catch (error) {
+        console.error('Rate limiting error:', error);
+        return {
+          success: false,
+          limit: config.limit,
+          remaining: 0,
+          reset: Date.now() + config.interval
+        };
       }
     }
-    
-    lastCleanup = now;
-  }
+  };
 }

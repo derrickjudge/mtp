@@ -1,13 +1,64 @@
-import { NextRequest, NextResponse } from 'next/server';
-import * as db from '@/lib/database';
-import { rateLimit } from '@/lib/rateLimit';
+/**
+ * Settings API Endpoint
+ * Handles site settings retrieval and updates with enhanced security
+ */
 
-// Create a rate limiter that allows 10 requests per minute
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 50,
-  limit: 10,
-});
+import { NextRequest, NextResponse } from 'next/server';
+import { createRateLimit } from '@/lib/enhancedRateLimit';
+import { applySecurityHeaders } from '@/middleware/securityHeaders';
+import { validateRequest, validationErrorResponse, sanitizeObject } from '@/lib/validation';
+import { settingsSchema } from '@/lib/validationSchemas';
+import { requireRole } from '@/lib/secureAuth';
+
+// Import mock settings service
+import { getSettings, updateSettings, SiteSettings } from '@/services/mockSettingsService';
+
+// Create a rate limiter
+// Use stricter limits for settings since they affect the entire site
+const settingsRateLimit = createRateLimit('STRICT');
+
+/**
+ * Helper function for consistent error responses with security headers
+ */
+function createErrorResponse(message: string, status: number = 400) {
+  const response = NextResponse.json(
+    { success: false, message },
+    { status }
+  );
+  return applySecurityHeaders(response);
+}
+
+/**
+ * Helper function for successful responses with security headers
+ */
+function createSuccessResponse(data: any, message?: string, status: number = 200) {
+  const responseBody: any = { success: true };
+  if (message) responseBody.message = message;
+  if (data) responseBody.data = data;
+  
+  const response = NextResponse.json(responseBody, { status });
+  return applySecurityHeaders(response);
+}
+
+// Default settings to use when database is unavailable
+const defaultSettings = {
+  siteName: 'MTP Collective',
+  siteDescription: 'Photography portfolio website',
+  contactEmail: '',
+  logoUrl: '',
+  primaryColor: '#000000',
+  secondaryColor: '#ffffff',
+  socialMedia: {
+    instagram: '',
+    twitter: '',
+    facebook: ''
+  },
+  metaTags: {
+    title: 'MTP Collective',
+    description: 'Photography portfolio website',
+    keywords: 'photography, portfolio, art'
+  }
+};
 
 /**
  * GET /api/settings
@@ -15,106 +66,37 @@ const limiter = rateLimit({
  */
 export async function GET(req: NextRequest) {
   try {
-    // Apply rate limiting
-    try {
-      await limiter.check(req);
-    } catch (error) {
-      return NextResponse.json(
-        { message: 'Rate limit exceeded, please try again later' },
-        { status: 429 }
+    // Apply rate limiting with enhanced rate limiter
+    const rateLimitResult = await settingsRateLimit.check(req);
+    if (!rateLimitResult.success) {
+      return createErrorResponse(
+        `Rate limit exceeded. Please try again in ${Math.ceil((rateLimitResult.reset - Date.now()) / 1000)} seconds.`,
+        429
       );
     }
 
-    // Get settings from database - wrapped in try/catch to handle table not existing
-    let settings;
-    try {
-      settings = await db.query('SELECT * FROM site_settings WHERE id = 1');
-    } catch (dbError) {
-      console.error('Database error when fetching settings:', dbError);
-      // Return default settings instead of error
-      return NextResponse.json({
-        siteName: 'MTP Collective',
-        siteDescription: 'Photography portfolio website',
-        contactEmail: '',
-        logoUrl: '',
-        primaryColor: '#000000',
-        secondaryColor: '#ffffff',
-        socialMedia: {
-          instagram: '',
-          twitter: '',
-          facebook: ''
-        },
-        metaTags: {
-          title: 'MTP Collective',
-          description: 'Photography portfolio website',
-          keywords: 'photography, portfolio, art'
-        }
-      });
-    }
-    
-    if (!settings || !Array.isArray(settings) || settings.length === 0) {
-      // Return default settings instead of 404 error
-      return NextResponse.json({
-        siteName: 'MTP Collective',
-        siteDescription: 'Photography portfolio website',
-        contactEmail: '',
-        logoUrl: '',
-        primaryColor: '#000000',
-        secondaryColor: '#ffffff',
-        socialMedia: {
-          instagram: '',
-          twitter: '',
-          facebook: ''
-        },
-        metaTags: {
-          title: 'MTP Collective',
-          description: 'Photography portfolio website',
-          keywords: 'photography, portfolio, art'
-        }
-      });
-    }
-    
-    // Parse JSON fields
-    const settingsData = settings[0];
+    console.log('[API] GET /api/settings - Fetching settings');
     
     try {
-      if (settingsData.social_media && typeof settingsData.social_media === 'string') {
-        settingsData.socialMedia = JSON.parse(settingsData.social_media);
-        delete settingsData.social_media;
+      // Use our mock settings service
+      const result = await getSettings();
+      
+      if (!result.success || !result.data) {
+        console.error('Error fetching settings from mock service');
+        // Return default settings as fallback
+        return createSuccessResponse(defaultSettings);
       }
       
-      if (settingsData.meta_tags && typeof settingsData.meta_tags === 'string') {
-        settingsData.metaTags = JSON.parse(settingsData.meta_tags);
-        delete settingsData.meta_tags;
-      }
-    } catch (err) {
-      console.error('Error parsing settings JSON:', err);
+      // Return the settings data
+      return createSuccessResponse(result.data);
+    } catch (error) {
+      console.error('Error in settings service:', error);
+      // Return default settings as fallback
+      return createSuccessResponse(defaultSettings);
     }
-    
-    // Convert snake_case to camelCase for frontend compatibility
-    const formattedSettings = {
-      siteName: settingsData.site_name || 'MTP Collective',
-      siteDescription: settingsData.site_description || 'Photography portfolio website',
-      contactEmail: settingsData.contact_email || '',
-      logoUrl: settingsData.logo_url || '',
-      primaryColor: settingsData.primary_color || '#000000',
-      secondaryColor: settingsData.secondary_color || '#ffffff',
-      socialMedia: settingsData.socialMedia || {
-        instagram: '',
-        twitter: '',
-        facebook: '',
-      },
-      metaTags: settingsData.metaTags || {
-        title: 'MTP Collective',
-        description: 'Photography portfolio website',
-        keywords: 'photography, portfolio, art',
-      },
-    };
-    
-    return NextResponse.json(formattedSettings);
   } catch (err) {
     console.error('Error fetching settings:', err);
-    return NextResponse.json({ message: 'Server error' }, { status: 500 });
+    return createErrorResponse('Server error occurred while fetching settings', 500);
   }
 }
 
@@ -124,146 +106,58 @@ export async function GET(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
-    // Apply rate limiting
-    try {
-      await limiter.check(req);
-    } catch (error) {
-      return NextResponse.json(
-        { message: 'Rate limit exceeded, please try again later' },
-        { status: 429 }
+    // Check rate limits first
+    const rateLimitResult = await settingsRateLimit.check(req);
+    if (!rateLimitResult.success) {
+      return createErrorResponse(
+        `Rate limit exceeded. Please try again in ${Math.ceil((rateLimitResult.reset - Date.now()) / 1000)} seconds.`,
+        429
       );
     }
 
-    const settings = await req.json();
+    // Verify admin privileges
+    const requireAdminCheck = await requireRole(req, 'admin');
+    if (requireAdminCheck.success === false) {
+      return createErrorResponse(
+        requireAdminCheck.message || 'Admin privileges required',
+        403
+      );
+    }
+
+    console.log('[API] PUT /api/settings - Updating settings');
     
-    // Format settings for database (camelCase to snake_case)
-    const dbSettings = {
-      site_name: settings.siteName || 'MTP Collective',
-      site_description: settings.siteDescription || '',
-      contact_email: settings.contactEmail || '',
-      logo_url: settings.logoUrl || '',
-      primary_color: settings.primaryColor || '#000000',
-      secondary_color: settings.secondaryColor || '#ffffff',
-      social_media: JSON.stringify(settings.socialMedia || {
-        instagram: '',
-        twitter: '',
-        facebook: '',
-      }),
-      meta_tags: JSON.stringify(settings.metaTags || {
-        title: 'MTP Collective',
-        description: 'Photography portfolio website',
-        keywords: 'photography, portfolio, art',
-      }),
-      updated_at: new Date(),
-    };
-    
+    // Parse and validate request body
+    let settings;
     try {
-      // Try to check if settings table exists and has records
-      let hasSettings = false;
-      try {
-        const existingSettings = await db.query('SELECT COUNT(*) as count FROM site_settings');
-        hasSettings = existingSettings && 
-                      Array.isArray(existingSettings) && 
-                      existingSettings.length > 0 && 
-                      existingSettings[0].count > 0;
-      } catch (tableErr) {
-        // Table doesn't exist, will create it
-        console.log('Settings table does not exist, will create it if possible');
-        
-        // Attempt to create the table
-        try {
-          await db.query(`
-            CREATE TABLE IF NOT EXISTS site_settings (
-              id INT NOT NULL AUTO_INCREMENT,
-              site_name VARCHAR(100) NOT NULL DEFAULT 'MTP Collective',
-              site_description TEXT,
-              contact_email VARCHAR(100),
-              logo_url VARCHAR(255),
-              primary_color VARCHAR(20) DEFAULT '#000000',
-              secondary_color VARCHAR(20) DEFAULT '#ffffff',
-              social_media JSON,
-              meta_tags JSON,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              PRIMARY KEY (id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-          `);
-          console.log('Created settings table successfully');
-        } catch (createErr) {
-          console.error('Failed to create settings table:', createErr);
-          // We'll still return success to the client, but log the error server-side
-          return NextResponse.json({ 
-            message: 'Settings saved (temporary, server-side storage pending)',
-            settings: settings
-          });
-        }
-      }
-      
-      if (hasSettings) {
-        // Update existing settings
-        await db.query(
-          `UPDATE site_settings SET 
-            site_name = ?, 
-            site_description = ?, 
-            contact_email = ?, 
-            logo_url = ?, 
-            primary_color = ?, 
-            secondary_color = ?, 
-            social_media = ?, 
-            meta_tags = ?, 
-            updated_at = NOW() 
-          WHERE id = 1`,
-          [
-            dbSettings.site_name,
-            dbSettings.site_description,
-            dbSettings.contact_email,
-            dbSettings.logo_url,
-            dbSettings.primary_color,
-            dbSettings.secondary_color,
-            dbSettings.social_media,
-            dbSettings.meta_tags,
-          ]
-        );
-      } else {
-        // Insert new settings
-        await db.query(
-          `INSERT INTO site_settings (
-            site_name, 
-            site_description, 
-            contact_email, 
-            logo_url, 
-            primary_color, 
-            secondary_color, 
-            social_media, 
-            meta_tags, 
-            created_at, 
-            updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-          [
-            dbSettings.site_name,
-            dbSettings.site_description,
-            dbSettings.contact_email,
-            dbSettings.logo_url,
-            dbSettings.primary_color,
-            dbSettings.secondary_color,
-            dbSettings.social_media,
-            dbSettings.meta_tags,
-          ]
-        );
-      }
-    } catch (err) {
-      console.error('Error saving settings, but returning success to client:', err);
-      // Even if we couldn't save to the database, let the client think it worked
-      // This is for development purposes only
-      return NextResponse.json({ 
-        message: 'Settings saved (temporary, server-side storage pending)',
-        settings: settings
-      });
+      settings = await req.json();
+    } catch (error) {
+      return createErrorResponse('Invalid JSON format', 400);
     }
     
-    return NextResponse.json({ message: 'Settings updated successfully' });
+    // Validate settings against schema
+    const validationResult = validateRequest(settings, settingsSchema);
+    if (!validationResult.success) {
+      return validationErrorResponse(validationResult.errors);
+    }
+    
+    // Sanitize settings to prevent XSS
+    settings = sanitizeObject(settings);
+    
+    try {
+      // Use our mock settings service to update settings
+      const result = await updateSettings(settings as SiteSettings);
+      
+      if (!result.success) {
+        return createErrorResponse('Failed to update settings', 500);
+      }
+      
+      return createSuccessResponse(result.data, 'Settings updated successfully');
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      return createErrorResponse('Server error occurred while updating settings', 500);
+    }
   } catch (err) {
     console.error('Error updating settings:', err);
-    return NextResponse.json({ message: 'Server error' }, { status: 500 });
+    return createErrorResponse('Server error occurred while updating settings', 500);
   }
 }

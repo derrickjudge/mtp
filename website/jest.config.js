@@ -5,7 +5,7 @@ module.exports = {
   },
   // Special handling for ESM modules - these packages will be transformed by Babel
   transformIgnorePatterns: [
-    '/node_modules/(?!(@next|next|react-image-lightbox|uuid)/)',
+    '/node_modules/(?!(@next|next|react-image-lightbox|uuid|jsonwebtoken)/)',
   ],
   // Ensure test environment has appropriate conditions for ESM
   testEnvironment: 'jsdom',
@@ -17,6 +17,10 @@ module.exports = {
   moduleNameMapper: {
     // Handle module aliases (if you're using them in tsconfig.json)
     '^@/(.*)$': '<rootDir>/src/$1',
+    // Ensure our mocks are used for tests
+    '^@/lib/rate-limiter$': '<rootDir>/src/__mocks__/lib/rate-limiter.js',
+    '^@/lib/database$': '<rootDir>/src/__mocks__/lib/database.js',
+    '^@/services/authService$': '<rootDir>/src/__mocks__/services/authService.js',
     // Handle CSS imports
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     // Handle image imports

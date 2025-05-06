@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as db from '@/lib/database';
-import bcrypt from 'bcryptjs';
 import { rateLimit } from '@/lib/rateLimit';
+
+// Import mock user service
+import { getUserById, updateUser, deleteUser } from '@/services/mockUserService';
 
 // Create a rate limiter that allows 10 requests per minute
 const limiter = rateLimit({
@@ -33,18 +34,22 @@ export async function GET(req: NextRequest, context: RouteContext) {
     }
 
     const userId = context.params.id;
+    const userIdNumber = parseInt(userId);
     
-    // Query the database for the user, excluding password
-    const users = await db.query(
-      'SELECT id, username, email, role, created_at, updated_at FROM users WHERE id = ?',
-      [userId]
-    );
-    
-    if (!users || users.length === 0) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    if (isNaN(userIdNumber)) {
+      return NextResponse.json({ message: 'Invalid user ID' }, { status: 400 });
     }
     
-    return NextResponse.json(users[0]);
+    console.log(`[API] GET /api/users/${userId} - Fetching user details`);
+    
+    // Use mock service to get user
+    const result = await getUserById(userIdNumber);
+    
+    if (!result.success) {
+      return NextResponse.json({ message: result.error || 'User not found' }, { status: 404 });
+    }
+    
+    return NextResponse.json(result.data);
   } catch (err) {
     console.error('Error fetching user:', err);
     return NextResponse.json({ message: 'Server error' }, { status: 500 });
@@ -68,74 +73,34 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     }
 
     const userId = context.params.id;
-    const { username, email, role, password } = await req.json();
+    const userIdNumber = parseInt(userId);
     
-    // Check if user exists
-    const existingUserResult = await db.query(
-      'SELECT * FROM users WHERE id = ?',
-      [userId]
-    );
-    
-    if (!existingUserResult || existingUserResult.length === 0) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    if (isNaN(userIdNumber)) {
+      return NextResponse.json({ message: 'Invalid user ID' }, { status: 400 });
     }
     
-    // Check if username or email is already taken by another user
-    if (username || email) {
-      const checkDuplicateQuery = 'SELECT * FROM users WHERE (username = ? OR email = ?) AND id != ?';
-      const duplicateParams = [
-        username || existingUserResult[0].username, 
-        email || existingUserResult[0].email, 
-        userId
-      ];
-      
-      const duplicateCheck = await db.query(checkDuplicateQuery, duplicateParams);
-      
-      if (duplicateCheck && duplicateCheck.length > 0) {
-        return NextResponse.json({ message: 'Username or email already in use by another account' }, { status: 400 });
-      }
-    }
+    console.log(`[API] PUT /api/users/${userId} - Updating user`);
     
-    // Prepare update query
-    let updateFields = [];
-    let updateParams = [];
-    
-    if (username) {
-      updateFields.push('username = ?');
-      updateParams.push(username);
-    }
-    
-    if (email) {
-      updateFields.push('email = ?');
-      updateParams.push(email);
-    }
-    
-    if (role) {
-      updateFields.push('role = ?');
-      updateParams.push(role);
-    }
-    
-    // Handle password update if provided
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      updateFields.push('password = ?');
-      updateParams.push(hashedPassword);
-    }
-    
-    // Add userId to params
-    updateParams.push(userId);
+    // Get update data from request
+    const userData = await req.json();
+    const { username, email, role } = userData;
     
     // If nothing to update, return early
-    if (updateFields.length === 0) {
+    if (!username && !email && !role) {
       return NextResponse.json({ message: 'No fields to update' }, { status: 400 });
     }
     
-    // Update user in database
-    const updateQuery = `UPDATE users SET ${updateFields.join(', ')}, updated_at = NOW() WHERE id = ?`;
-    await db.query(updateQuery, updateParams);
+    // Use mock service to update user
+    const result = await updateUser(userIdNumber, userData);
     
-    return NextResponse.json({ message: 'User updated successfully' });
+    if (!result.success) {
+      return NextResponse.json({ message: result.error || 'Failed to update user' }, { status: result.error === 'User not found' ? 404 : 400 });
+    }
+    
+    return NextResponse.json({ 
+      message: 'User updated successfully',
+      user: result.data
+    });
   } catch (err) {
     console.error('Error updating user:', err);
     return NextResponse.json({ message: 'Server error' }, { status: 500 });
@@ -159,24 +124,27 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     }
 
     const userId = context.params.id;
+    const userIdNumber = parseInt(userId);
     
-    // Check if user exists
-    const existingUser = await db.query(
-      'SELECT role FROM users WHERE id = ?',
-      [userId]
-    );
-    
-    if (!existingUser || existingUser.length === 0) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    if (isNaN(userIdNumber)) {
+      return NextResponse.json({ message: 'Invalid user ID' }, { status: 400 });
     }
     
-    // Prevent deletion of admin users
-    if (existingUser[0].role === 'admin') {
-      return NextResponse.json({ message: 'Cannot delete admin user' }, { status: 403 });
-    }
+    console.log(`[API] DELETE /api/users/${userId} - Deleting user`);
     
-    // Delete user from database
-    await db.query('DELETE FROM users WHERE id = ?', [userId]);
+    // Use mock service to delete user
+    const result = await deleteUser(userIdNumber);
+    
+    if (!result.success) {
+      // Check specific error types
+      if (result.error === 'User not found') {
+        return NextResponse.json({ message: 'User not found' }, { status: 404 });
+      } else if (result.error === 'Cannot delete the primary admin user') {
+        return NextResponse.json({ message: 'Cannot delete admin user' }, { status: 403 });
+      } else {
+        return NextResponse.json({ message: result.error || 'Failed to delete user' }, { status: 400 });
+      }
+    }
     
     return NextResponse.json({ message: 'User deleted successfully' });
   } catch (err) {

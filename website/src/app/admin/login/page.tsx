@@ -3,9 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+// Import our new validation utilities for client-side validation
+import { sanitizeInput } from '@/lib/validation';
 
 export default function AdminLogin() {
-  const router = useRouter();
+  // Disable router for now, we'll use form submission for a cleaner approach
+  // const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -13,6 +16,7 @@ export default function AdminLogin() {
   const [loginStatus, setLoginStatus] = useState('');
   const [redirectAttempted, setRedirectAttempted] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState(0);
+  const [loginResponse, setLoginResponse] = useState(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,52 +24,67 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
+      console.log('Login attempt for:', username);
+      
+      // Sanitize input before sending to server
+      const sanitizedUsername = sanitizeInput(username);
+      const requestBody = { username: sanitizedUsername, password };
+      
+      console.log('Sending login request to login endpoint...');
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        credentials: 'include', // Important for cookies to be sent and received
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
+      console.log('Login response status:', response.status);
+      setLoginResponse(data); // Store the full response for debugging
 
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Store the token in localStorage for JavaScript access
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Log any cookies that are visible to JavaScript
+      console.log('Current document.cookie:', document.cookie);
       
-      // Also set a cookie for middleware authentication
-      document.cookie = `auth_token=${data.token}; path=/; max-age=86400; SameSite=Strict`;  // 1 day expiry
-      
-      console.log('Login successful, token stored in localStorage and cookie');
+      // Store CSRF token for future requests requiring CSRF protection
+      if (data.csrfToken) {
+        console.log('CSRF token received, storing for future requests');
+        sessionStorage.setItem('csrfToken', data.csrfToken);
+      }
       
       // Update success status
       setLoginStatus('Login successful!');
       
-      // Store the token in localStorage and sessionStorage for redundancy
-      sessionStorage.setItem('authToken', data.token);
-      sessionStorage.setItem('redirectTime', Date.now().toString());
+      // Store minimal user info for UI purposes only (no sensitive tokens)
+      if (data.user) {
+        console.log('User info received:', data.user.username, data.user.role);
+        sessionStorage.setItem('userRole', data.user.role || 'user');
+        sessionStorage.setItem('userName', data.user.username || 'user');
+      }
+      
+      // Log debug info if available
+      if (data.debug) {
+        console.log('Auth debug info:', data.debug);
+      }
       
       // Set redirect flag and start countdown
       setRedirectAttempted(true);
       setRedirectCountdown(3);
       
-      // Start countdown and automatic redirect
-      let countdown = 3;
-      const timer = setInterval(() => {
-        countdown -= 1;
-        setRedirectCountdown(countdown);
-        
-        if (countdown <= 0) {
-          clearInterval(timer);
-          // Use window.location for a hard navigation
-          window.location.href = '/admin/dashboard';
-        }
-      }, 1000);
+      // Prepare a form submission to redirect to dashboard
+      // This is more reliable than client-side navigation for maintaining cookies
+      setTimeout(() => {
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = '/admin/dashboard';
+        document.body.appendChild(form);
+        form.submit();
+      }, 3000);
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'An error occurred during login');
@@ -109,24 +128,36 @@ export default function AdminLogin() {
             <p>Redirecting to dashboard in <span style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{redirectCountdown}</span> seconds...</p>
           </div>
           
-          <a 
-            href='/admin/dashboard'
-            className="btn btn-primary"
-            style={{ 
-              display: 'block', 
-              width: '100%', 
-              marginTop: '0.5rem', 
-              textAlign: 'center',
-              padding: '0.75rem',
-              backgroundColor: '#2563eb',
-              color: 'white',
-              borderRadius: '4px',
-              textDecoration: 'none',
-              fontWeight: 'bold'
-            }}
-          >
-            Go to Dashboard Now
-          </a>
+          <form method="GET" action="/admin/dashboard">
+            <button 
+              type="submit"
+              className="btn btn-primary"
+              style={{ 
+                display: 'block', 
+                width: '100%', 
+                marginTop: '0.5rem', 
+                textAlign: 'center',
+                padding: '0.75rem',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                borderRadius: '4px',
+                textDecoration: 'none',
+                fontWeight: 'bold'
+              }}
+            >
+              Go to Dashboard Now
+            </button>
+          </form>
+          
+          {/* Debug information */}
+          {loginResponse && process.env.NODE_ENV !== 'production' && (
+            <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#1e293b', borderRadius: '4px', fontSize: '0.8rem' }}>
+              <h4>Debug Info (Development Only)</h4>
+              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {JSON.stringify(loginResponse, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       )}
       
