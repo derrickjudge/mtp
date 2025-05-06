@@ -37,6 +37,23 @@ export default function AdminPhotos() {
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
 
+  // Helper function to get category ID from name
+  const getCategoryIdByName = (name: string): number | null => {
+    if (!name) return null;
+    
+    // Map common category names to IDs for our mock service
+    const categoryMap: Record<string, number> = {
+      'nature': 1,
+      'street': 2,
+      'portrait': 3,
+      'architecture': 4
+    };
+    
+    // Try to find the category in our mock mapping
+    const lowerName = name.toLowerCase();
+    return categoryMap[lowerName] || null;
+  };
+
   // Fetch photos when page, limit, or category changes
   useEffect(() => {
     const fetchPhotos = async () => {
@@ -44,7 +61,13 @@ export default function AdminPhotos() {
       try {
         let url = `/api/photos?page=${pagination.page}&limit=${pagination.limit}`;
         if (selectedCategory) {
-          url += `&category=${selectedCategory}`;
+          // Change to category_id instead of category for our mock service
+          const categoryId = getCategoryIdByName(selectedCategory);
+          if (categoryId) {
+            url += `&category_id=${categoryId}`;
+          } else {
+            url += `&category=${selectedCategory}`;
+          }
         }
 
         const response = await fetch(url);
@@ -192,7 +215,12 @@ export default function AdminPhotos() {
                 </div>
                 <div className="photo-item-details">
                   <h3 className="photo-item-title">{photo.title}</h3>
-                  <p className="photo-item-category">{photo.category.name}</p>
+                  <p className="photo-item-category">
+                    {/* Handle both object format and string format */}
+                    {typeof photo.category === 'object' && photo.category?.name ? 
+                      photo.category.name : 
+                      (typeof photo.category === 'string' ? photo.category : 'Uncategorized')}
+                  </p>
                 </div>
               </div>
             ))}

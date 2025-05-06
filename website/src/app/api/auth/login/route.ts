@@ -1,110 +1,117 @@
 /**
  * Login API Endpoint
- * Authenticates users and returns a JWT token
+ * Authenticates users and returns a JWT token with enhanced security
  * 
  * Security features:
+ * - Input validation with standardized schemas
+ * - HTTP-only cookies for token storage
+ * - CSRF protection
  * - General rate limiting for all requests
  * - Specific tracking of failed login attempts
  * - Account lockout after 3 failed attempts for 5 minutes
+ * - Security headers on all responses
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser } from '@/services/authService';
-import auth from '@/lib/auth';
-import { rateLimiter } from '@/lib/rate-limiter';
-import { trackLoginAttempt, recordFailedAttempt, resetFailedAttempts } from '@/lib/failedLoginTracker';
-import { setServerCookie } from './server-cookies';
+// Using mock auth service for development - no database dependency
+import { authenticateUser } from '@/auth/services/mockAuthService';
+import { validateData, validationErrorResponse } from '@/lib/validation';
+import { authSchemas } from '@/lib/validationSchemas';
+import { applySecurityHeaders } from '@/middleware/securityHeaders';
+import { createRateLimit } from '@/lib/enhancedRateLimit';
+import { setAuthCookies } from '@/auth/utils/cookies';
+import { generateCsrfToken } from '@/auth/utils/tokens';
+import { InvalidCredentialsError, AccountLockedError, AuthError } from '@/auth/errors/AuthError';
+
+// Create a rate limiter specific to auth endpoints with strict limits
+const authRateLimit = createRateLimit('VERY_STRICT');
+
+// Helper function to create consistent error responses with security headers
+const createErrorResponse = (message: string, status: number = 400) => {
+  const response = NextResponse.json({ success: false, message }, { status });
+  return applySecurityHeaders(response);
+};
 
 export async function POST(req: NextRequest) {
   try {
-    // Apply general rate limiting first
-    const rateLimitResult = await rateLimiter(req);
+    // Apply rate limiting first
+    const rateLimitResult = await authRateLimit.check(req);
     if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { message: 'Rate limit exceeded' },
-        { status: 429 }
+      return createErrorResponse(
+        `Rate limit exceeded. Please try again in ${Math.ceil(rateLimitResult.reset - Date.now()) / 1000} seconds.`, 
+        429
       );
     }
 
-    // Get credentials from request body
-    const { username, password } = await req.json();
-
-    // Validate inputs
-    if (!username || !password) {
-      return NextResponse.json(
-        { message: 'Username and password are required' },
-        { status: 400 }
-      );
+    // Parse the request body first
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (error) {
+      return createErrorResponse('Invalid request format', 400);
     }
     
-    // Check if login is allowed or if account is locked out due to failed attempts
-    const loginAttemptStatus = trackLoginAttempt(req, username);
-    if (!loginAttemptStatus.allowed) {
-      // Account is locked - calculate lockout time in minutes and seconds
-      const lockoutMinutes = Math.floor(loginAttemptStatus.lockoutRemaining / 60000);
-      const lockoutSeconds = Math.floor((loginAttemptStatus.lockoutRemaining % 60000) / 1000);
-      
-      return NextResponse.json(
-        { 
-          message: `Account locked due to too many failed attempts. Please try again in ${lockoutMinutes}m ${lockoutSeconds}s.`,
-          lockedUntil: loginAttemptStatus.lockoutEnds
-        },
-        { status: 429 }
-      );
+    // Validate parsed request body against schema
+    const { username, password } = requestBody;
+    const validationResult = validateData(requestBody, authSchemas.login);
+    if (!validationResult.valid) {
+      return validationErrorResponse(validationResult.errors);
     }
 
-    // Authenticate user
-    const result = await authenticateUser(username, password);
-    if (!result) {
-      // Record failed attempt and get updated status
-      const failedStatus = recordFailedAttempt(req, username);
+    try {
+      // Authenticate user using our new modular auth service
+      // This handles account lockout internally now
+      const authResult = await authenticateUser({
+        username,
+        password
+      });
+
+      // Login successful - reset rate limiter
+      await authRateLimit.resetFailures(req);
+
+      // Create a secure login response with HTTP-only cookies
+      const response = NextResponse.json({ 
+        success: true, 
+        user: {
+          id: authResult.user.id,
+          username: authResult.user.username,
+          role: authResult.user.role
+        },
+        // Return CSRF token to client for use in future requests
+        csrfToken: authResult.csrfToken
+      });
+
+      // Set auth cookies and return the response
+      return setAuthCookies(response, {
+        accessToken: authResult.accessToken,
+        refreshToken: authResult.refreshToken
+      }, authResult.csrfToken);
       
-      // If this failure triggered a lockout, inform the user
-      if (!failedStatus.allowed) {
-        const lockoutMinutes = Math.floor(failedStatus.lockoutRemaining / 60000);
-        const lockoutSeconds = Math.floor((failedStatus.lockoutRemaining % 60000) / 1000);
-        
-        return NextResponse.json(
-          { 
-            message: `Account locked due to too many failed attempts. Please try again in ${lockoutMinutes}m ${lockoutSeconds}s.`,
-            lockedUntil: failedStatus.lockoutEnds
-          },
-          { status: 429 }
+    } catch (error) {
+      // Handle specific authentication errors
+      if (error instanceof InvalidCredentialsError) {
+        await authRateLimit.recordFailure(req);
+        return createErrorResponse('Invalid username or password', 401);
+      }
+      
+      if (error instanceof AccountLockedError) {
+        return createErrorResponse(
+          error.message,
+          error.status
         );
       }
       
-      // Otherwise, inform the user of remaining attempts
-      return NextResponse.json(
-        { 
-          message: `Invalid credentials. ${failedStatus.attemptsRemaining} attempts remaining before account lockout.` 
-        },
-        { status: 401 }
-      );
+      if (error instanceof AuthError) {
+        return createErrorResponse(error.message, error.status);
+      }
+      
+      // Unexpected error
+      console.error('Login error:', error);
+      return createErrorResponse('Server error during login. Please try again later.', 500);
     }
-    
-    // Login successful - reset any failed attempt counters
-    resetFailedAttempts(req, username);
-
-    // Set auth cookie using server-side cookie utility
-    await setServerCookie('auth_token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24, // 24 hours in seconds
-      path: '/',
-      sameSite: 'strict',
-    });
-
-    // Return user data (without password) and token
-    return NextResponse.json({
-      user: result.user,
-      token: result.token
-    }, { status: 200 });
 
   } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json(
-      { message: 'Server error during login' },
-      { status: 500 }
-    );
+    console.error('Login route error:', error);
+    return createErrorResponse('Server error during login. Please try again later.', 500);
   }
 }

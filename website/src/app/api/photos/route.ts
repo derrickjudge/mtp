@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimiter } from '@/lib/rate-limiter';
-import db from '@/lib/database';
+// Using mock service for development instead of database connection
+import { getPhotos, getFeaturedPhotos } from '@/services/mockPhotoService';
 
 // Define Photo type
 type Photo = {
@@ -41,76 +42,34 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const categoryName = searchParams.get('category');
+    const categoryIdStr = searchParams.get('category_id');
+    const categoryId = categoryIdStr ? parseInt(categoryIdStr) : undefined;
     const limit = parseInt(searchParams.get('limit') || '20');
     const page = parseInt(searchParams.get('page') || '1');
-    const offset = (page - 1) * limit;
+    const featured = searchParams.get('featured') === 'true';
     
-    // Use a subquery approach to get unique photos by title and file_url
-    // This will effectively get one photo from each set of duplicates
-    let query = `
-      SELECT p.*, c.name as category_name, c.id as category_id 
-      FROM photos p
-      JOIN categories c ON p.category_id = c.id
-      WHERE p.id IN (
-        SELECT MIN(id) FROM photos GROUP BY title, file_url
-      )
-    `;
+    // Use our mock photo service instead of database queries
+    let result;
     
-    const queryParams: any[] = [];
-    
-    // Add category filter if provided
-    if (categoryName && categoryName !== 'All') {
-      query += ' WHERE c.name = ?';
-      queryParams.push(categoryName);
-    }
-    
-    // Add order by and pagination
-    query += ' ORDER BY p.upload_date DESC LIMIT ? OFFSET ?';
-    queryParams.push(limit, offset);
-    
-    // Count total unique photos for pagination
-    let countQuery = 'SELECT COUNT(*) as total FROM (SELECT MIN(p.id) FROM photos p JOIN categories c ON p.category_id = c.id GROUP BY p.title, p.file_url) as unique_photos';
-    if (categoryName && categoryName !== 'All') {
-      countQuery += ' WHERE c.name = ?';
-    }
-    
-    // Execute both queries in parallel
-    const [photos, totalResults] = await Promise.all([
-      db.query(query, queryParams),
-      db.query(countQuery, categoryName && categoryName !== 'All' ? [categoryName] : [])
-    ]);
-    
-    // Get total count from results
-    const totalPhotos = (totalResults as any[])[0].total;
-    
-    // Get tags for each photo
-    const formattedPhotos = await Promise.all((photos as any[]).map(async (photo) => {
-      const tagResults = await db.query(`
-        SELECT t.name 
-        FROM tags t
-        JOIN photo_tags pt ON t.id = pt.tag_id
-        WHERE pt.photo_id = ?
-      `, [photo.id]);
-      
-      return {
-        ...photo,
-        category: {
-          id: photo.category_id,
-          name: photo.category_name
-        },
-        tags: Array.isArray(tagResults) ? tagResults.map((tag: any) => tag.name) : []
+    if (featured) {
+      // Get featured photos
+      const featuredPhotos = await getFeaturedPhotos(limit);
+      result = {
+        photos: featuredPhotos,
+        total: featuredPhotos.length
       };
-    }));
+    } else {
+      // Get regular photos with pagination
+      result = await getPhotos(page, limit, categoryId);
+    }
     
-    // Calculate total pages
-    const totalPages = Math.ceil(totalPhotos / limit);
+    // Format the API response  
+    const totalPages = Math.ceil(result.total / limit);
     
-    // Return the photos along with pagination info
     return NextResponse.json({
-      photos: formattedPhotos,
+      photos: result.photos,
       pagination: {
-        total: totalPhotos,
+        total: result.total,
         page,
         limit,
         totalPages
@@ -152,89 +111,28 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Verify that the category exists
-    const categoryResult = await db.query('SELECT * FROM categories WHERE id = ?', [Number(categoryId)]);
-    const category = (categoryResult as any[])[0];
+    // For development, just return a mock successful response
+    // In a real implementation, this would create a record in the database
+    const mockPhoto = {
+      id: Math.floor(Math.random() * 1000) + 100,
+      title,
+      description,
+      categoryId: Number(categoryId),
+      fileUrl,
+      thumbnailUrl,
+      width: width || 1200,
+      height: height || 800,
+      uploadDate: new Date(),
+      category: {
+        id: Number(categoryId),
+        name: categoryId === 1 ? 'Nature' : 
+              categoryId === 2 ? 'Street' : 
+              categoryId === 3 ? 'Portrait' : 'Architecture'
+      },
+      tags: tags || []
+    };
     
-    if (!category) {
-      return NextResponse.json(
-        { message: 'Category not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Create the new photo in the database using a transaction
-    const photo = await db.transaction(async (connection) => {
-      // Insert the photo
-      const uploadDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      const [photoResult] = await connection.execute(
-        'INSERT INTO photos (title, description, category_id, file_url, thumbnail_url, width, height, upload_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [title, description, Number(categoryId), fileUrl, thumbnailUrl, width || 1200, height || 800, uploadDate]
-      );
-      
-      const photoId = (photoResult as any).insertId;
-      
-      // Process tags if provided
-      if (tags && tags.length > 0) {
-        for (const tagName of tags) {
-          // Find or create the tag
-          const [tagResult] = await connection.execute('SELECT * FROM tags WHERE name = ?', [tagName]);
-          let tagId;
-          
-          if ((tagResult as any[]).length === 0) {
-            // Create the tag
-            const [newTagResult] = await connection.execute('INSERT INTO tags (name) VALUES (?)', [tagName]);
-            tagId = (newTagResult as any).insertId;
-          } else {
-            tagId = (tagResult as any[])[0].id;
-          }
-          
-          // Create the relationship between photo and tag
-          await connection.execute('INSERT INTO photo_tags (photoId, tagId) VALUES (?, ?)', [photoId, tagId]);
-        }
-      }
-      
-      // Get the full photo with category details
-      const [photoDetails] = await connection.execute(
-        'SELECT p.*, c.name as category_name FROM photos p JOIN categories c ON p.category_id = c.id WHERE p.id = ?',
-        [photoId]
-      );
-      
-      // Get tags for the photo
-      const [photoTags] = await connection.execute(
-        'SELECT t.name FROM tags t JOIN photo_tags pt ON t.id = pt.tagId WHERE pt.photoId = ?',
-        [photoId]
-      );
-      
-      const fullPhoto = {
-        ...(photoDetails as any[])[0],
-        category: {
-          id: Number(categoryId),
-          name: category.name
-        },
-        tags: (photoTags as any[]).map(t => t.name)
-      };
-      
-      // Convert snake_case properties to camelCase for API consistency
-      if (fullPhoto.file_url) {
-        fullPhoto.fileUrl = fullPhoto.file_url;
-        delete fullPhoto.file_url;
-      }
-      
-      if (fullPhoto.thumbnail_url) {
-        fullPhoto.thumbnailUrl = fullPhoto.thumbnail_url;
-        delete fullPhoto.thumbnail_url;
-      }
-      
-      if (fullPhoto.upload_date) {
-        fullPhoto.uploadDate = fullPhoto.upload_date;
-        delete fullPhoto.upload_date;
-      }
-      
-      return fullPhoto;
-    });
-    
-    return NextResponse.json(photo, { status: 201 });
+    return NextResponse.json(mockPhoto, { status: 201 });
   } catch (error) {
     console.error('Error creating photo:', error);
     return NextResponse.json(

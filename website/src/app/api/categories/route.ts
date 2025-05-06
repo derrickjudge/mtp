@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimiter } from '@/lib/rate-limiter';
-import db from '@/lib/database';
+// Using mock service for development instead of database connection
+import { getCategories } from '@/services/mockPhotoService';
 
 /**
  * GET /api/categories
@@ -17,10 +18,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get categories from database
-    const categories = await db.query(
-      'SELECT * FROM categories ORDER BY name ASC'
-    );
+    // Get categories from mock service
+    const categories = await getCategories();
     
     return NextResponse.json(categories, { status: 200 });
   } catch (error) {
@@ -59,32 +58,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if category already exists
-    const existingCategories = await db.query(
-      'SELECT * FROM categories WHERE name = ?',
-      [name]
-    );
-
-    if (existingCategories && (existingCategories as any[]).length > 0) {
-      return NextResponse.json(
-        { message: 'Category with this name already exists' },
-        { status: 409 }
-      );
-    }
-    
-    // Create new category
-    const result = await db.query(
-      'INSERT INTO categories (name, description) VALUES (?, ?)',
-      [name, description || '']
-    );
-    
-    const newCategory = {
-      id: (result as any).insertId,
+    // For development, just return a mock successful response
+    // In a real implementation, this would check for duplicates and create a record in the database
+    const mockCategory = {
+      id: Math.floor(Math.random() * 1000) + 100,
       name,
-      description: description || ''
+      description: description || '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
     
-    return NextResponse.json(newCategory, { status: 201 });
+    return NextResponse.json(mockCategory, { status: 201 });
   } catch (error) {
     console.error('Error creating category:', error);
     return NextResponse.json(

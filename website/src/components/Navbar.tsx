@@ -30,7 +30,7 @@ const Navbar = () => {
               Portfolio
             </Link>
             <Link href="/about" className="text-gray-300 hover:text-white transition-colors">
-              About
+              About Us
             </Link>
             <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">
               Contact
@@ -104,7 +104,7 @@ const Navbar = () => {
             className="block px-3 py-2 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md"
             onClick={() => setIsMenuOpen(false)}
           >
-            About
+            About Us
           </Link>
           <Link 
             href="/contact" 
