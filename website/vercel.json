@@ -1,0 +1,15 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "installCommand": "npm install --force",
+        "buildCommand": "NODE_OPTIONS='--max-old-space-size=4096' npm run build"
+      }
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
