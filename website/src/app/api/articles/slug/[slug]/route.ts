@@ -26,7 +26,7 @@ interface RouteContext {
  * GET /api/articles/slug/[slug]
  * Get article by slug
  */
-export async function GET(req: NextRequest, context: RouteContext) {
+export async function GET(req: NextRequest, { params }: { params: Record<string, string> }) {
   try {
     // Apply rate limiting
     try {
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       );
     }
 
-    const slug = context.params.slug;
+    const slug = params.slug;
     if (!slug) {
       return NextResponse.json({ message: 'Invalid article slug' }, { status: 400 });
     }
