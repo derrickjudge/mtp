@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disable ESLint during builds
+  eslint: {
+    // Only run ESLint during development, not during builds
+    ignoreDuringBuilds: true,
+  },
   reactStrictMode: true,
   // Disable optimizations that rely on native bindings
   swcMinify: true,

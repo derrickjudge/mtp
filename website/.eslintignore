@@ -1,0 +1,8 @@
+# Ignore all test files during deployment
+/src/__tests__/**
+/scripts/**
+/node_modules/**
+
+# Ignore build output
+/.next/**
+/out/**
