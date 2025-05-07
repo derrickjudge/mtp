@@ -21,7 +21,7 @@ interface RouteContext {
  * GET /api/users/[id]
  * Get user by ID
  */
-export async function GET(req: NextRequest, context: RouteContext) {
+export async function GET(req: NextRequest, { params }: { params: Record<string, string> }) {
   try {
     // Apply rate limiting
     try {
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       );
     }
 
-    const userId = context.params.id;
+    const userId = params.id;
     const userIdNumber = parseInt(userId);
     
     if (isNaN(userIdNumber)) {
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
  * PUT /api/users/[id]
  * Update user by ID
  */
-export async function PUT(req: NextRequest, context: RouteContext) {
+export async function PUT(req: NextRequest, { params }: { params: Record<string, string> }) {
   try {
     // Apply rate limiting
     try {
@@ -72,7 +72,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       );
     }
 
-    const userId = context.params.id;
+    const userId = params.id;
     const userIdNumber = parseInt(userId);
     
     if (isNaN(userIdNumber)) {
@@ -111,7 +111,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
  * DELETE /api/users/[id]
  * Delete user by ID
  */
-export async function DELETE(req: NextRequest, context: RouteContext) {
+export async function DELETE(req: NextRequest, { params }: { params: Record<string, string> }) {
   try {
     // Apply rate limiting
     try {
@@ -123,7 +123,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       );
     }
 
-    const userId = context.params.id;
+    const userId = params.id;
     const userIdNumber = parseInt(userId);
     
     if (isNaN(userIdNumber)) {
