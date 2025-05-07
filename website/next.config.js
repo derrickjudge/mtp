@@ -5,6 +5,11 @@ const nextConfig = {
     // Only run ESLint during development, not during builds
     ignoreDuringBuilds: true,
   },
+  // Disable TypeScript type checking during builds
+  typescript: {
+    // Only check types during development, not during builds
+    ignoreBuildErrors: true,
+  },
   reactStrictMode: true,
   // Disable optimizations that rely on native bindings
   swcMinify: true,

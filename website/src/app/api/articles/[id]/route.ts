@@ -26,7 +26,7 @@ const limiter = rateLimit({
  */
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Apply rate limiting
@@ -41,7 +41,7 @@ export async function GET(
       );
     }
 
-    const id = parseInt(context.params.id);
+    const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json({ message: 'Invalid article ID' }, { status: 400 });
     }
@@ -88,7 +88,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Apply rate limiting
@@ -112,7 +112,7 @@ export async function PUT(
       );
     }
     
-    const id = parseInt(context.params.id);
+    const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json({ message: 'Invalid article ID' }, { status: 400 });
     }
@@ -161,7 +161,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Apply rate limiting
@@ -185,7 +185,7 @@ export async function DELETE(
       );
     }
     
-    const id = parseInt(context.params.id);
+    const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json({ message: 'Invalid article ID' }, { status: 400 });
     }
