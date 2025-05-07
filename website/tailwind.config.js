@@ -8,13 +8,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Your custom colors here
+        // Dark theme colors
+        'background': '#0a0a0a',
+        'foreground': '#ededed',
+      },
+      fontFamily: {
+        'sans': ['Arial', 'Helvetica', 'sans-serif'],
       },
     },
   },
   plugins: [],
-  // Explicitly disable the oxide engine for Vercel compatibility
-  future: {
-    disableOxide: true,
-  },
+  darkMode: 'class',
 };
