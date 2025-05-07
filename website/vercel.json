@@ -5,7 +5,7 @@
       "use": "@vercel/next",
       "config": {
         "installCommand": "npm install --force",
-        "buildCommand": "NODE_OPTIONS='--max-old-space-size=4096' NEXT_DISABLE_ESLINT=1 NEXT_TYPESCRIPT_IGNORE_ERRORS=1 npm run build"
+        "buildCommand": "NODE_OPTIONS='--max-old-space-size=4096' NEXT_DISABLE_ESLINT=1 NEXT_TYPESCRIPT_IGNORE_ERRORS=1 TAILWIND_MODE=build npm run build"
       }
     }
   ],
