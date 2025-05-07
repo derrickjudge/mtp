@@ -54,6 +54,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <li>
                 <Link href="/admin/settings">Settings</Link>
               </li>
+              <li>
+                <Link href="/admin/articles">Articles</Link>
+              </li>
               <li className="logout-button">
                 <Logout />
               </li>
