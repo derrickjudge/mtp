@@ -5,11 +5,11 @@ import '@testing-library/jest-dom';
 // Mock the next/image component
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: ({ src, alt }) => <img src={src} alt={alt} />,
+  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }));
 
-// Mock react-image-lightbox
-jest.mock('react-image-lightbox', () => ({
+// Mock yet-another-react-lightbox
+jest.mock('yet-another-react-lightbox', () => ({
   __esModule: true,
   default: () => <div data-testid="lightbox" />,
 }));

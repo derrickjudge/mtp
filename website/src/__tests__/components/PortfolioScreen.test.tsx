@@ -8,7 +8,7 @@ import PortfolioScreen from '../../components/PortfolioScreen';
 // Mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props) => {
+  default: (props: { src: string; alt?: string; width?: number; height?: number; [key: string]: any }) => {
     return (
       <img 
         src={props.src} 
@@ -20,10 +20,10 @@ jest.mock('next/image', () => ({
   },
 }));
 
-// Mock react-image-lightbox
-jest.mock('react-image-lightbox', () => ({
+// Mock yet-another-react-lightbox
+jest.mock('yet-another-react-lightbox', () => ({
   __esModule: true,
-  default: (props) => {
+  default: (props: { onCloseRequest?: () => void; onMoveNextRequest?: () => void; onMovePrevRequest?: () => void; mainSrc?: string; [key: string]: any }) => {
     return (
       <div data-testid="lightbox-mock">
         <button onClick={props.onCloseRequest} data-testid="close-button">Close</button>

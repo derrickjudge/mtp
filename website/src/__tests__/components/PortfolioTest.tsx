@@ -9,8 +9,8 @@ jest.mock('next/image', () => {
   };
 });
 
-// Mock the react-image-lightbox component
-jest.mock('react-image-lightbox', () => {
+// Mock the yet-another-react-lightbox component
+jest.mock('yet-another-react-lightbox', () => {
   return function MockLightbox() {
     return <div data-testid="mock-lightbox">Lightbox</div>;
   };

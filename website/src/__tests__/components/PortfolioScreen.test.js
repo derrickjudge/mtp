@@ -2,8 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import PortfolioScreen from '../../components/PortfolioScreen';
 
-// Mock react-image-lightbox
-jest.mock('react-image-lightbox', () => {
+// Mock yet-another-react-lightbox
+jest.mock('yet-another-react-lightbox', () => {
   return function MockLightbox(props) {
     return (
       <div data-testid="lightbox-mock">

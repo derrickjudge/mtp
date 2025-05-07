@@ -32,7 +32,7 @@ jest.mock('../../app/portfolio/page', () => {
   };
 });
 
-jest.mock('react-image-lightbox', () => {
+jest.mock('yet-another-react-lightbox', () => {
   return function MockLightbox() {
     return <div data-testid="lightbox-mock" />;
   };
