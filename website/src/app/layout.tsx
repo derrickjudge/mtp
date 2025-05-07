@@ -18,6 +18,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Ensure Tailwind CSS loads in production */}
+        <script src="/css/inject-tailwind.js" async />
+      </head>
       <body className="font-sans antialiased bg-black text-white min-h-screen flex flex-col">
         <ThemeProvider>
           <Navbar />

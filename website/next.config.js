@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   // Disable ESLint during builds
   eslint: {
@@ -19,22 +21,30 @@ const nextConfig = {
   },
   
   // Configure webpack to handle CSS processing properly
-  webpack: (config, { isServer }) => {
-    // Fix for CSS processing issues in Vercel
+  webpack: (config, { isServer, dev }) => {
+    // Enhanced CSS processing for production
     if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        path: false,
-      };
+      // Find the CSS rule
+      const cssRule = config.module.rules.find(
+        rule => rule.test?.toString().includes('css')
+      );
       
-      // Force usage of babel for CSS processing
-      const oneOfRule = config.module.rules.find((rule) => typeof rule.oneOf === 'object');
-      if (oneOfRule) {
-        const cssModuleRules = oneOfRule.oneOf.filter((rule) => 
-          rule.test && rule.test.toString().includes('modules'))
+      if (cssRule && cssRule.use) {
+        // Make sure PostCSS loader is properly configured
+        const postCssLoaderIndex = cssRule.use.findIndex(
+          loader => typeof loader === 'object' && loader.loader === 'postcss-loader'
+        );
         
-        for (const rule of cssModuleRules) {
+        if (postCssLoaderIndex === -1) {
+          cssRule.use.push({
+            loader: 'postcss-loader',
+            options: {
+              sourceMap: dev,
+              postcssOptions: {
+                config: path.resolve('./postcss.config.js'),
+              },
+            },
+          });
           if (Array.isArray(rule.use)) {
             rule.use.forEach((loader) => {
               if (typeof loader === 'object' && loader.loader && loader.loader.includes('postcss-loader')) {
@@ -52,6 +62,13 @@ const nextConfig = {
           }
         }
       }
+
+      // Additional fallbacks for Vercel
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+      };
     }
     
     return config;
