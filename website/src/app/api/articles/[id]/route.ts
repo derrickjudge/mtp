@@ -20,23 +20,19 @@ const limiter = rateLimit({
   limit: 20, // 20 requests per minute
 });
 
-// Route context interface
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
-
 /**
  * GET /api/articles/[id]
  * Get article by ID
  */
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
     // Apply rate limiting
     try {
       // Get client identifier from headers
-      const clientId = req.headers.get('x-forwarded-for') || 'anonymous';
+      const clientId = request.headers.get('x-forwarded-for') || 'anonymous';
       await limiter.check(clientId);
     } catch (error) {
       return NextResponse.json(
@@ -45,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       );
     }
 
-    const id = parseInt(params.id);
+    const id = parseInt(context.params.id);
     if (isNaN(id)) {
       return NextResponse.json({ message: 'Invalid article ID' }, { status: 400 });
     }
@@ -66,7 +62,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     
     // Check if article is published or if user has permission to view unpublished articles
     if (!article.published) {
-      const authCheck = await requireRole(req, 'user');
+      const authCheck = await requireRole(request, 'user');
       if (!authCheck) {
         return NextResponse.json(
           { message: 'Article not found' },
@@ -90,12 +86,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  * Update article by ID
  * Requires authentication and admin/editor role
  */
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
     // Apply rate limiting
     try {
       // Get client identifier from headers
-      const clientId = req.headers.get('x-forwarded-for') || 'anonymous';
+      const clientId = request.headers.get('x-forwarded-for') || 'anonymous';
       await limiter.check(clientId); // Lower limit for PUT operations
     } catch (error) {
       return NextResponse.json(
@@ -105,7 +104,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
     
     // Require authentication (admin or editor role)
-    const authCheck = await requireRole(req, 'user');
+    const authCheck = await requireRole(request, 'user');
     if (!authCheck) {
       return NextResponse.json(
         { message: 'Unauthorized' },
@@ -113,7 +112,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       );
     }
     
-    const id = parseInt(params.id);
+    const id = parseInt(context.params.id);
     if (isNaN(id)) {
       return NextResponse.json({ message: 'Invalid article ID' }, { status: 400 });
     }
@@ -123,7 +122,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // Parse and sanitize request body
     let articleData;
     try {
-      const rawData = await req.json();
+      const rawData = await request.json();
       articleData = sanitizeObject(rawData);
     } catch (error) {
       return NextResponse.json(
@@ -160,12 +159,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
  * Delete article by ID
  * Requires authentication and admin role
  */
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
     // Apply rate limiting
     try {
       // Get client identifier from headers
-      const clientId = req.headers.get('x-forwarded-for') || 'anonymous';
+      const clientId = request.headers.get('x-forwarded-for') || 'anonymous';
       await limiter.check(clientId); // Strict limit for DELETE operations
     } catch (error) {
       return NextResponse.json(
@@ -175,7 +177,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
     
     // Require authentication with admin role
-    const authCheck = await requireRole(req, 'admin');
+    const authCheck = await requireRole(request, 'admin');
     if (!authCheck) {
       return NextResponse.json(
         { message: 'Unauthorized - Admin privileges required' },
@@ -183,7 +185,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       );
     }
     
-    const id = parseInt(params.id);
+    const id = parseInt(context.params.id);
     if (isNaN(id)) {
       return NextResponse.json({ message: 'Invalid article ID' }, { status: 400 });
     }
