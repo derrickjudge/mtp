@@ -5,7 +5,7 @@ module.exports = {
   },
   // Special handling for ESM modules - these packages will be transformed by Babel
   transformIgnorePatterns: [
-    '/node_modules/(?!(@next|next|react-image-lightbox|uuid|jsonwebtoken)/)',
+    '/node_modules/(?!(@next|next|yet-another-react-lightbox|uuid|jsonwebtoken)/)',
   ],
   // Ensure test environment has appropriate conditions for ESM
   testEnvironment: 'jsdom',

@@ -5,7 +5,7 @@ import '@testing-library/jest-dom';
 
 // Ignore TypeScript errors in the test mocks
 // @ts-ignore
-jest.mock('react-image-lightbox', () => {
+jest.mock('yet-another-react-lightbox', () => {
   return function DummyLightbox(props: any) {
     return (
       <div data-testid="lightbox-mock">

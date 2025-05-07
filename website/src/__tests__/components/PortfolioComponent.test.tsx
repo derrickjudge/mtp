@@ -16,8 +16,8 @@ jest.mock('next/image', () => ({
   },
 }));
 
-// Mock react-image-lightbox
-jest.mock('react-image-lightbox', () => ({
+// Mock yet-another-react-lightbox
+jest.mock('yet-another-react-lightbox', () => ({
   __esModule: true,
   default: (props: any) => {
     return (

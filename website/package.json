@@ -25,6 +25,8 @@
     "admin:force-create": "node scripts/force-create-admin.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.804.0",
+    "@aws-sdk/s3-request-presigner": "^3.804.0",
     "@prisma/client": "^6.7.0",
     "aws-sdk": "^2.1692.0",
     "bcryptjs": "^3.0.2",
@@ -37,8 +39,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
-    "yet-another-react-lightbox": "^3.17.0",
-    "react-responsive-masonry": "^2.2.0"
+    "react-responsive-masonry": "^2.2.0",
+    "yet-another-react-lightbox": "^3.17.0"
   },
   "devDependencies": {
     "@babel/core": "^7.26.10",
