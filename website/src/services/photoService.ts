@@ -120,6 +120,7 @@ const MOCK_PHOTOS: any[] = Array.from({ length: 20 }, (_, i) => ({
   title: `Sample Photo ${i + 1}`,
   description: `This is a description for sample photo ${i + 1}. This text provides details about the photo.`,
   image_url: `https://picsum.photos/id/${(i % 30) + 10}/800/600`,
+  imageUrl: `https://picsum.photos/id/${(i % 30) + 10}/800/600`, // Adding imageUrl directly
   thumbnail_url: `https://picsum.photos/id/${(i % 30) + 10}/400/300`,
   category_id: Math.floor(i / 5) + 1,
   category_name: i < 5 ? 'Nature' : i < 10 ? 'Street' : i < 15 ? 'Portrait' : 'Architecture',
@@ -140,84 +141,82 @@ export async function getPhotos(
     // Build query params
     const params = new URLSearchParams();
     
-    // Map category name to category_id for the mock API
     if (category !== 'All') {
-      // For our mock API we now use category_id instead of category name
-      const categoryId = 
-        category.toLowerCase() === 'nature' ? 1 :
-        category.toLowerCase() === 'street' ? 2 :
-        category.toLowerCase() === 'portrait' ? 3 :
-        category.toLowerCase() === 'architecture' ? 4 : null;
-      
-      if (categoryId) {
-        params.append('category_id', categoryId.toString());
-      }
+      params.append('category', category);
     }
     
     params.append('page', page.toString());
     params.append('limit', limit.toString());
     
-    const response = await fetch(`/api/photos?${params.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // Make API call
+    const response = await fetch(`/api/photos?${params.toString()}`);
     
     if (!response.ok) {
       console.warn(`API error ${response.status}, using mock photos`);
-      // Return mock photos as fallback
-      const mockResult = handleMockPhotos(category, page, limit);
-      return mockResult;
+      return handleMockPhotos(category, page, limit);
     }
     
     const data = await response.json();
     
-    // Make sure we have photos array, or use mock data
-    if (!data.photos || !Array.isArray(data.photos)) {
-      console.warn('Invalid photos data format, using mock photos');
+    // If API returns empty data or unexpected format, use mock
+    if (!data || !data.photos || !Array.isArray(data.photos)) {
+      console.warn('API returned invalid data format, using mocks');
       return handleMockPhotos(category, page, limit);
     }
     
-    // Transform the data to match the expected Photo format
-    const transformedPhotos = data.photos.map((photo: ApiPhoto) => {
-      // Get file URL (handle both camelCase and snake_case)
-      const fileUrl = photo.fileUrl || photo.file_url || photo.image_url || '';
+    // Process returned photos to ensure they match the expected format
+    const processedPhotos = data.photos.map((photo: ApiPhoto) => {
+      // Extract category
+      let categoryValue: string | { id: number; name: string };
       
-      // Extract category name
-      let categoryName = 'Uncategorized';
-      if (photo.category && typeof photo.category === 'object' && photo.category.name) {
-        categoryName = photo.category.name;
+      if (photo.category && typeof photo.category === 'object') {
+        categoryValue = photo.category;
       } else if (photo.category_name) {
-        categoryName = photo.category_name;
+        categoryValue = {
+          id: photo.category_id || 0,
+          name: photo.category_name
+        };
+      } else {
+        categoryValue = 'Uncategorized';
       }
       
+      // Get image URL from various possible fields
+      const imageUrl = photo.imageUrl || photo.image_url || photo.fileUrl || photo.file_url || '';
+      
       return {
-        id: String(photo.id), // Ensure consistent string ID format
-        title: photo.title,
+        id: String(photo.id),
+        title: photo.title || `Photo ${photo.id}`,
         description: photo.description || '',
-        category: categoryName,
-        imageUrl: fileUrl,
+        category: categoryValue,
+        imageUrl,
         width: photo.width || 1200,
-        height: photo.height || 800
+        height: photo.height || 800,
+        tags: photo.tags || []
       };
     });
+    
+    // If the API returned no photos, use mock data
+    if (processedPhotos.length === 0) {
+      console.warn('API returned no photos, using mock data');
+      return handleMockPhotos(category, page, limit);
+    }
     
     return {
       success: true,
       data: {
-        photos: transformedPhotos,
+        photos: processedPhotos,
         pagination: data.pagination || {
-          total: data.total || transformedPhotos.length,
-          page: page,
-          limit: limit,
-          pages: Math.ceil((data.total || transformedPhotos.length) / limit)
+          total: data.total || processedPhotos.length,
+          page: data.page || page,
+          limit: data.limit || limit,
+          pages: data.pages || Math.ceil((data.total || processedPhotos.length) / limit)
         }
       }
     };
+    
   } catch (error: any) {
     console.error('Error fetching photos:', error);
-    // Return mock photos as fallback
+    // Use mock photos as fallback
     return handleMockPhotos(category, page, limit);
   }
 }
@@ -251,7 +250,7 @@ function handleMockPhotos(category: string, page: number, limit: number): ApiRes
     // Add thumbnail and file URLs needed by admin page
     thumbnail_url: photo.thumbnail_url || photo.image_url,
     file_url: photo.image_url, 
-    imageUrl: photo.image_url,
+    imageUrl: photo.imageUrl || photo.image_url, // Use imageUrl if available, fallback to image_url
     width: photo.width || 800,
     height: photo.height || 600,
     tags: photo.tags || []
@@ -339,6 +338,7 @@ function getMockPhotoById(id: string): ApiResponse<Photo> {
       title: `Photo ${photoId}`,
       description: `This is a generated photo with ID ${photoId}`,
       image_url: `https://picsum.photos/id/${(photoId % 30) + 10}/800/600`,
+      imageUrl: `https://picsum.photos/id/${(photoId % 30) + 10}/800/600`,
       category_name: 'Generated',
       width: 800,
       height: 600

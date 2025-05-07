@@ -29,6 +29,9 @@ const Navbar = () => {
             <Link href="/portfolio" className="text-gray-300 hover:text-white transition-colors">
               Portfolio
             </Link>
+            <Link href="/articles" className="text-gray-300 hover:text-white transition-colors">
+              Articles
+            </Link>
             <Link href="/about" className="text-gray-300 hover:text-white transition-colors">
               About Us
             </Link>
@@ -98,6 +101,13 @@ const Navbar = () => {
             onClick={() => setIsMenuOpen(false)}
           >
             Portfolio
+          </Link>
+          <Link 
+            href="/articles" 
+            className="block px-3 py-2 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Articles
           </Link>
           <Link 
             href="/about" 

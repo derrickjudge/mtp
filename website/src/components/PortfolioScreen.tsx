@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import Lightbox from 'react-image-lightbox';
-import 'react-image-lightbox/style.css';
+import Lightbox from 'yet-another-react-lightbox';
+import type { SlideImage } from 'yet-another-react-lightbox';
+import 'yet-another-react-lightbox/styles.css';
 import { getCategories } from '../services/photoService';
 
 // Type definition for photo data
@@ -11,7 +12,7 @@ export interface Photo {
   id: string;
   title: string;
   description?: string;
-  category: string;
+  category: string | { id: number; name: string };
   imageUrl: string;
   width?: number;
   height?: number;
@@ -23,6 +24,8 @@ interface PortfolioScreenProps {
 }
 
 const PortfolioScreen: React.FC<PortfolioScreenProps> = ({ photos, initialCategories }) => {
+  // Debug incoming props
+  console.log('PortfolioScreen received photos:', photos);
   const [activeCategory, setActiveCategory] = useState('All');
   const [filteredPhotos, setFilteredPhotos] = useState<Photo[]>(photos);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -61,7 +64,15 @@ const PortfolioScreen: React.FC<PortfolioScreenProps> = ({ photos, initialCatego
     if (activeCategory === 'All') {
       setFilteredPhotos(photos);
     } else {
-      setFilteredPhotos(photos.filter(photo => photo.category === activeCategory));
+      setFilteredPhotos(photos.filter(photo => {
+        // Handle both string and object category formats
+        if (typeof photo.category === 'string') {
+          return photo.category === activeCategory;
+        } else if (photo.category && typeof photo.category === 'object') {
+          return photo.category.name === activeCategory;
+        }
+        return false;
+      }));
     }
   }, [activeCategory, photos]);
   
@@ -96,12 +107,13 @@ const PortfolioScreen: React.FC<PortfolioScreenProps> = ({ photos, initialCatego
         )}
       </div>
       
-      {/* Photo Grid */}
+      {/* Photo Grid - Responsive Masonry Layout */}
+      {/* Simple grid for photos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredPhotos.map((photo, index) => (
           <div 
             key={photo.id} 
-            className="relative overflow-hidden rounded-lg shadow-lg transition-transform hover:scale-[1.02] cursor-pointer"
+            className="relative overflow-hidden rounded-lg shadow-lg transition-transform hover:scale-[1.02] cursor-pointer mb-4"
             onClick={() => {
               setPhotoIndex(index);
               setLightboxOpen(true);
@@ -109,14 +121,10 @@ const PortfolioScreen: React.FC<PortfolioScreenProps> = ({ photos, initialCatego
             data-testid="photo-card"
           >
             <div className="aspect-[4/3] relative bg-gray-800 overflow-hidden">
-              <Image
+              <img
                 src={photo.imageUrl}
                 alt={photo.title}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="object-cover"
-                priority={index < 6} // Only prioritize loading for the first 6 images
-                unoptimized={true}
+                className="w-full h-full object-cover"
                 onError={(e) => {
                   // Fallback to a default image on error
                   const target = e.target as HTMLImageElement;
@@ -126,12 +134,15 @@ const PortfolioScreen: React.FC<PortfolioScreenProps> = ({ photos, initialCatego
             </div>
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
               <h3 className="text-lg font-semibold text-white">{photo.title}</h3>
-              <p className="text-sm text-gray-300">{photo.category}</p>
+              <p className="text-sm text-gray-300">
+                {typeof photo.category === 'string' 
+                  ? photo.category 
+                  : photo.category?.name || 'Uncategorized'}
+              </p>
             </div>
           </div>
         ))}
       </div>
-      
       {/* No results message */}
       {filteredPhotos.length === 0 && (
         <div className="text-center py-12">
@@ -142,18 +153,19 @@ const PortfolioScreen: React.FC<PortfolioScreenProps> = ({ photos, initialCatego
       {/* Lightbox */}
       {lightboxOpen && filteredPhotos.length > 0 && (
         <Lightbox
-          mainSrc={filteredPhotos[photoIndex].imageUrl}
-          nextSrc={filteredPhotos[(photoIndex + 1) % filteredPhotos.length].imageUrl}
-          prevSrc={filteredPhotos[(photoIndex + filteredPhotos.length - 1) % filteredPhotos.length].imageUrl}
-          onCloseRequest={() => setLightboxOpen(false)}
-          onMovePrevRequest={() => 
-            setPhotoIndex((photoIndex + filteredPhotos.length - 1) % filteredPhotos.length)
-          }
-          onMoveNextRequest={() => 
-            setPhotoIndex((photoIndex + 1) % filteredPhotos.length)
-          }
-          imageTitle={filteredPhotos[photoIndex].title}
-          imageCaption={filteredPhotos[photoIndex].description}
+          open={lightboxOpen}
+          close={() => setLightboxOpen(false)}
+          index={photoIndex}
+          slides={filteredPhotos.map(photo => ({
+            src: photo.imageUrl,
+            alt: photo.title,
+            title: photo.title,
+            description: photo.description
+          }))}
+          controller={{ closeOnBackdropClick: true }}
+          on={{
+            view: ({ index }: { index: number }) => setPhotoIndex(index),
+          }}
         />
       )}
     </div>

@@ -1,0 +1,125 @@
+/* Global Article Styles */
+
+.articlePage {
+  max-width: 100%;
+  padding: 2rem 0;
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #000;
+  color: #e0e0e0;
+}
+
+.articleContainer {
+  width: 90%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2.5rem;
+  background-color: #111;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.articleTitle {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 1.25rem;
+  line-height: 1.2;
+  color: #fff;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.articleMeta {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  font-size: 0.95rem;
+  color: #aaa;
+  margin-bottom: 1.5rem;
+}
+
+.featuredImage {
+  margin: 1.5rem 0 2.5rem;
+  text-align: center;
+  max-height: 400px;
+  overflow: hidden;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.featuredImage img {
+  max-width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.articleContent {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 2.5rem;
+}
+
+.articleContent p {
+  margin-bottom: 1.5rem;
+}
+
+.articleContent h2 {
+  font-size: 1.8rem;
+  margin: 2.5rem 0 1rem;
+  color: #fff;
+}
+
+.articleContent h3 {
+  font-size: 1.5rem;
+  margin: 2rem 0 1rem;
+  color: #fff;
+}
+
+.articleContent a {
+  color: #4d9fff;
+  text-decoration: none;
+}
+
+.relatedArticles {
+  width: 90%;
+  max-width: 1000px;
+  margin: 3rem auto;
+  padding: 0 2rem;
+}
+
+.relatedGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .articleTitle {
+    font-size: 2rem;
+  }
+  
+  .articleContainer {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .articleTitle {
+    font-size: 1.7rem;
+  }
+  
+  .articleContainer {
+    padding: 1rem;
+  }
+  
+  .articleContent {
+    font-size: 1rem;
+  }
+}
