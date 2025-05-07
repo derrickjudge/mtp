@@ -31,11 +31,13 @@ interface RouteContext {
  * GET /api/articles/[id]
  * Get article by ID
  */
-export async function GET(req: NextRequest, context: RouteContext) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Apply rate limiting
     try {
-      await limiter.check(req);
+      // Get client identifier from headers
+      const clientId = req.headers.get('x-forwarded-for') || 'anonymous';
+      await limiter.check(clientId);
     } catch (error) {
       return NextResponse.json(
         { message: 'Rate limit exceeded, please try again later' },
@@ -43,7 +45,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       );
     }
 
-    const id = parseInt(context.params.id);
+    const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json({ message: 'Invalid article ID' }, { status: 400 });
     }
@@ -64,7 +66,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     
     // Check if article is published or if user has permission to view unpublished articles
     if (!article.published) {
-      const authCheck = await requireRole(req, 'user', false);
+      const authCheck = await requireRole(req, 'user');
       if (!authCheck) {
         return NextResponse.json(
           { message: 'Article not found' },
@@ -88,11 +90,13 @@ export async function GET(req: NextRequest, context: RouteContext) {
  * Update article by ID
  * Requires authentication and admin/editor role
  */
-export async function PUT(req: NextRequest, context: RouteContext) {
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Apply rate limiting
     try {
-      await limiter.check(req, 10); // Lower limit for PUT operations
+      // Get client identifier from headers
+      const clientId = req.headers.get('x-forwarded-for') || 'anonymous';
+      await limiter.check(clientId); // Lower limit for PUT operations
     } catch (error) {
       return NextResponse.json(
         { message: 'Rate limit exceeded, please try again later' },
@@ -109,7 +113,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       );
     }
     
-    const id = parseInt(context.params.id);
+    const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json({ message: 'Invalid article ID' }, { status: 400 });
     }
@@ -156,11 +160,13 @@ export async function PUT(req: NextRequest, context: RouteContext) {
  * Delete article by ID
  * Requires authentication and admin role
  */
-export async function DELETE(req: NextRequest, context: RouteContext) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Apply rate limiting
     try {
-      await limiter.check(req, 5); // Strict limit for DELETE operations
+      // Get client identifier from headers
+      const clientId = req.headers.get('x-forwarded-for') || 'anonymous';
+      await limiter.check(clientId); // Strict limit for DELETE operations
     } catch (error) {
       return NextResponse.json(
         { message: 'Rate limit exceeded, please try again later' },
@@ -177,7 +183,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       );
     }
     
-    const id = parseInt(context.params.id);
+    const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json({ message: 'Invalid article ID' }, { status: 400 });
     }

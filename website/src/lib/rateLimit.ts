@@ -69,24 +69,31 @@ export function rateLimit(options: RateLimitOptions) {
   });
 
   return {
-    check: (request: NextRequest) => {
-      // Get client IP address from headers or connection info
-    let ip: string;
-    try {
-      const forwardedFor = request.headers.get('x-forwarded-for');
-      const realIp = request.headers.get('x-real-ip');
-      
-      if (forwardedFor) {
-        ip = forwardedFor.split(',')[0].trim();
-      } else if (realIp) {
-        ip = realIp.trim();
-      } else {
-        ip = '127.0.0.1';
+    check: (request: NextRequest | string) => {
+      // Get client identifier - either string ID or extract from request
+    let token: string;
+    
+    if (typeof request === 'string') {
+      // If a string ID was passed directly
+      token = request;
+    } else {
+      // Extract IP from NextRequest
+      try {
+        const forwardedFor = request.headers.get('x-forwarded-for') || '';
+        const realIp = request.headers.get('x-real-ip') || '';
+        
+        if (forwardedFor && forwardedFor.length > 0) {
+          token = forwardedFor.split(',')[0].trim();
+        } else if (realIp && realIp.length > 0) {
+          token = realIp.trim();
+        } else {
+          token = '127.0.0.1';
+        }
+      } catch (e) {
+        token = '127.0.0.1';
       }
-    } catch (e) {
-      ip = '127.0.0.1';
     }
-      const token = ip;
+      // Token is already set above
       
       const tokenCount = (tokenCache.get(token) as number[]) || [0];
       
