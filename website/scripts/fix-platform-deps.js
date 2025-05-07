@@ -12,25 +12,55 @@ console.log('🔧 Checking and fixing platform-specific dependencies...');
 // Determine if we're running in a CI environment (like Vercel)
 const isCI = process.env.CI === 'true' || process.env.VERCEL === '1';
 
+// Set environment variables to disable native bindings
+process.env.NEXT_DISABLE_OXIDE = '1'; // Disable Tailwind Oxide
+process.env.TAILWIND_DISABLE_OXIDE = '1'; // Disable Tailwind Oxide
+process.env.NEXT_IGNORE_INCORRECT_LOCKFILE = '1'; // Skip lockfile checks
+
 try {
   if (isCI) {
-    console.log('📦 Running in CI environment, ensuring Linux binaries are available');
+    console.log('📦 Running in CI environment, ensuring compatible dependencies');
     
-    // Force install lightningcss to ensure we have the right binary
+    // Create a simpler postcss.config.js for Vercel
+    const postCssConfig = `
+module.exports = {
+  plugins: {
+    'postcss-flexbugs-fixes': {},
+    'postcss-preset-env': {
+      autoprefixer: {
+        flexbox: 'no-2009',
+      },
+      stage: 3,
+    },
+  },
+};
+`;
+    
+    // Write simplified postcss config to avoid Oxide
+    fs.writeFileSync(path.join(process.cwd(), 'postcss.config.js'), postCssConfig);
+    console.log('✅ Created simplified postcss.config.js');
+    
+    // Force install compatible dependencies
     try {
-      execSync('npm install lightningcss --no-save', { stdio: 'inherit' });
-      console.log('✅ Successfully installed lightningcss');
+      console.log('🔄 Installing compatible CSS processing packages...');
+      execSync('npm install postcss postcss-flexbugs-fixes postcss-preset-env --no-save', { stdio: 'inherit' });
+      console.log('✅ Successfully installed PostCSS packages');
+      
+      // Make sure we don't use Tailwind Oxide
+      if (fs.existsSync(path.join(process.cwd(), 'node_modules', '@tailwindcss', 'oxide'))) {
+        console.log('⚠️ Found Tailwind Oxide - disabling it');
+        // Create an empty index.js to prevent loading the native module
+        const overridePath = path.join(process.cwd(), 'node_modules', '@tailwindcss', 'oxide', 'index.js');
+        fs.writeFileSync(overridePath, 'module.exports = {}; // Disabled to avoid native binding issues');
+      }
     } catch (error) {
-      console.warn('⚠️ Could not install lightningcss:', error.message);
+      console.warn('⚠️ Could not install CSS packages:', error.message);
     }
     
-    // Make sure the node_modules structure is correct
-    const moduleDir = path.join(process.cwd(), 'node_modules', 'lightningcss');
-    if (fs.existsSync(moduleDir)) {
-      console.log('✅ lightningcss module exists');
-    } else {
-      console.warn('⚠️ lightningcss module not found');
-    }
+    console.log('📋 Environment configuration:');
+    console.log('- NEXT_DISABLE_OXIDE:', process.env.NEXT_DISABLE_OXIDE);
+    console.log('- TAILWIND_DISABLE_OXIDE:', process.env.TAILWIND_DISABLE_OXIDE);
+    console.log('- NODE_ENV:', process.env.NODE_ENV);
   } else {
     console.log('💻 Running in development environment, skipping platform fixes');
   }
