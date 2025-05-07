@@ -11,11 +11,12 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: true,
-  // Disable optimizations that rely on native bindings
-  swcMinify: true,
+  // Use standard minification
   transpilePackages: ['lightningcss', '@tailwindcss/oxide', 'yet-another-react-lightbox'],
-  // Skip external CSS file loading for now to avoid Oxide issues
-  optimizeFonts: false,
+  // Configure image domains
+  images: {
+    domains: ['picsum.photos', 'source.unsplash.com', 'images.unsplash.com'],
+  },
   
   // Configure webpack to handle CSS processing properly
   webpack: (config, { isServer }) => {
