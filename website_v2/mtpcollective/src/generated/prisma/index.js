@@ -225,12 +225,11 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
-  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
         "fromEnvVar": "POSTGRES_PRISMA_URL",
-        "value": null
+        "value": "postgres://postgres.denljmcgyghtpcygsocd:PIFjg7bVXaacfTs5@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x"
       }
     }
   },
