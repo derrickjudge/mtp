@@ -1,11 +1,11 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const config = {
+  serverExternalPackages: ['@prisma/client', 'bcrypt'],
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'images.unsplash.com',
-        pathname: '/**',
+        hostname: '**',
       },
     ],
     formats: ['image/avif', 'image/webp'],
@@ -14,4 +14,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default config;
