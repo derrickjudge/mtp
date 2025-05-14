@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import HomePage from '@/app/page';
+import { ImageProps } from 'next/image';
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -12,7 +13,7 @@ jest.mock('next/navigation', () => ({
 // Mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props: any) => {
+  default: (props: ImageProps) => {
     // Convert boolean attributes to strings
     const convertedProps = Object.entries(props).reduce((acc, [key, value]) => {
       if (typeof value === 'boolean') {
@@ -21,10 +22,10 @@ jest.mock('next/image', () => ({
         acc[key] = value;
       }
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, string>);
 
     // eslint-disable-next-line @next/next/no-img-element
-    return <img {...convertedProps} />;
+    return <img {...convertedProps} alt={props.alt || ''} />;
   },
 }));
 
