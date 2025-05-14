@@ -76,7 +76,8 @@ describe('HomePage', () => {
 
     // Check hero section
     const heroSection = mainContainer.querySelector('section:first-child');
-    expect(heroSection).toHaveClass('relative', 'h-[80vh]', 'w-full');
+    expect(heroSection).toHaveClass('relative', 'w-full');
+    expect(heroSection).toHaveStyle({ height: '80vh' });
 
     // Check featured photos section
     const featuredSection = mainContainer.querySelector('section:nth-child(2)');

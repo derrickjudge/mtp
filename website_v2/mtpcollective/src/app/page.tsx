@@ -5,7 +5,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-black text-white" role="main">
       {/* Hero Section */}
-      <section className="relative h-[80vh] w-full">
+      <section className="relative w-full" style={{ height: '80vh' }}>
         <div className="absolute inset-0">
           <Image
             src={imageUrls.hero}
@@ -13,7 +13,7 @@ export default function HomePage() {
             fill
             priority
             sizes="100vw"
-            className="object-cover brightness-75"
+            className="brightness-75"
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/30 flex items-center justify-center">
@@ -36,15 +36,17 @@ export default function HomePage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {Object.entries(imageUrls.featured).map(([key, url]) => (
-              <div key={key} className="aspect-[4/3] relative group">
-                <Image
-                  src={url}
-                  alt={`Featured photo ${key}`}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover rounded-lg transition-transform duration-500 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg" />
+              <div key={key} className="relative w-full" style={{ height: '400px' }}>
+                <div className="absolute inset-0 group overflow-hidden rounded-lg">
+                  <Image
+                    src={url}
+                    alt={`Featured photo ${key}`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </div>
               </div>
             ))}
           </div>
@@ -59,18 +61,20 @@ export default function HomePage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {Object.entries(imageUrls.specialties).map(([key, url]) => (
-              <div key={key} className="aspect-[4/3] relative group">
-                <Image
-                  src={url}
-                  alt={`${key} photography`}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover rounded-lg transition-transform duration-500 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end justify-center p-8">
-                  <h3 className="text-2xl font-bold text-white capitalize transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                    {key}
-                  </h3>
+              <div key={key} className="relative w-full" style={{ height: '400px' }}>
+                <div className="absolute inset-0 group overflow-hidden rounded-lg">
+                  <Image
+                    src={url}
+                    alt={`${key} photography`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end justify-center p-8">
+                    <h3 className="text-2xl font-bold text-white capitalize transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                      {key}
+                    </h3>
+                  </div>
                 </div>
               </div>
             ))}
