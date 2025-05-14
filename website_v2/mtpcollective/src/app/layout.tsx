@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/layout/Navigation";
 import { AuthProvider } from "@/context/AuthContext";
+import Link from 'next/link';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -43,24 +44,24 @@ export default function RootLayout({
                     <h3 className="text-white text-lg font-semibold mb-4">Quick Links</h3>
                     <ul className="space-y-2">
                       <li>
-                        <a href="/" className="text-gray-400 hover:text-white transition-colors">
+                        <Link href="/" className="text-gray-400 hover:text-white transition-colors">
                           Home
-                        </a>
+                        </Link>
                       </li>
                       <li>
-                        <a href="/portfolio" className="text-gray-400 hover:text-white transition-colors">
+                        <Link href="/portfolio" className="text-gray-400 hover:text-white transition-colors">
                           Portfolio
-                        </a>
+                        </Link>
                       </li>
                       <li>
-                        <a href="/about" className="text-gray-400 hover:text-white transition-colors">
+                        <Link href="/about" className="text-gray-400 hover:text-white transition-colors">
                           About
-                        </a>
+                        </Link>
                       </li>
                       <li>
-                        <a href="/contact" className="text-gray-400 hover:text-white transition-colors">
+                        <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
                           Contact
-                        </a>
+                        </Link>
                       </li>
                     </ul>
                   </div>

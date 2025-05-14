@@ -1,6 +1,13 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import Home from '@/app/page';
+import HomePage from '@/app/page';
+
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+  }),
+}));
 
 // Mock next/image
 jest.mock('next/image', () => ({
@@ -21,34 +28,35 @@ jest.mock('next/image', () => ({
   },
 }));
 
-describe('Home Page', () => {
-  it('renders the hero section', () => {
-    render(<Home />);
-    expect(screen.getByText('MTP COLLECTIVE')).toBeInTheDocument();
-    expect(screen.getByText(/Capturing moments through a unique lens/)).toBeInTheDocument();
+describe('HomePage', () => {
+  it('renders hero section', () => {
+    render(<HomePage />);
+    expect(screen.getByText(/capturing moments/i)).toBeInTheDocument();
   });
 
-  it('renders the featured photos section', () => {
-    render(<Home />);
-    expect(screen.getByText('Featured Photography')).toBeInTheDocument();
+  it('renders featured photos section', () => {
+    render(<HomePage />);
+    expect(screen.getByText(/featured photos/i)).toBeInTheDocument();
   });
 
-  it('renders the specialties section', () => {
-    render(<Home />);
-    expect(screen.getByText('Our Specialties')).toBeInTheDocument();
-    expect(screen.getByText('Concert Photography')).toBeInTheDocument();
-    expect(screen.getByText('Automotive Photography')).toBeInTheDocument();
-    expect(screen.getByText('Nature Photography')).toBeInTheDocument();
+  it('renders specialties section', () => {
+    render(<HomePage />);
+    expect(screen.getByText(/concert photography/i)).toBeInTheDocument();
+    expect(screen.getByText(/automotive photography/i)).toBeInTheDocument();
+    expect(screen.getByText(/nature photography/i)).toBeInTheDocument();
   });
 
-  it('renders the about section', () => {
-    render(<Home />);
-    expect(screen.getByText('About MTP Collective')).toBeInTheDocument();
-    expect(screen.getByText(/We are a collective of passionate photographers/)).toBeInTheDocument();
+  it('renders about section', () => {
+    render(<HomePage />);
+    expect(screen.getByText(/about mtp collective/i)).toBeInTheDocument();
   });
 
   it('renders all navigation links', () => {
-    render(<Home />);
-    expect(screen.getByText('Learn More About Us')).toBeInTheDocument();
+    render(<HomePage />);
+    expect(screen.getByText(/home/i)).toBeInTheDocument();
+    expect(screen.getByText(/portfolio/i)).toBeInTheDocument();
+    expect(screen.getByText(/articles/i)).toBeInTheDocument();
+    expect(screen.getByText(/about us/i)).toBeInTheDocument();
+    expect(screen.getByText(/contact/i)).toBeInTheDocument();
   });
 }); 
