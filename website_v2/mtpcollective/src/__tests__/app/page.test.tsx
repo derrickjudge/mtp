@@ -6,8 +6,18 @@ import Home from '@/app/page';
 jest.mock('next/image', () => ({
   __esModule: true,
   default: (props: any) => {
+    // Convert boolean attributes to strings
+    const convertedProps = Object.entries(props).reduce((acc, [key, value]) => {
+      if (typeof value === 'boolean') {
+        acc[key] = value.toString();
+      } else {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as Record<string, any>);
+
     // eslint-disable-next-line @next/next/no-img-element
-    return <img {...props} />;
+    return <img {...convertedProps} />;
   },
 }));
 
