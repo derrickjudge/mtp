@@ -9,7 +9,6 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
-    domains: ['picsum.photos'],
   },
 };
 
