@@ -7,30 +7,18 @@ interface ImageProps extends Omit<NextImageProps, 'onError'> {
   fallbackSrc?: string;
 }
 
-const Image: React.FC<ImageProps> = ({ 
-  src, 
-  alt, 
-  fallbackSrc = '/placeholder.svg',
-  onLoad,
-  className = '',
-  ...props 
-}) => {
-  const [imgSrc, setImgSrc] = useState(src);
+export function Image({ fallbackSrc = '/placeholder.svg', ...props }: ImageProps) {
+  const [src, setSrc] = useState(props.src);
 
   return (
-    <div className={`relative w-full h-full ${imgSrc === null ? 'animate-pulse bg-gray-200' : ''}`}>
-      <NextImage
-        {...props}
-        alt={alt}
-        src={imgSrc}
-        onLoad={onLoad}
-        onError={() => {
-          setImgSrc(fallbackSrc);
-        }}
-        className={`object-cover ${className}`}
-      />
-    </div>
+    <NextImage
+      {...props}
+      src={src}
+      onError={() => {
+        if (src !== fallbackSrc) {
+          setSrc(fallbackSrc);
+        }
+      }}
+    />
   );
-};
-
-export default Image; 
+} 

@@ -3,6 +3,3 @@ description:
 globs: 
 alwaysApply: true
 ---
-- site is hosted on vercel
-- will use supabase as a database
-- will use cloudflare r2 for object storage
