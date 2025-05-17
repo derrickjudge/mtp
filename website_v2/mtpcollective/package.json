@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "setup-admin": "ts-node --esm scripts/setup-admin.ts",
     "setup-admin-role": "ts-node --esm scripts/setup-admin-role.ts",
     "check-admin": "ts-node --esm scripts/check-admin-status.ts"
