@@ -11,7 +11,7 @@ export default function AboutPage() {
         <div className="absolute inset-0">
           <Image
             src={imageUrls.about}
-            alt="About MTP Collective1"
+            alt="About MTP Collective"
             fill
             priority
             sizes="100vw"
@@ -35,7 +35,7 @@ export default function AboutPage() {
         <div className="max-w-4xl mx-auto">
           <SectionHeader
             title="Our Story"
-            subtitle="From passion to profession, we've been capturing moments that matter since 2015."
+            subtitle="From passion to profession, we've been capturing moments that matter since 2023."
           />
           <div className="text-gray-300 text-lg space-y-6">
             <p className="leading-relaxed">
