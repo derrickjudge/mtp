@@ -11,7 +11,7 @@ export default function AboutPage() {
         <div className="absolute inset-0">
           <Image
             src={imageUrls.about}
-            alt="About MTP Collective"
+            alt="About MTP Collective1"
             fill
             priority
             sizes="100vw"
