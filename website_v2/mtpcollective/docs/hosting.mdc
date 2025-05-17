@@ -1,5 +1,133 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# Hosting and Development Rules
+
+## Server Management
+- Site is hosted on Vercel
+- Will use Supabase as a database
+- Will use Cloudflare R2 for object storage
+- Be proactive about checking if the server is running locally before asking to test
+- Ensure there are not multiple versions of the server running locally
+- Do not ask if you want to start the server, just implement
+- Always kill existing servers before starting new ones
+- ALWAYS monitor server startup logs for errors and address them before proceeding
+- After starting a server, VERIFY that it's running properly without errors before proceeding
+- Actively scan console output for error messages and fix them before moving on
+- Never assume the server is running correctly without verification
+- When database is blocked, use local database for development when possible
+
+## Code Implementation Guidelines
+- Balance readability with performance - code should be both maintainable and efficient
+- Fully implement all requested functionality
+- Leave NO todos, placeholders or missing pieces
+- Ensure code is complete and thoroughly finalized
+- Include all required imports
+- Ensure proper naming of key components
+- Be concise, minimize any other prose
+- If there might not be a correct answer, say so
+- If you do not know the answer, say so, instead of guessing
+- Always look for existing code to iterate on instead of creating new code
+- Do not drastically change the patterns before trying to iterate on existing patterns
+- Always prefer simple solutions that don't compromise performance
+- Avoid duplication of code whenever possible
+- Write code that takes into account different environments: dev, test, and prod
+- Be careful to only make changes that are requested or well understood
+- When fixing an issue or bug, do not introduce a new pattern or technology without first exhausting all options
+- Keep the codebase very clean and organized
+- Scripts are allowed when necessary (e.g., admin setup, database migrations)
+- Avoid having files over 200-300 lines of code. Refactor at that point
+- Mocking data is only needed for tests, never mock data for dev or prod
+- Never add stubbing or fake data patterns to code that affects the dev or prod environments
+- Never overwrite .env file without first asking and confirming
+- Focus on the areas of code relevant to the task
+- Do not touch code that is unrelated to the task
+- Write thorough tests for all major functionality
+- Avoid making major changes to the patterns and architecture of how a feature works after it has shown to work well
+- Always think about what other methods and areas of code might be affected by code changes
+- Rate limit all API endpoints
+- Do not hard code secrets
+- Never use absolute paths
+- Never compromise security to make code work
+- Never use a workaround if a better solution exists
+- Consider performance implications of all code changes
+- Profile and optimize critical paths
+- Use appropriate caching strategies
+- Implement lazy loading where beneficial
+- Optimize images and assets
+
+## Development Priorities
+1. Security and Readability
+2. Performance and Scalability
+3. Maintainability and Documentation
+4. Feature Completeness
+
+## Debugging Process
+1. Check server state
+   - Is server running?
+   - Are there multiple instances?
+   - Kill any existing servers
+   - Start fresh server
+   - CRITICALLY IMPORTANT: Monitor startup logs for errors
+   - Verify server is running without errors before proceeding
+   - Check browser console for frontend errors
+   - Check terminal for backend errors
+
+2. Review environment variables
+   - Check if all required variables are present
+   - Verify variable names match code
+   - Ensure variables are in correct format
+   - Never expose sensitive variables
+
+3. Check existing code patterns
+   - Review similar functionality
+   - Follow established patterns
+   - Maintain consistency
+   - Document any necessary deviations
+
+4. Make minimal necessary changes
+   - Only modify what's needed
+   - Keep changes focused
+   - Test each change
+   - Document changes
+
+5. Test changes
+   - Is server running?
+   - Are there multiple instances?
+   - Kill any existing servers
+   - Start fresh server
+   - Monitor startup logs
+   - Verify functionality
+   - Check for side effects
+   - Test in all environments
+   - Monitor for errors
+   - Profile performance impact
+
+6. Document what was done
+   - Record changes made
+   - Note any issues found
+   - Document solutions
+   - Update relevant documentation
+
+## Code Review Checklist
+- [ ] Is it using the correct storage solution?
+- [ ] Is it following existing patterns?
+- [ ] Is it properly handling environment variables?
+- [ ] Is it clean and readable?
+- [ ] Is it properly error handled?
+- [ ] Does it follow security best practices?
+- [ ] Is it properly tested?
+- [ ] Is it documented?
+- [ ] Does it handle all edge cases?
+- [ ] Is it performant enough?
+- [ ] Does it follow DRY principles?
+- [ ] Is it maintainable?
+- [ ] Does it handle errors gracefully?
+- [ ] Is it properly typed (if using TypeScript)?
+- [ ] Does it follow accessibility guidelines?
+- [ ] Have performance implications been considered?
+- [ ] Are appropriate caching strategies used?
+- [ ] Is lazy loading implemented where beneficial?
+- [ ] Are images and assets optimized?

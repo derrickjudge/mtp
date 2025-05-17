@@ -2,23 +2,32 @@
 
 import React, { useState } from 'react';
 import NextImage, { ImageProps as NextImageProps } from 'next/image';
+import { PlaceholderImage } from './PlaceholderImage';
+import { cn } from '@/utils/cn';
 
 interface ImageProps extends Omit<NextImageProps, 'onError'> {
-  fallbackSrc?: string;
+  fallbackText?: string;
 }
 
-export function Image({ fallbackSrc = '/placeholder.svg', ...props }: ImageProps) {
-  const [src, setSrc] = useState(props.src);
+export function Image({ fallbackText, className, ...props }: ImageProps) {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) {
+    return (
+      <PlaceholderImage
+        text={fallbackText}
+        className={cn('relative', className)}
+        width={typeof props.width === 'string' ? parseInt(props.width) : props.width}
+        height={typeof props.height === 'string' ? parseInt(props.height) : props.height}
+      />
+    );
+  }
 
   return (
     <NextImage
       {...props}
-      src={src}
-      onError={() => {
-        if (src !== fallbackSrc) {
-          setSrc(fallbackSrc);
-        }
-      }}
+      className={className}
+      onError={() => setHasError(true)}
     />
   );
 } 

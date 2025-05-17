@@ -1,15 +1,24 @@
-const BASE_URL = 'https://picsum.photos';
+import { placeholderImages } from './placeholderImages';
 
 export const imageUrls = {
-  hero: `${BASE_URL}/seed/mtp-hero/1920/1080`,
+  hero: placeholderImages.hero,
+  about: placeholderImages.about,
+  contact: placeholderImages.contact,
+  portfolio: placeholderImages.portfolio,
+  services: placeholderImages.services,
   featured: {
-    1: `${BASE_URL}/seed/mtp-featured-1/800/600`,
-    2: `${BASE_URL}/seed/mtp-featured-2/800/600`,
-    3: `${BASE_URL}/seed/mtp-featured-3/800/600`,
+    1: placeholderImages.featured1,
+    2: placeholderImages.featured2,
+    3: placeholderImages.featured3,
   },
   specialties: {
-    concert: `${BASE_URL}/seed/mtp-concert/800/600`,
-    automotive: `${BASE_URL}/seed/mtp-automotive/800/600`,
-    nature: `${BASE_URL}/seed/mtp-nature/800/600`,
+    concert: placeholderImages.concert,
+    automotive: placeholderImages.automotive,
+    nature: placeholderImages.nature,
   },
-}; 
+  team: {
+    photographer1: placeholderImages.team1,
+    photographer2: placeholderImages.team2,
+    photographer3: placeholderImages.team3,
+  },
+} as const; 
