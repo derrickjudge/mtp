@@ -194,7 +194,7 @@ export function ContactForm({ className, onSubmit }: ContactFormProps) {
 
       {submitStatus === 'success' && (
         <p className="text-sm text-green-500">
-          Thank you for your message. We'll get back to you soon!
+          Thank you for your message. We&apos;ll get back to you soon!
         </p>
       )}
 

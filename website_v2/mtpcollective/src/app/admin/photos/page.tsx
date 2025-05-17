@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { PhotoUpload } from '@/components/photos/PhotoUpload';
 import { PhotoGrid } from '@/components/photos/PhotoGrid';
@@ -20,11 +20,43 @@ export default function AdminPhotos() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    checkAuth();
+  const fetchCategories = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch categories');
+    }
   }, []);
 
-  const checkAuth = async () => {
+  const fetchPhotos = useCallback(async () => {
+    try {
+      let query = supabase
+        .from('photos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (selectedCategory) {
+        query = query.eq('category_id', selectedCategory);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setPhotos(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch photos');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedCategory]);
+
+  const checkAuth = useCallback(async () => {
     try {
       const { data: { session }, error: authError } = await supabase.auth.getSession();
       
@@ -52,43 +84,11 @@ export default function AdminPhotos() {
       setError(err instanceof Error ? err.message : 'Failed to authenticate');
       router.push('/admin/login');
     }
-  };
+  }, [router, fetchCategories, fetchPhotos]);
 
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setCategories(data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch categories');
-    }
-  };
-
-  const fetchPhotos = async () => {
-    try {
-      let query = supabase
-        .from('photos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setPhotos(data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch photos');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const handleUploadComplete = async (url: string, key: string, thumbnailUrl: string, thumbnailKey: string, width: number, height: number) => {
     try {
