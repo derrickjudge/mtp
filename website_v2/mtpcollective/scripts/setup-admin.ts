@@ -78,7 +78,7 @@ async function setupAdmin() {
   try {
     // Test Supabase connection
     console.log('Testing Supabase connection...');
-    const { data: testData, error: testError } = await supabase.from('roles').select('count').limit(1);
+    const { data: testData, error: testError } = await supabase.from('user_roles').select('count').limit(1);
     if (testError) {
       console.error('Failed to connect to Supabase:', testError);
       process.exit(1);
@@ -121,22 +121,6 @@ async function setupAdmin() {
         throw userError;
       }
       userId = user.user.id;
-    }
-
-    // Create admin role if it doesn't exist
-    console.log('Setting up admin role...');
-    const { error: roleError } = await supabase
-      .from('roles')
-      .upsert([
-        {
-          name: 'admin',
-          description: 'Administrator role with full access',
-        },
-      ]);
-
-    if (roleError) {
-      console.error('Error creating admin role:', roleError);
-      throw roleError;
     }
 
     // Assign admin role to user
