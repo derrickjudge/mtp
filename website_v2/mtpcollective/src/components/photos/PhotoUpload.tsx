@@ -3,10 +3,15 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
-import { uploadPhoto } from '@/services/photoService';
 
 interface PhotoUploadProps {
-  onUploadComplete: (url: string, key: string, thumbnailUrl: string, thumbnailKey: string, width: number, height: number) => void;
+  onUploadComplete: (photo: {
+    id: string;
+    url: string;
+    thumbnail: string;
+    title: string;
+    description?: string;
+  }) => void;
   onError: (error: string) => void;
 }
 
@@ -14,6 +19,8 @@ export function PhotoUpload({ onUploadComplete, onError }: PhotoUploadProps) {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -35,7 +42,7 @@ export function PhotoUpload({ onUploadComplete, onError }: PhotoUploadProps) {
   });
 
   const handleUpload = async () => {
-    if (!filePreview) return;
+    if (!filePreview || !title) return;
 
     try {
       setIsUploading(true);
@@ -46,21 +53,33 @@ export function PhotoUpload({ onUploadComplete, onError }: PhotoUploadProps) {
       const blob = await response.blob();
       const file = new File([blob], 'photo.jpg', { type: blob.type });
 
-      const result = await uploadPhoto(file, (progress) => {
-        setUploadProgress(progress);
+      // Create form data
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', title);
+      if (description) {
+        formData.append('description', description);
+      }
+      formData.append('categoryIds', '[]'); // Empty array for now
+      formData.append('tagIds', '[]'); // Empty array for now
+
+      // Upload to API
+      const result = await fetch('/api/photos/upload', {
+        method: 'POST',
+        body: formData,
       });
 
-      onUploadComplete(
-        result.url,
-        result.key,
-        result.thumbnailUrl || result.url,
-        result.thumbnailKey || result.key,
-        result.width || 0,
-        result.height || 0
-      );
+      if (!result.ok) {
+        throw new Error('Failed to upload photo');
+      }
+
+      const photo = await result.json();
+      onUploadComplete(photo);
 
       // Reset the form
       setFilePreview(null);
+      setTitle('');
+      setDescription('');
       setUploadProgress(0);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to upload photo');
@@ -104,9 +123,36 @@ export function PhotoUpload({ onUploadComplete, onError }: PhotoUploadProps) {
 
       {filePreview && (
         <div className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+              Title *
+            </label>
+            <input
+              type="text"
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+            />
+          </div>
+
           <button
             onClick={handleUpload}
-            disabled={isUploading}
+            disabled={isUploading || !title}
             className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUploading ? 'Uploading...' : 'Upload Photo'}
