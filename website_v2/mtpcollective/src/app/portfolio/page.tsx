@@ -29,13 +29,13 @@ export default async function PortfolioPage() {
     createdAt: photo.createdAt.toISOString(),
     updatedAt: photo.updatedAt.toISOString(),
     authorId: photo.authorId,
-    categories: photo.categories.map(category => ({
+    categories: photo.categories.map((category: Prisma.CategoryGetPayload<{}>) => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       description: category.description || undefined,
     })),
-    tags: photo.tags.map(tag => ({
+    tags: photo.tags.map((tag: Prisma.TagGetPayload<{}>) => ({
       id: tag.id,
       name: tag.name,
       slug: tag.slug,
@@ -54,13 +54,13 @@ export default async function PortfolioPage() {
     createdAt: photo.createdAt.toISOString(),
     updatedAt: photo.updatedAt.toISOString(),
     authorId: photo.authorId,
-    categories: photo.categories.map(category => ({
+    categories: photo.categories.map((category: Prisma.CategoryGetPayload<{}>) => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       description: category.description || undefined,
     })),
-    tags: photo.tags.map(tag => ({
+    tags: photo.tags.map((tag: Prisma.TagGetPayload<{}>) => ({
       id: tag.id,
       name: tag.name,
       slug: tag.slug,
@@ -79,13 +79,13 @@ export default async function PortfolioPage() {
     createdAt: photo.createdAt.toISOString(),
     updatedAt: photo.updatedAt.toISOString(),
     authorId: photo.authorId,
-    categories: photo.categories.map(category => ({
+    categories: photo.categories.map((category: Prisma.CategoryGetPayload<{}>) => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       description: category.description || undefined,
     })),
-    tags: photo.tags.map(tag => ({
+    tags: photo.tags.map((tag: Prisma.TagGetPayload<{}>) => ({
       id: tag.id,
       name: tag.name,
       slug: tag.slug,
