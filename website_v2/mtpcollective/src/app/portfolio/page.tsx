@@ -3,8 +3,7 @@ import { GalleryGrid } from '@/components/common/GalleryGrid';
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
 import { photoService, PhotoWithRelations } from '@/services/photoService';
-import { Photo } from '@/types/photo';
-import { Category, Tag } from '@prisma/client';
+import { Photo, Category, Tag } from '@/types/photo';
 
 export const revalidate = 3600; // Revalidate every hour
 

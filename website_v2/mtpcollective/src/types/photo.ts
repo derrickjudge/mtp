@@ -1,3 +1,16 @@
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface Photo {
   id: string;
   title: string;
@@ -10,15 +23,6 @@ export interface Photo {
   createdAt?: string;
   updatedAt?: string;
   authorId: string;
-  categories?: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-  }>;
-  tags?: Array<{
-    id: string;
-    name: string;
-    slug: string;
-  }>;
+  categories?: Category[];
+  tags?: Tag[];
 } 
