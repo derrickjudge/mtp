@@ -25,10 +25,10 @@ export interface UploadPhotoParams {
   metadata?: Record<string, any>;
 }
 
-export interface PhotoWithRelations extends Photo {
+export type PhotoWithRelations = Photo & {
   categories: Category[];
   tags: Tag[];
-}
+};
 
 export const photoService = {
   async uploadPhoto({
