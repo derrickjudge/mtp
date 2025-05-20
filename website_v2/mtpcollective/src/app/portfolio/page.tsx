@@ -3,7 +3,8 @@ import { GalleryGrid } from '@/components/common/GalleryGrid';
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
 import { photoService, PhotoWithRelations } from '@/services/photoService';
-import { Photo, Category, Tag } from '@/types/photo';
+import { Photo } from '@/types/photo';
+import { Prisma } from '@prisma/client';
 
 export const revalidate = 3600; // Revalidate every hour
 
@@ -28,13 +29,13 @@ export default async function PortfolioPage() {
     createdAt: photo.createdAt.toISOString(),
     updatedAt: photo.updatedAt.toISOString(),
     authorId: photo.authorId,
-    categories: photo.categories.map((category: Category) => ({
+    categories: photo.categories.map(category => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       description: category.description || undefined,
     })),
-    tags: photo.tags.map((tag: Tag) => ({
+    tags: photo.tags.map(tag => ({
       id: tag.id,
       name: tag.name,
       slug: tag.slug,
@@ -53,13 +54,13 @@ export default async function PortfolioPage() {
     createdAt: photo.createdAt.toISOString(),
     updatedAt: photo.updatedAt.toISOString(),
     authorId: photo.authorId,
-    categories: photo.categories.map((category: Category) => ({
+    categories: photo.categories.map(category => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       description: category.description || undefined,
     })),
-    tags: photo.tags.map((tag: Tag) => ({
+    tags: photo.tags.map(tag => ({
       id: tag.id,
       name: tag.name,
       slug: tag.slug,
@@ -78,13 +79,13 @@ export default async function PortfolioPage() {
     createdAt: photo.createdAt.toISOString(),
     updatedAt: photo.updatedAt.toISOString(),
     authorId: photo.authorId,
-    categories: photo.categories.map((category: Category) => ({
+    categories: photo.categories.map(category => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       description: category.description || undefined,
     })),
-    tags: photo.tags.map((tag: Tag) => ({
+    tags: photo.tags.map(tag => ({
       id: tag.id,
       name: tag.name,
       slug: tag.slug,

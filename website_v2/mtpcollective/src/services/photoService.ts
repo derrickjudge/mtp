@@ -1,7 +1,7 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
 import { prisma } from '@/lib/db';
-import { Photo, Category, Tag } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import sharp from 'sharp';
 
 const s3Client = new S3Client({
@@ -25,10 +25,12 @@ export interface UploadPhotoParams {
   metadata?: Record<string, any>;
 }
 
-export type PhotoWithRelations = Photo & {
-  categories: Category[];
-  tags: Tag[];
-};
+export type PhotoWithRelations = Prisma.PhotoGetPayload<{
+  include: {
+    categories: true;
+    tags: true;
+  };
+}>;
 
 export const photoService = {
   async uploadPhoto({
