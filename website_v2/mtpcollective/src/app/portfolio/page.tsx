@@ -4,7 +4,7 @@ import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
 import { photoService, PhotoWithRelations } from '@/services/photoService';
 import { Photo } from '@/types/photo';
-import { Prisma } from '@prisma/client';
+import { Prisma, Category, Tag } from '@prisma/client';
 
 export const revalidate = 3600; // Revalidate every hour
 
@@ -29,13 +29,13 @@ export default async function PortfolioPage() {
     createdAt: photo.createdAt.toISOString(),
     updatedAt: photo.updatedAt.toISOString(),
     authorId: photo.authorId,
-    categories: photo.categories.map((category: Prisma.CategoryGetPayload<{}>) => ({
+    categories: photo.categories.map((category: Category) => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       description: category.description || undefined,
     })),
-    tags: photo.tags.map((tag: Prisma.TagGetPayload<{}>) => ({
+    tags: photo.tags.map((tag: Tag) => ({
       id: tag.id,
       name: tag.name,
       slug: tag.slug,
@@ -54,13 +54,13 @@ export default async function PortfolioPage() {
     createdAt: photo.createdAt.toISOString(),
     updatedAt: photo.updatedAt.toISOString(),
     authorId: photo.authorId,
-    categories: photo.categories.map((category: Prisma.CategoryGetPayload<{}>) => ({
+    categories: photo.categories.map((category: Category) => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       description: category.description || undefined,
     })),
-    tags: photo.tags.map((tag: Prisma.TagGetPayload<{}>) => ({
+    tags: photo.tags.map((tag: Tag) => ({
       id: tag.id,
       name: tag.name,
       slug: tag.slug,
@@ -79,13 +79,13 @@ export default async function PortfolioPage() {
     createdAt: photo.createdAt.toISOString(),
     updatedAt: photo.updatedAt.toISOString(),
     authorId: photo.authorId,
-    categories: photo.categories.map((category: Prisma.CategoryGetPayload<{}>) => ({
+    categories: photo.categories.map((category: Category) => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       description: category.description || undefined,
     })),
-    tags: photo.tags.map((tag: Prisma.TagGetPayload<{}>) => ({
+    tags: photo.tags.map((tag: Tag) => ({
       id: tag.id,
       name: tag.name,
       slug: tag.slug,
