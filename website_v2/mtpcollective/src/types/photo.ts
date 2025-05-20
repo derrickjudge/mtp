@@ -2,7 +2,7 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
-  description?: string;
+  description?: string | null;
 }
 
 export interface Tag {
@@ -17,12 +17,12 @@ export interface Photo {
   description?: string;
   url: string;
   thumbnail?: string;
-  published?: boolean;
-  featured?: boolean;
+  published: boolean;
+  featured: boolean;
   metadata?: Record<string, any>;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
   authorId: string;
-  categories?: Category[];
-  tags?: Tag[];
+  categories: Category[];
+  tags: Tag[];
 } 

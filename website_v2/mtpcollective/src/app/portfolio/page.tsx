@@ -3,8 +3,7 @@ import { GalleryGrid } from '@/components/common/GalleryGrid';
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
 import { photoService, PhotoWithRelations } from '@/services/photoService';
-import { Photo } from '@/types/photo';
-import type { Category, Tag } from '@prisma/client';
+import type { Photo, Category, Tag } from '@/types/photo';
 
 export const revalidate = 3600; // Revalidate every hour
 
@@ -22,80 +21,9 @@ export default async function PortfolioPage() {
     ]) as [PhotoWithRelations[], PhotoWithRelations[], PhotoWithRelations[]];
 
     // Map to Photo[] type
-    concertPhotos = concertPhotosWithRelations.map(photo => ({
-      id: photo.id,
-      title: photo.title,
-      description: photo.description || undefined,
-      url: photo.url,
-      thumbnail: photo.thumbnail || undefined,
-      published: photo.published,
-      featured: photo.featured,
-      metadata: photo.metadata ? (photo.metadata as Record<string, any>) : undefined,
-      createdAt: photo.createdAt.toISOString(),
-      updatedAt: photo.updatedAt.toISOString(),
-      authorId: photo.authorId,
-      categories: photo.categories.map((category: Category) => ({
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-        description: category.description || undefined,
-      })),
-      tags: photo.tags.map((tag: Tag) => ({
-        id: tag.id,
-        name: tag.name,
-        slug: tag.slug,
-      })),
-    }));
-
-    automotivePhotos = automotivePhotosWithRelations.map(photo => ({
-      id: photo.id,
-      title: photo.title,
-      description: photo.description || undefined,
-      url: photo.url,
-      thumbnail: photo.thumbnail || undefined,
-      published: photo.published,
-      featured: photo.featured,
-      metadata: photo.metadata ? (photo.metadata as Record<string, any>) : undefined,
-      createdAt: photo.createdAt.toISOString(),
-      updatedAt: photo.updatedAt.toISOString(),
-      authorId: photo.authorId,
-      categories: photo.categories.map((category: Category) => ({
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-        description: category.description || undefined,
-      })),
-      tags: photo.tags.map((tag: Tag) => ({
-        id: tag.id,
-        name: tag.name,
-        slug: tag.slug,
-      })),
-    }));
-
-    naturePhotos = naturePhotosWithRelations.map(photo => ({
-      id: photo.id,
-      title: photo.title,
-      description: photo.description || undefined,
-      url: photo.url,
-      thumbnail: photo.thumbnail || undefined,
-      published: photo.published,
-      featured: photo.featured,
-      metadata: photo.metadata ? (photo.metadata as Record<string, any>) : undefined,
-      createdAt: photo.createdAt.toISOString(),
-      updatedAt: photo.updatedAt.toISOString(),
-      authorId: photo.authorId,
-      categories: photo.categories.map((category: Category) => ({
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-        description: category.description || undefined,
-      })),
-      tags: photo.tags.map((tag: Tag) => ({
-        id: tag.id,
-        name: tag.name,
-        slug: tag.slug,
-      })),
-    }));
+    concertPhotos = concertPhotosWithRelations;
+    automotivePhotos = automotivePhotosWithRelations;
+    naturePhotos = naturePhotosWithRelations;
   } catch (error) {
     console.error('Error fetching photos:', error);
     // Continue with empty arrays - the page will render without photos

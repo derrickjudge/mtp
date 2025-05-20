@@ -1,7 +1,7 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
 import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { Category, Tag, Photo } from '@/types/photo';
 import sharp from 'sharp';
 
 const s3Client = new S3Client({
@@ -25,12 +25,36 @@ export interface UploadPhotoParams {
   metadata?: Record<string, any>;
 }
 
-export type PhotoWithRelations = Prisma.PhotoGetPayload<{
-  include: {
-    categories: true;
-    tags: true;
-  };
-}>;
+export type PhotoWithRelations = Photo & {
+  categories: Category[];
+  tags: Tag[];
+};
+
+// Helper function to convert Prisma's null to undefined
+const convertPrismaToPhoto = (prismaPhoto: any): PhotoWithRelations => ({
+  id: prismaPhoto.id,
+  title: prismaPhoto.title,
+  description: prismaPhoto.description || undefined,
+  url: prismaPhoto.url,
+  thumbnail: prismaPhoto.thumbnail || undefined,
+  published: prismaPhoto.published,
+  featured: prismaPhoto.featured,
+  metadata: prismaPhoto.metadata || undefined,
+  createdAt: prismaPhoto.createdAt.toISOString(),
+  updatedAt: prismaPhoto.updatedAt.toISOString(),
+  authorId: prismaPhoto.authorId,
+  categories: prismaPhoto.categories.map((category: any) => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    description: category.description || undefined,
+  })),
+  tags: prismaPhoto.tags.map((tag: any) => ({
+    id: tag.id,
+    name: tag.name,
+    slug: tag.slug,
+  })),
+});
 
 export const photoService = {
   async uploadPhoto({
@@ -101,7 +125,7 @@ export const photoService = {
       },
     });
 
-    return photo;
+    return convertPrismaToPhoto(photo);
   },
 
   async deletePhoto(id: string): Promise<void> {
@@ -149,7 +173,7 @@ export const photoService = {
     tagId?: string;
     featured?: boolean;
   }): Promise<PhotoWithRelations[]> {
-    return prisma.photo.findMany({
+    const photos = await prisma.photo.findMany({
       where: {
         published: true,
         ...(options?.categoryId && {
@@ -180,15 +204,19 @@ export const photoService = {
         createdAt: 'desc',
       },
     });
+
+    return photos.map(convertPrismaToPhoto);
   },
 
   async getPhotoById(id: string): Promise<PhotoWithRelations | null> {
-    return prisma.photo.findUnique({
+    const photo = await prisma.photo.findUnique({
       where: { id },
       include: {
         categories: true,
         tags: true,
       },
     });
+
+    return photo ? convertPrismaToPhoto(photo) : null;
   },
 }; 
