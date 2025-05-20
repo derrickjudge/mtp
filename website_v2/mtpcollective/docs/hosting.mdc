@@ -7,8 +7,8 @@ alwaysApply: false
 
 ## Server Management
 - Site is hosted on Vercel
-- Will use Supabase as a database
-- Will use Cloudflare R2 for object storage
+- Will use Supabase as a database which is already deployed through vercel
+- Will use Cloudflare R2 for object storage and is provisioned
 - Be proactive about checking if the server is running locally before asking to test
 - Ensure there are not multiple versions of the server running locally
 - Do not ask if you want to start the server, just implement

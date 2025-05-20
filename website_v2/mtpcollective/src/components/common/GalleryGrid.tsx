@@ -1,13 +1,6 @@
 import { PhotoCard } from './PhotoCard';
 import { cn } from '@/utils/cn';
-
-interface Photo {
-  src: string;
-  alt: string;
-  title?: string;
-  description?: string;
-  aspectRatio?: 'square' | 'video' | 'portrait';
-}
+import { Photo } from '@prisma/client';
 
 interface GalleryGridProps {
   photos: Photo[];
@@ -46,12 +39,11 @@ export function GalleryGrid({
     >
       {photos.map((photo, index) => (
         <PhotoCard
-          key={`${photo.src}-${index}`}
-          src={photo.src}
-          alt={photo.alt}
+          key={photo.id}
+          src={photo.url}
+          alt={photo.title}
           title={photo.title}
-          description={photo.description}
-          aspectRatio={photo.aspectRatio}
+          description={photo.description || undefined}
           priority={index < 4} // Prioritize loading first 4 images
         />
       ))}

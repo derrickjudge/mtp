@@ -50,9 +50,9 @@ In a competitive photography market, an online presence is essential for attract
   - **Portfolio:** Categorized galleries with navigation for Concerts, Cars, Nature.
   - **About:** Photographer’s bio, style, and service details.
   - **Contact:** Form for inquiries, email, phone, and social media links.
+  - **Articles:** Section for sharing stories, behind-the-scenes content, or photography tips.
 
 ### 4.2 Optional Features
-- **Blog:** Section for sharing stories, behind-the-scenes content, or photography tips.
 - **Online Shop:** Platform for selling prints or merchandise, integrated with payment gateways like Stripe.
 - **Client Portal:** Private galleries for clients to view and download their photos, secured with authentication.
 

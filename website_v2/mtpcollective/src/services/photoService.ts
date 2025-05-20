@@ -1,79 +1,192 @@
-import { uploadToR2, deleteFromR2 } from '@/lib/r2Client';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { r2Config } from '@/config/r2';
+import { prisma } from '@/lib/db';
+import { Photo, Category, Tag } from '@prisma/client';
+import sharp from 'sharp';
 
-export interface UploadResult {
-  url: string;
-  key: string;
-  thumbnailUrl?: string;
-  thumbnailKey?: string;
-  width?: number;
-  height?: number;
-  error?: string;
+const s3Client = new S3Client({
+  region: 'auto',
+  endpoint: r2Config.endpoint,
+  credentials: {
+    accessKeyId: r2Config.accessKeyId,
+    secretAccessKey: r2Config.secretAccessKey,
+  },
+});
+
+export interface UploadPhotoParams {
+  file: Buffer;
+  fileName: string;
+  contentType: string;
+  title: string;
+  description?: string;
+  categoryIds: string[];
+  tagIds: string[];
+  authorId: string;
+  metadata?: Record<string, any>;
 }
 
-export async function uploadPhoto(
-  file: File,
-  onProgress?: (progress: number) => void
-): Promise<UploadResult> {
-  try {
-    // Process image on the server
-    const formData = new FormData();
-    formData.append('file', file);
+export interface PhotoWithRelations extends Photo {
+  categories: Category[];
+  tags: Tag[];
+}
 
-    const processResponse = await fetch('/api/photos/process', {
-      method: 'POST',
-      body: formData,
-    });
+export const photoService = {
+  async uploadPhoto({
+    file,
+    fileName,
+    contentType,
+    title,
+    description,
+    categoryIds,
+    tagIds,
+    authorId,
+    metadata,
+  }: UploadPhotoParams): Promise<PhotoWithRelations> {
+    // Generate unique file name
+    const uniqueFileName = `${Date.now()}-${fileName}`;
+    const thumbnailFileName = `thumbnails/${uniqueFileName}`;
 
-    if (!processResponse.ok) {
-      throw new Error('Failed to process image');
-    }
+    // Process image and create thumbnail
+    const processedImage = await sharp(file)
+      .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
+      .toBuffer();
 
-    const { thumbnail, width, height } = await processResponse.json();
+    const thumbnail = await sharp(file)
+      .resize(300, 200, { fit: 'cover' })
+      .toBuffer();
 
     // Upload original image
-    const result = await uploadToR2(file, onProgress);
-    if (result.error) {
-      throw new Error(result.error);
-    }
-
-    // Convert base64 thumbnail to File
-    const thumbnailBlob = await fetch(thumbnail).then(r => r.blob());
-    const thumbnailFile = new File([thumbnailBlob], `thumb_${file.name}`, {
-      type: 'image/jpeg',
-    });
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: r2Config.bucketName,
+        Key: uniqueFileName,
+        Body: processedImage,
+        ContentType: contentType,
+      })
+    );
 
     // Upload thumbnail
-    const thumbnailResult = await uploadToR2(thumbnailFile);
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: r2Config.bucketName,
+        Key: thumbnailFileName,
+        Body: thumbnail,
+        ContentType: contentType,
+      })
+    );
 
-    return {
-      url: result.url,
-      key: result.key,
-      thumbnailUrl: thumbnailResult.url,
-      thumbnailKey: thumbnailResult.key,
-      width,
-      height,
-    };
-  } catch (error) {
-    console.error('Error uploading photo:', error);
-    return {
-      url: '',
-      key: '',
-      error: error instanceof Error ? error.message : 'Failed to upload photo',
-    };
-  }
-}
+    // Create photo record in database
+    const photo = await prisma.photo.create({
+      data: {
+        title,
+        description,
+        url: `${r2Config.publicUrl}/${uniqueFileName}`,
+        thumbnail: `${r2Config.publicUrl}/${thumbnailFileName}`,
+        categories: {
+          connect: categoryIds.map(id => ({ id })),
+        },
+        tags: {
+          connect: tagIds.map(id => ({ id })),
+        },
+        author: {
+          connect: { id: authorId },
+        },
+        metadata,
+      },
+      include: {
+        categories: true,
+        tags: true,
+      },
+    });
 
-export async function deletePhoto(key: string, thumbnailKey?: string): Promise<{ error?: string }> {
-  try {
-    await deleteFromR2(key);
-    if (thumbnailKey) {
-      await deleteFromR2(thumbnailKey);
+    return photo;
+  },
+
+  async deletePhoto(id: string): Promise<void> {
+    const photo = await prisma.photo.findUnique({
+      where: { id },
+    });
+
+    if (!photo) {
+      throw new Error('Photo not found');
     }
-    return {};
-  } catch (error) {
-    console.error('Error deleting photo:', error);
-    return {
-      error: error instanceof Error ? error.message : 'Failed to delete photo',
-    };
-  }
-} 
+
+    // Extract file names from URLs
+    const fileName = photo.url.split('/').pop();
+    const thumbnailFileName = photo.thumbnail?.split('/').pop();
+
+    // Delete from R2
+    if (fileName) {
+      await s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: r2Config.bucketName,
+          Key: fileName,
+        })
+      );
+    }
+
+    if (thumbnailFileName) {
+      await s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: r2Config.bucketName,
+          Key: thumbnailFileName,
+        })
+      );
+    }
+
+    // Delete from database
+    await prisma.photo.delete({
+      where: { id },
+    });
+  },
+
+  async getPhotos(options?: {
+    take?: number;
+    skip?: number;
+    categoryId?: string;
+    tagId?: string;
+    featured?: boolean;
+  }): Promise<PhotoWithRelations[]> {
+    return prisma.photo.findMany({
+      where: {
+        published: true,
+        ...(options?.categoryId && {
+          categories: {
+            some: {
+              id: options.categoryId,
+            },
+          },
+        }),
+        ...(options?.tagId && {
+          tags: {
+            some: {
+              id: options.tagId,
+            },
+          },
+        }),
+        ...(options?.featured && {
+          featured: true,
+        }),
+      },
+      include: {
+        categories: true,
+        tags: true,
+      },
+      take: options?.take,
+      skip: options?.skip,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  },
+
+  async getPhotoById(id: string): Promise<PhotoWithRelations | null> {
+    return prisma.photo.findUnique({
+      where: { id },
+      include: {
+        categories: true,
+        tags: true,
+      },
+    });
+  },
+}; 

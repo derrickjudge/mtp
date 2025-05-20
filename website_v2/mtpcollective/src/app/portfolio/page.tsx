@@ -2,73 +2,18 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { GalleryGrid } from '@/components/common/GalleryGrid';
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
-import { placeholderImages } from '@/utils/placeholderImages';
+import { photoService } from '@/services/photoService';
 
-// Temporary portfolio data - will be replaced with database data
-const portfolioData = {
-  concert: [
-    {
-      src: placeholderImages.concertPhoto1,
-      alt: 'Concert photography 1',
-      title: 'Live Performance',
-      description: 'Capturing the energy of live music',
-    },
-    {
-      src: placeholderImages.concertPhoto2,
-      alt: 'Concert photography 2',
-      title: 'Stage Presence',
-      description: 'The magic of live performances',
-    },
-    {
-      src: placeholderImages.concertPhoto3,
-      alt: 'Concert photography 3',
-      title: 'Crowd Energy',
-      description: 'The connection between artist and audience',
-    },
-  ],
-  automotive: [
-    {
-      src: placeholderImages.autoPhoto1,
-      alt: 'Automotive photography 1',
-      title: 'Classic Beauty',
-      description: 'Timeless automotive design',
-    },
-    {
-      src: placeholderImages.autoPhoto2,
-      alt: 'Automotive photography 2',
-      title: 'Modern Lines',
-      description: 'Contemporary automotive art',
-    },
-    {
-      src: placeholderImages.autoPhoto3,
-      alt: 'Automotive photography 3',
-      title: 'Speed and Grace',
-      description: 'The perfect blend of power and elegance',
-    },
-  ],
-  nature: [
-    {
-      src: placeholderImages.naturePhoto1,
-      alt: 'Nature photography 1',
-      title: 'Mountain Majesty',
-      description: 'The grandeur of nature',
-    },
-    {
-      src: placeholderImages.naturePhoto2,
-      alt: 'Nature photography 2',
-      title: 'Forest Serenity',
-      description: 'Peace and tranquility in nature',
-    },
-    {
-      src: placeholderImages.naturePhoto3,
-      alt: 'Nature photography 3',
-      title: 'Ocean Wonders',
-      description: 'The beauty of coastal landscapes',
-    },
-  ],
-};
+export const revalidate = 3600; // Revalidate every hour
 
-export default function PortfolioPage() {
+export default async function PortfolioPage() {
+  // Fetch photos for each category
+  const [concertPhotos, automotivePhotos, naturePhotos] = await Promise.all([
+    photoService.getPhotos({ categoryId: 'concert' }),
+    photoService.getPhotos({ categoryId: 'automotive' }),
+    photoService.getPhotos({ categoryId: 'nature' }),
+  ]);
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
@@ -102,7 +47,7 @@ export default function PortfolioPage() {
             title="Concert Photography"
             subtitle="Capturing the energy and emotion of live performances"
           />
-          <GalleryGrid photos={portfolioData.concert} />
+          <GalleryGrid photos={concertPhotos} />
         </div>
       </section>
 
@@ -113,7 +58,7 @@ export default function PortfolioPage() {
             title="Automotive Photography"
             subtitle="Showcasing the beauty and power of automotive design"
           />
-          <GalleryGrid photos={portfolioData.automotive} />
+          <GalleryGrid photos={automotivePhotos} />
         </div>
       </section>
 
@@ -124,7 +69,7 @@ export default function PortfolioPage() {
             title="Nature Photography"
             subtitle="Exploring the beauty and wonder of the natural world"
           />
-          <GalleryGrid photos={portfolioData.nature} />
+          <GalleryGrid photos={naturePhotos} />
         </div>
       </section>
     </div>
