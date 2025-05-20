@@ -98,8 +98,8 @@ export default function AdminPhotos() {
         .insert([
           {
             title: photo.title,
-            file_url: photo.url,
-            thumbnail_url: photo.thumbnail,
+            url: photo.url,
+            thumbnail: photo.thumbnail,
             description: photo.description,
             category_id: selectedCategory || null,
           }

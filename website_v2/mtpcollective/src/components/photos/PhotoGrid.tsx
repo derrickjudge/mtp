@@ -22,7 +22,7 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
           >
             <div className="aspect-square relative">
               <Image
-                src={photo.thumbnail_url || photo.file_url}
+                src={photo.thumbnail || photo.url}
                 alt={photo.title}
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -63,7 +63,7 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
             </button>
             <div className="relative aspect-[4/3] w-full">
               <Image
-                src={selectedPhoto.file_url}
+                src={selectedPhoto.url}
                 alt={selectedPhoto.title}
                 fill
                 className="object-contain"

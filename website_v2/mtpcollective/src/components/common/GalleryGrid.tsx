@@ -40,7 +40,7 @@ export function GalleryGrid({
       {photos.map((photo, index) => (
         <PhotoCard
           key={photo.id}
-          src={photo.file_url}
+          src={photo.url}
           alt={photo.title}
           title={photo.title}
           description={photo.description}
