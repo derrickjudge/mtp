@@ -1,6 +1,6 @@
 import { PhotoCard } from './PhotoCard';
 import { cn } from '@/utils/cn';
-import { Photo } from '@prisma/client';
+import { Photo } from '@/types/photo';
 
 interface GalleryGridProps {
   photos: Photo[];
@@ -40,10 +40,10 @@ export function GalleryGrid({
       {photos.map((photo, index) => (
         <PhotoCard
           key={photo.id}
-          src={photo.url}
+          src={photo.file_url}
           alt={photo.title}
           title={photo.title}
-          description={photo.description || undefined}
+          description={photo.description}
           priority={index < 4} // Prioritize loading first 4 images
         />
       ))}
