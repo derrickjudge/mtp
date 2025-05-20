@@ -2,7 +2,7 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { GalleryGrid } from '@/components/common/GalleryGrid';
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
-import { photoService } from '@/services/photoService';
+import { photoService, PhotoWithRelations } from '@/services/photoService';
 import { Photo } from '@/types/photo';
 
 export const revalidate = 3600; // Revalidate every hour
@@ -13,7 +13,7 @@ export default async function PortfolioPage() {
     photoService.getPhotos({ categoryId: 'concert' }),
     photoService.getPhotos({ categoryId: 'automotive' }),
     photoService.getPhotos({ categoryId: 'nature' }),
-  ]);
+  ]) as [PhotoWithRelations[], PhotoWithRelations[], PhotoWithRelations[]];
 
   // Map to Photo[] type
   const concertPhotos: Photo[] = concertPhotosWithRelations.map(photo => ({
