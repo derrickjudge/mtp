@@ -90,18 +90,17 @@ export default function AdminPhotos() {
     checkAuth();
   }, [checkAuth]);
 
-  const handleUploadComplete = async (url: string, key: string, thumbnailUrl: string, thumbnailKey: string, width: number, height: number) => {
+  const handleUploadComplete = async (photo: { id: string; url: string; thumbnail: string; title: string; description?: string }) => {
     try {
       // Create a new photo record in the database
       const { data, error } = await supabase
         .from('photos')
         .insert([
           {
-            title: key.split('/').pop()?.split('.')[0] || 'Untitled',
-            file_url: url,
-            thumbnail_url: thumbnailUrl,
-            width,
-            height,
+            title: photo.title,
+            file_url: photo.url,
+            thumbnail_url: photo.thumbnail,
+            description: photo.description,
             category_id: selectedCategory || null,
           }
         ])
