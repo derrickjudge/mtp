@@ -3,16 +3,93 @@ import { GalleryGrid } from '@/components/common/GalleryGrid';
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
 import { photoService } from '@/services/photoService';
+import { Photo } from '@/types/photo';
 
 export const revalidate = 3600; // Revalidate every hour
 
 export default async function PortfolioPage() {
   // Fetch photos for each category
-  const [concertPhotos, automotivePhotos, naturePhotos] = await Promise.all([
+  const [concertPhotosWithRelations, automotivePhotosWithRelations, naturePhotosWithRelations] = await Promise.all([
     photoService.getPhotos({ categoryId: 'concert' }),
     photoService.getPhotos({ categoryId: 'automotive' }),
     photoService.getPhotos({ categoryId: 'nature' }),
   ]);
+
+  // Map to Photo[] type
+  const concertPhotos: Photo[] = concertPhotosWithRelations.map(photo => ({
+    id: photo.id,
+    title: photo.title,
+    description: photo.description || undefined,
+    url: photo.url,
+    thumbnail: photo.thumbnail || undefined,
+    published: photo.published,
+    featured: photo.featured,
+    metadata: photo.metadata ? (photo.metadata as Record<string, any>) : undefined,
+    createdAt: photo.createdAt.toISOString(),
+    updatedAt: photo.updatedAt.toISOString(),
+    authorId: photo.authorId,
+    categories: photo.categories.map(category => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      description: category.description || undefined,
+    })),
+    tags: photo.tags.map(tag => ({
+      id: tag.id,
+      name: tag.name,
+      slug: tag.slug,
+    })),
+  }));
+
+  const automotivePhotos: Photo[] = automotivePhotosWithRelations.map(photo => ({
+    id: photo.id,
+    title: photo.title,
+    description: photo.description || undefined,
+    url: photo.url,
+    thumbnail: photo.thumbnail || undefined,
+    published: photo.published,
+    featured: photo.featured,
+    metadata: photo.metadata ? (photo.metadata as Record<string, any>) : undefined,
+    createdAt: photo.createdAt.toISOString(),
+    updatedAt: photo.updatedAt.toISOString(),
+    authorId: photo.authorId,
+    categories: photo.categories.map(category => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      description: category.description || undefined,
+    })),
+    tags: photo.tags.map(tag => ({
+      id: tag.id,
+      name: tag.name,
+      slug: tag.slug,
+    })),
+  }));
+
+  const naturePhotos: Photo[] = naturePhotosWithRelations.map(photo => ({
+    id: photo.id,
+    title: photo.title,
+    description: photo.description || undefined,
+    url: photo.url,
+    thumbnail: photo.thumbnail || undefined,
+    published: photo.published,
+    featured: photo.featured,
+    metadata: photo.metadata ? (photo.metadata as Record<string, any>) : undefined,
+    createdAt: photo.createdAt.toISOString(),
+    updatedAt: photo.updatedAt.toISOString(),
+    authorId: photo.authorId,
+    categories: photo.categories.map(category => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      description: category.description || undefined,
+    })),
+    tags: photo.tags.map(tag => ({
+      id: tag.id,
+      name: tag.name,
+      slug: tag.slug,
+    })),
+  }));
 
   return (
     <div className="min-h-screen bg-black text-white">

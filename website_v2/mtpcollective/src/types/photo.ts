@@ -3,15 +3,22 @@ export interface Photo {
   title: string;
   description?: string;
   url: string;
-  thumbnail: string;
-  width?: number;
-  height?: number;
-  category_id?: string;
-  tags?: string[];
-  created_at?: string;
-  updated_at?: string;
+  thumbnail?: string;
   published?: boolean;
   featured?: boolean;
   metadata?: Record<string, any>;
-  author_id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  authorId: string;
+  categories?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+  }>;
+  tags?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+  }>;
 } 
