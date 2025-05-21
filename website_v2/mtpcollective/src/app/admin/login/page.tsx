@@ -37,16 +37,25 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: {
       getItem: (key) => {
         debug('Getting storage item:', key);
+        if (typeof window === 'undefined') {
+          return null;
+        }
         const value = localStorage.getItem(key);
         debug('Storage value:', value);
         return value;
       },
       setItem: (key, value) => {
         debug('Setting storage item:', { key, value });
+        if (typeof window === 'undefined') {
+          return;
+        }
         localStorage.setItem(key, value);
       },
       removeItem: (key) => {
         debug('Removing storage item:', key);
+        if (typeof window === 'undefined') {
+          return;
+        }
         localStorage.removeItem(key);
       },
     },
