@@ -1,6 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
-import { prisma, handlePrismaError } from '@/lib/prisma';
+import { getPrismaClient } from '@/lib/prisma';
 import { Category, Tag, Photo } from '@/types/photo';
 import sharp from 'sharp';
 
@@ -56,6 +56,25 @@ const convertPrismaToPhoto = (prismaPhoto: any): PhotoWithRelations => ({
   })),
 });
 
+// Helper function to handle Prisma errors
+const handlePrismaError = async <T>(operation: () => Promise<T>): Promise<T> => {
+  const prisma = getPrismaClient();
+  if (!prisma) {
+    throw new Error('Prisma client not available');
+  }
+
+  try {
+    return await operation();
+  } catch (error: any) {
+    if (error.code === '42P05' && error.message.includes('prepared statement')) {
+      // If we get a prepared statement error, disconnect and retry
+      await prisma.$disconnect();
+      return await operation();
+    }
+    throw error;
+  }
+};
+
 export const photoService = {
   async uploadPhoto({
     file,
@@ -68,6 +87,11 @@ export const photoService = {
     authorId,
     metadata,
   }: UploadPhotoParams): Promise<PhotoWithRelations> {
+    const prisma = getPrismaClient();
+    if (!prisma) {
+      throw new Error('Prisma client not available');
+    }
+
     // Generate unique file name
     const uniqueFileName = `${Date.now()}-${fileName}`;
     const thumbnailFileName = `thumbnails/${uniqueFileName}`;
@@ -131,6 +155,11 @@ export const photoService = {
   },
 
   async deletePhoto(id: string): Promise<void> {
+    const prisma = getPrismaClient();
+    if (!prisma) {
+      throw new Error('Prisma client not available');
+    }
+
     const photo = await handlePrismaError(() =>
       prisma.photo.findUnique({
         where: { id },
@@ -179,6 +208,11 @@ export const photoService = {
     tagId?: string;
     featured?: boolean;
   }): Promise<PhotoWithRelations[]> {
+    const prisma = getPrismaClient();
+    if (!prisma) {
+      throw new Error('Prisma client not available');
+    }
+
     const photos = await handlePrismaError(() =>
       prisma.photo.findMany({
         where: {
@@ -217,6 +251,11 @@ export const photoService = {
   },
 
   async getPhotoById(id: string): Promise<PhotoWithRelations | null> {
+    const prisma = getPrismaClient();
+    if (!prisma) {
+      throw new Error('Prisma client not available');
+    }
+
     const photo = await handlePrismaError(() =>
       prisma.photo.findUnique({
         where: { id },
