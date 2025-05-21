@@ -1,6 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { Category, Tag, Photo } from '@/types/photo';
 import sharp from 'sharp';
 
