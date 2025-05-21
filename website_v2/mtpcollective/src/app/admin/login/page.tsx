@@ -191,7 +191,12 @@ export default function AdminLogin() {
       addDebugMessage('Login successful, redirecting to photos page...');
       // Add a small delay to ensure session is fully established
       await new Promise(resolve => setTimeout(resolve, 500));
-      router.replace('/admin/photos');
+      try {
+        router.replace('/admin/photos');
+      } catch (err) {
+        addDebugMessage('Router redirect failed, using window.location:', err);
+        window.location.href = '/admin/photos';
+      }
     } catch (err) {
       addDebugMessage('Login error:', err);
       setError(err instanceof Error ? err.message : 'Authentication failed');

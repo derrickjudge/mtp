@@ -55,10 +55,22 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // If there's a session and the user is on the login page
-  if (session && req.nextUrl.pathname === '/admin/login') {
-    // Redirect to admin photos page
-    return NextResponse.redirect(new URL('/admin/photos', req.url));
+  // If there's a session, check if user is admin for admin routes
+  if (session && req.nextUrl.pathname.startsWith('/admin')) {
+    // Skip admin check for login page
+    if (req.nextUrl.pathname === '/admin/login') {
+      return NextResponse.redirect(new URL('/admin/photos', req.url));
+    }
+
+    // Check if user is admin
+    const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', { 
+      user_id: session.user.id 
+    });
+
+    if (adminError || !isAdmin) {
+      // If not admin, redirect to login
+      return NextResponse.redirect(new URL('/admin/login', req.url));
+    }
   }
 
   return res;
