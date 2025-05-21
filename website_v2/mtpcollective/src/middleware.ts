@@ -10,6 +10,8 @@ const debug = (message: string, data?: any) => {
 
 export async function middleware(req: NextRequest) {
   debug('Processing request for path:', req.nextUrl.pathname);
+  
+  // Create a response that we can modify
   const res = NextResponse.next();
   
   // Create a Supabase client configured to use cookies
@@ -19,30 +21,57 @@ export async function middleware(req: NextRequest) {
     {
       cookies: {
         get: (name: string) => {
-          return req.cookies.get(name)?.value;
+          debug('Getting cookie:', name);
+          const cookie = req.cookies.get(name);
+          debug('Cookie value:', cookie?.value);
+          return cookie?.value;
         },
         set: (name: string, value: string, options: any) => {
+          debug('Setting cookie:', { name, value, options });
+          // Set cookie on the request
           req.cookies.set({
             name,
             value,
             ...options,
           });
+          // Set cookie on the response
           res.cookies.set({
             name,
             value,
             ...options,
+            // Ensure cookies are accessible to JavaScript
+            httpOnly: false,
+            // Ensure cookies are sent with every request
+            path: '/',
+            // Ensure cookies are sent over HTTPS in production
+            secure: process.env.NODE_ENV === 'production',
+            // Allow cookies to be sent in cross-site requests
+            sameSite: 'lax',
           });
         },
         remove: (name: string, options: any) => {
+          debug('Removing cookie:', name);
+          // Remove cookie from request
           req.cookies.set({
             name,
             value: '',
             ...options,
           });
+          // Remove cookie from response
           res.cookies.set({
             name,
             value: '',
             ...options,
+            // Ensure cookies are accessible to JavaScript
+            httpOnly: false,
+            // Ensure cookies are sent with every request
+            path: '/',
+            // Ensure cookies are sent over HTTPS in production
+            secure: process.env.NODE_ENV === 'production',
+            // Allow cookies to be sent in cross-site requests
+            sameSite: 'lax',
+            // Set expiration to past date to remove cookie
+            expires: new Date(0),
           });
         },
       },
@@ -56,7 +85,8 @@ export async function middleware(req: NextRequest) {
   debug('Session check:', { 
     hasSession: !!session,
     userId: session?.user?.id,
-    path: req.nextUrl.pathname 
+    path: req.nextUrl.pathname,
+    cookies: req.cookies.getAll().map(c => c.name)
   });
 
   // If there's no session and the user is trying to access an admin route
