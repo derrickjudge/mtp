@@ -10,37 +10,60 @@ export default function DebugPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  useEffect(() => {
-    const gatherDebugInfo = async () => {
-      const info: any = {
-        timestamp: new Date().toISOString(),
-        cookies: document.cookie,
-        localStorage: {},
-        session: null,
-        user: null,
-      };
-
-      // Get localStorage items
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) {
-          info.localStorage[key] = localStorage.getItem(key);
-        }
+  const setAuthCookie = () => {
+    const authToken = localStorage.getItem('sb-denljmcgyghtpcygsocd-auth-token');
+    if (authToken) {
+      try {
+        const tokenData = JSON.parse(authToken);
+        // Set the cookie with the same name Supabase expects
+        document.cookie = `sb-denljmcgyghtpcygsocd-auth-token=${authToken}; path=/; max-age=3600; SameSite=Lax`;
+        // Refresh the debug info
+        gatherDebugInfo();
+      } catch (error) {
+        console.error('Error setting auth cookie:', error);
       }
+    }
+  };
 
-      // Get session info
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      info.session = session;
-      info.sessionError = sessionError;
-
-      // Get user info
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      info.user = user;
-      info.userError = userError;
-
-      setDebugInfo(info);
+  const gatherDebugInfo = async () => {
+    const info: any = {
+      timestamp: new Date().toISOString(),
+      cookies: document.cookie,
+      localStorage: {},
+      rawLocalStorage: {},
+      session: null,
+      user: null,
     };
 
+    // Get localStorage items
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        const value = localStorage.getItem(key);
+        info.localStorage[key] = value;
+        // Try to parse JSON values
+        try {
+          info.rawLocalStorage[key] = JSON.parse(value || '');
+        } catch {
+          info.rawLocalStorage[key] = value;
+        }
+      }
+    }
+
+    // Get session info
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    info.session = session;
+    info.sessionError = sessionError;
+
+    // Get user info
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    info.user = user;
+    info.userError = userError;
+
+    setDebugInfo(info);
+  };
+
+  useEffect(() => {
     gatherDebugInfo();
   }, [supabase.auth]);
 
@@ -65,7 +88,14 @@ export default function DebugPage() {
           </section>
 
           <section className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">LocalStorage</h2>
+            <h2 className="text-xl font-semibold mb-4">LocalStorage (Raw)</h2>
+            <pre className="bg-gray-50 p-4 rounded overflow-x-auto">
+              {JSON.stringify(debugInfo.rawLocalStorage, null, 2)}
+            </pre>
+          </section>
+
+          <section className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-4">LocalStorage (String)</h2>
             <pre className="bg-gray-50 p-4 rounded overflow-x-auto">
               {JSON.stringify(debugInfo.localStorage, null, 2)}
             </pre>
@@ -95,6 +125,16 @@ export default function DebugPage() {
                 <pre className="mt-2">{JSON.stringify(debugInfo.userError, null, 2)}</pre>
               </div>
             )}
+          </section>
+
+          <section className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-4">Actions</h2>
+            <button
+              onClick={setAuthCookie}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+            >
+              Set Auth Cookie
+            </button>
           </section>
         </div>
       </div>
