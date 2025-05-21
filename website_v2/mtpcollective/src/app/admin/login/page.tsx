@@ -159,6 +159,11 @@ export default function AdminLogin() {
 
       addDebugMessage('Session established, user ID:', authData.session.user.id);
 
+      // Set the auth cookie with the session data
+      const authToken = JSON.stringify(authData.session);
+      document.cookie = `sb-denljmcgyghtpcygsocd-auth-token=${authToken}; path=/; max-age=3600; SameSite=Lax`;
+      addDebugMessage('Auth cookie set');
+
       // Wait a moment to ensure the session is fully established
       await new Promise(resolve => setTimeout(resolve, 1000));
 
