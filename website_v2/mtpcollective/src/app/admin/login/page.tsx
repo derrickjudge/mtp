@@ -8,8 +8,21 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase Anon Key exists:', !!supabaseAnonKey);
+// Debug logging function
+const debug = (message: string, data?: any) => {
+  console.log(`[DEBUG] ${message}`, data || '');
+  // Also show in UI for development
+  if (process.env.NODE_ENV === 'development') {
+    const debugElement = document.getElementById('debug-output');
+    if (debugElement) {
+      debugElement.innerHTML += `<div>${message} ${data ? JSON.stringify(data) : ''}</div>`;
+    }
+  }
+};
+
+debug('Initializing login page');
+debug('Supabase URL:', supabaseUrl);
+debug('Supabase Anon Key exists:', !!supabaseAnonKey);
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing required environment variables. Please ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in .env.local');
@@ -30,44 +43,51 @@ export default function AdminLogin() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [debugMessages, setDebugMessages] = useState<string[]>([]);
+
+  const addDebugMessage = (message: string, data?: any) => {
+    const fullMessage = `${message} ${data ? JSON.stringify(data) : ''}`;
+    debug(message, data);
+    setDebugMessages(prev => [...prev, fullMessage]);
+  };
 
   useEffect(() => {
     // Check if we have a valid session on mount
     const checkSession = async () => {
       try {
-        console.log('Checking initial session...');
+        addDebugMessage('Checking initial session...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
-          console.error('Session check error:', sessionError);
+          addDebugMessage('Session check error:', sessionError);
           return;
         }
 
-        console.log('Session exists:', !!session);
+        addDebugMessage('Session exists:', !!session);
         
         if (session) {
-          console.log('User ID:', session.user.id);
+          addDebugMessage('User ID:', session.user.id);
           // Check if user is admin
           const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', { user_id: session.user.id });
           
-          console.log('Admin check result:', { isAdmin, adminError });
+          addDebugMessage('Admin check result:', { isAdmin, adminError });
           
           if (adminError) {
-            console.error('Admin check error:', adminError);
+            addDebugMessage('Admin check error:', adminError);
             await supabase.auth.signOut();
             return;
           }
 
           if (isAdmin) {
-            console.log('User is admin, redirecting to photos page...');
+            addDebugMessage('User is admin, redirecting to photos page...');
             router.push('/admin/photos');
           } else {
-            console.log('User is not admin, signing out...');
+            addDebugMessage('User is not admin, signing out...');
             await supabase.auth.signOut();
           }
         }
       } catch (err) {
-        console.error('Error checking session:', err);
+        addDebugMessage('Error checking session:', err);
       } finally {
         setIsInitialized(true);
       }
@@ -80,9 +100,10 @@ export default function AdminLogin() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setDebugMessages([]); // Clear previous debug messages
 
     try {
-      console.log('Attempting login with email:', email);
+      addDebugMessage('Attempting login with email:', email);
       
       // First, sign in with email and password
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -90,14 +111,14 @@ export default function AdminLogin() {
         password,
       });
 
-      console.log('Auth response:', { 
+      addDebugMessage('Auth response:', { 
         hasData: !!authData, 
         hasSession: !!authData?.session,
         error: authError 
       });
 
       if (authError) {
-        console.error('Auth error:', {
+        addDebugMessage('Auth error:', {
           message: authError.message,
           status: authError.status,
           name: authError.name
@@ -106,11 +127,11 @@ export default function AdminLogin() {
       }
 
       if (!authData.session) {
-        console.error('No session in auth response');
+        addDebugMessage('No session in auth response');
         throw new Error('Authentication failed');
       }
 
-      console.log('Session established, user ID:', authData.session.user.id);
+      addDebugMessage('Session established, user ID:', authData.session.user.id);
 
       // Wait a moment to ensure the session is fully established
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -118,27 +139,27 @@ export default function AdminLogin() {
       // Get the current session to verify it's active
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      console.log('Session verification:', {
+      addDebugMessage('Session verification:', {
         hasSession: !!session,
         error: sessionError
       });
       
       if (sessionError) {
-        console.error('Session verification error:', sessionError);
+        addDebugMessage('Session verification error:', sessionError);
         throw new Error('Authentication failed');
       }
       if (!session) {
-        console.error('No session after verification');
+        addDebugMessage('No session after verification');
         throw new Error('Authentication failed');
       }
 
-      console.log('Checking admin role for user:', session.user.id);
+      addDebugMessage('Checking admin role for user:', session.user.id);
 
       // Check if the user has admin role using the is_admin function
       const { data: isAdmin, error: roleError } = await supabase
         .rpc('is_admin', { user_id: session.user.id });
 
-      console.log('Role check response:', { 
+      addDebugMessage('Role check response:', { 
         isAdmin, 
         roleError,
         errorDetails: roleError ? {
@@ -150,7 +171,7 @@ export default function AdminLogin() {
       });
 
       if (roleError) {
-        console.error('Error checking admin role:', {
+        addDebugMessage('Error checking admin role:', {
           error: roleError,
           code: roleError.code,
           message: roleError.message,
@@ -162,15 +183,15 @@ export default function AdminLogin() {
       }
 
       if (!isAdmin) {
-        console.log('User is not an admin, signing out...');
+        addDebugMessage('User is not an admin, signing out...');
         await supabase.auth.signOut();
         throw new Error('Invalid email or password');
       }
 
-      console.log('Login successful, redirecting to photos page...');
+      addDebugMessage('Login successful, redirecting to photos page...');
       router.push('/admin/photos');
     } catch (err) {
-      console.error('Login error:', err);
+      addDebugMessage('Login error:', err);
       setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
       setIsLoading(false);
@@ -268,6 +289,13 @@ export default function AdminLogin() {
             </button>
           </div>
         </form>
+
+        {/* Debug output */}
+        <div id="debug-output" className="mt-8 p-4 bg-gray-100 rounded-lg text-xs font-mono overflow-auto max-h-48">
+          {debugMessages.map((msg, i) => (
+            <div key={i} className="mb-1">{msg}</div>
+          ))}
+        </div>
       </div>
     </div>
   );
