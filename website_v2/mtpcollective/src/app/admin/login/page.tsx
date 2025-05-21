@@ -33,7 +33,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    storageKey: 'sb-auth-token',
+    storageKey: 'sb-denljmcgyghtpcygsocd-auth-token',
     storage: {
       getItem: (key) => {
         debug('Getting storage item:', key);

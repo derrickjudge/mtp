@@ -30,13 +30,13 @@ export async function middleware(req: NextRequest) {
           debug('Setting cookie:', { name, value, options });
           // Set cookie on the request
           req.cookies.set({
-            name: 'sb-auth-token',
+            name,
             value,
             ...options,
           });
           // Set cookie on the response
           res.cookies.set({
-            name: 'sb-auth-token',
+            name,
             value,
             ...options,
             // Ensure cookies are accessible to JavaScript
@@ -53,13 +53,13 @@ export async function middleware(req: NextRequest) {
           debug('Removing cookie:', name);
           // Remove cookie from request
           req.cookies.set({
-            name: 'sb-auth-token',
+            name,
             value: '',
             ...options,
           });
           // Remove cookie from response
           res.cookies.set({
-            name: 'sb-auth-token',
+            name,
             value: '',
             ...options,
             // Ensure cookies are accessible to JavaScript
@@ -89,23 +89,20 @@ export async function middleware(req: NextRequest) {
     cookies: req.cookies.getAll().map(c => c.name)
   });
 
+  // If we're already on the login page, don't redirect
+  if (req.nextUrl.pathname === '/admin/login') {
+    debug('On login page, allowing access');
+    return res;
+  }
+
   // If there's no session and the user is trying to access an admin route
   if (!session && req.nextUrl.pathname.startsWith('/admin')) {
     debug('No session, redirecting to login');
-    // Redirect to login page if not already there
-    if (req.nextUrl.pathname !== '/admin/login') {
-      return NextResponse.redirect(new URL('/admin/login', req.url));
-    }
+    return NextResponse.redirect(new URL('/admin/login', req.url));
   }
 
   // If there's a session, check if user is admin for admin routes
   if (session && req.nextUrl.pathname.startsWith('/admin')) {
-    // Skip admin check for login page
-    if (req.nextUrl.pathname === '/admin/login') {
-      debug('On login page with session, redirecting to photos');
-      return NextResponse.redirect(new URL('/admin/photos', req.url));
-    }
-
     debug('Checking admin role for user:', session.user.id);
     // Check if user is admin
     const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', { 
