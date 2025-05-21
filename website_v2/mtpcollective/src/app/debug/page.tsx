@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 
 export default function DebugPage() {
@@ -25,7 +25,7 @@ export default function DebugPage() {
     }
   };
 
-  const gatherDebugInfo = async () => {
+  const gatherDebugInfo = useCallback(async () => {
     const info: any = {
       timestamp: new Date().toISOString(),
       cookies: document.cookie,
@@ -61,11 +61,11 @@ export default function DebugPage() {
     info.userError = userError;
 
     setDebugInfo(info);
-  };
+  }, [supabase.auth]);
 
   useEffect(() => {
     gatherDebugInfo();
-  }, [supabase.auth]);
+  }, [gatherDebugInfo]);
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">

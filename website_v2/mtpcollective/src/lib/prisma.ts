@@ -41,8 +41,13 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Add a function to handle Prisma errors
+// Helper function to handle Prisma errors
 export const handlePrismaError = async <T>(operation: () => Promise<T>): Promise<T> => {
+  const prisma = getPrismaClient();
+  if (!prisma) {
+    throw new Error('Prisma client not available');
+  }
+
   try {
     return await operation();
   } catch (error: any) {

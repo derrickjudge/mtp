@@ -5,7 +5,9 @@ import { imageUrls } from '@/utils/imageUrls';
 import { photoService, PhotoWithRelations } from '@/services/photoService';
 import type { Photo, Category, Tag } from '@/types/photo';
 
-export const revalidate = 3600; // Revalidate every hour
+// Make this page dynamic to prevent Prisma initialization during build
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; // Disable static generation
 
 export default async function PortfolioPage() {
   let concertPhotos: Photo[] = [];
