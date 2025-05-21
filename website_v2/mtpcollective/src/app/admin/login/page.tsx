@@ -8,6 +8,9 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Anon Key exists:', !!supabaseAnonKey);
+
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing required environment variables. Please ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in .env.local');
 }
@@ -32,13 +35,34 @@ export default function AdminLogin() {
     // Check if we have a valid session on mount
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Checking initial session...');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session check error:', sessionError);
+          return;
+        }
+
+        console.log('Session exists:', !!session);
+        
         if (session) {
+          console.log('User ID:', session.user.id);
           // Check if user is admin
-          const { data: isAdmin } = await supabase.rpc('is_admin', { user_id: session.user.id });
+          const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', { user_id: session.user.id });
+          
+          console.log('Admin check result:', { isAdmin, adminError });
+          
+          if (adminError) {
+            console.error('Admin check error:', adminError);
+            await supabase.auth.signOut();
+            return;
+          }
+
           if (isAdmin) {
+            console.log('User is admin, redirecting to photos page...');
             router.push('/admin/photos');
           } else {
+            console.log('User is not admin, signing out...');
             await supabase.auth.signOut();
           }
         }
@@ -58,19 +82,35 @@ export default function AdminLogin() {
     setError(null);
 
     try {
+      console.log('Attempting login with email:', email);
+      
       // First, sign in with email and password
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log('Auth response:', { 
+        hasData: !!authData, 
+        hasSession: !!authData?.session,
+        error: authError 
+      });
+
       if (authError) {
+        console.error('Auth error:', {
+          message: authError.message,
+          status: authError.status,
+          name: authError.name
+        });
         throw new Error('Invalid email or password');
       }
 
       if (!authData.session) {
+        console.error('No session in auth response');
         throw new Error('Authentication failed');
       }
+
+      console.log('Session established, user ID:', authData.session.user.id);
 
       // Wait a moment to ensure the session is fully established
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -78,16 +118,36 @@ export default function AdminLogin() {
       // Get the current session to verify it's active
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError) throw new Error('Authentication failed');
-      if (!session) throw new Error('Authentication failed');
+      console.log('Session verification:', {
+        hasSession: !!session,
+        error: sessionError
+      });
+      
+      if (sessionError) {
+        console.error('Session verification error:', sessionError);
+        throw new Error('Authentication failed');
+      }
+      if (!session) {
+        console.error('No session after verification');
+        throw new Error('Authentication failed');
+      }
 
-      console.log('Session established, checking admin role...');
+      console.log('Checking admin role for user:', session.user.id);
 
       // Check if the user has admin role using the is_admin function
       const { data: isAdmin, error: roleError } = await supabase
         .rpc('is_admin', { user_id: session.user.id });
 
-      console.log('Role check response:', { isAdmin, roleError });
+      console.log('Role check response:', { 
+        isAdmin, 
+        roleError,
+        errorDetails: roleError ? {
+          code: roleError.code,
+          message: roleError.message,
+          details: roleError.details,
+          hint: roleError.hint
+        } : null
+      });
 
       if (roleError) {
         console.error('Error checking admin role:', {
@@ -102,12 +162,12 @@ export default function AdminLogin() {
       }
 
       if (!isAdmin) {
-        // User is authenticated but not an admin
+        console.log('User is not an admin, signing out...');
         await supabase.auth.signOut();
         throw new Error('Invalid email or password');
       }
 
-      // User is authenticated and has admin role
+      console.log('Login successful, redirecting to photos page...');
       router.push('/admin/photos');
     } catch (err) {
       console.error('Login error:', err);
