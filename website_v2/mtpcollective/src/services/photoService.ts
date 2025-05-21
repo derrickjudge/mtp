@@ -1,6 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
-import { prisma } from '@/lib/prisma';
+import { prisma, handlePrismaError } from '@/lib/prisma';
 import { Category, Tag, Photo } from '@/types/photo';
 import sharp from 'sharp';
 
@@ -55,20 +55,6 @@ const convertPrismaToPhoto = (prismaPhoto: any): PhotoWithRelations => ({
     slug: tag.slug,
   })),
 });
-
-// Helper function to handle Prisma errors
-const handlePrismaError = async (operation: () => Promise<any>) => {
-  try {
-    return await operation();
-  } catch (error: any) {
-    if (error.code === '42P05' && error.message.includes('prepared statement')) {
-      // If we get a prepared statement error, try the operation again
-      await prisma.$disconnect();
-      return await operation();
-    }
-    throw error;
-  }
-};
 
 export const photoService = {
   async uploadPhoto({
