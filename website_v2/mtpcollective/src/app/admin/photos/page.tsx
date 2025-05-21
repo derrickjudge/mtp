@@ -65,15 +65,12 @@ export default function AdminPhotos() {
         return;
       }
 
-      // Check if user has admin role
-      const { data: userRoles, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .eq('role', 'admin')
-        .single();
+      // Check if user is admin using the is_admin RPC function
+      const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', { 
+        user_id: session.user.id 
+      });
 
-      if (roleError || !userRoles) {
+      if (adminError || !isAdmin) {
         setError('You do not have permission to access this page');
         return;
       }

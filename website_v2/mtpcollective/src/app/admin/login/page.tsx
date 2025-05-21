@@ -15,7 +15,7 @@ const debug = (message: string, data?: any) => {
   if (process.env.NODE_ENV === 'development') {
     const debugElement = document.getElementById('debug-output');
     if (debugElement) {
-      debugElement.innerHTML += `<div>${message} ${data ? JSON.stringify(data) : ''}</div>`;
+      debugElement.innerHTML += `<div class="text-gray-300">${message} ${data ? JSON.stringify(data) : ''}</div>`;
     }
   }
 };
@@ -233,23 +233,23 @@ export default function AdminLogin() {
 
   if (!isInitialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
             Admin Login
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
               <span className="block sm:inline">{error}</span>
             </div>
           )}
@@ -266,7 +266,7 @@ export default function AdminLogin() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white placeholder-gray-400 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Email address"
               />
             </div>
@@ -282,7 +282,7 @@ export default function AdminLogin() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white placeholder-gray-400 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
               />
             </div>
@@ -296,39 +296,26 @@ export default function AdminLogin() {
             >
               {isLoading ? (
                 <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                  <svg
-                    className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                </span>
+              ) : (
+                <span className="absolute left-0 inset-y-0 flex items-center pl-3">
+                  <svg className="h-5 w-5 text-blue-500 group-hover:text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
                 </span>
-              ) : null}
+              )}
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
         </form>
 
-        {/* Debug output */}
-        <div id="debug-output" className="mt-8 p-4 bg-gray-100 rounded-lg text-xs font-mono overflow-auto max-h-48">
-          {debugMessages.map((msg, i) => (
-            <div key={i} className="mb-1">{msg}</div>
-          ))}
-        </div>
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-8 p-4 bg-gray-800 rounded-lg">
+            <h3 className="text-lg font-medium text-white mb-2">Debug Logs</h3>
+            <div id="debug-output" className="text-sm text-gray-300 space-y-1 max-h-96 overflow-y-auto"></div>
+          </div>
+        )}
       </div>
     </div>
   );
