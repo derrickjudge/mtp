@@ -30,13 +30,13 @@ export async function middleware(req: NextRequest) {
           debug('Setting cookie:', { name, value, options });
           // Set cookie on the request
           req.cookies.set({
-            name,
+            name: 'sb-auth-token',
             value,
             ...options,
           });
           // Set cookie on the response
           res.cookies.set({
-            name,
+            name: 'sb-auth-token',
             value,
             ...options,
             // Ensure cookies are accessible to JavaScript
@@ -53,13 +53,13 @@ export async function middleware(req: NextRequest) {
           debug('Removing cookie:', name);
           // Remove cookie from request
           req.cookies.set({
-            name,
+            name: 'sb-auth-token',
             value: '',
             ...options,
           });
           // Remove cookie from response
           res.cookies.set({
-            name,
+            name: 'sb-auth-token',
             value: '',
             ...options,
             // Ensure cookies are accessible to JavaScript

@@ -32,8 +32,25 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
-    persistSession: true
-  }
+    persistSession: true,
+    storageKey: 'sb-auth-token',
+    storage: {
+      getItem: (key) => {
+        debug('Getting storage item:', key);
+        const value = localStorage.getItem(key);
+        debug('Storage value:', value);
+        return value;
+      },
+      setItem: (key, value) => {
+        debug('Setting storage item:', { key, value });
+        localStorage.setItem(key, value);
+      },
+      removeItem: (key) => {
+        debug('Removing storage item:', key);
+        localStorage.removeItem(key);
+      },
+    },
+  },
 });
 
 export default function AdminLogin() {
