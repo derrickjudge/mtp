@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # Hosting and Development Rules
 
-## Server Management
+## Server and Hosting Management
 - Site is hosted on Vercel
 - Will use Supabase as a database which is already deployed through vercel
 - Will use Cloudflare R2 for object storage and is provisioned

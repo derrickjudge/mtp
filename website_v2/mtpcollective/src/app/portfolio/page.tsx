@@ -1,8 +1,8 @@
 import { SectionHeader } from '@/components/common/SectionHeader';
-import { GalleryGrid } from '@/components/common/GalleryGrid';
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
 import { photoService, PhotoWithRelations } from '@/services/photoService';
+import { PhotoGallery } from '@/components/photos/PhotoGallery';
 import type { Photo, Category, Tag } from '@/types/photo';
 
 // Make this page dynamic to prevent Prisma initialization during build
@@ -64,7 +64,7 @@ export default async function PortfolioPage() {
             title="Concert Photography"
             subtitle="Capturing the energy and emotion of live performances"
           />
-          <GalleryGrid photos={concertPhotos} />
+          <PhotoGallery photos={concertPhotos} />
         </div>
       </section>
 
@@ -75,7 +75,7 @@ export default async function PortfolioPage() {
             title="Automotive Photography"
             subtitle="Showcasing the beauty and power of automotive design"
           />
-          <GalleryGrid photos={automotivePhotos} />
+          <PhotoGallery photos={automotivePhotos} />
         </div>
       </section>
 
@@ -86,7 +86,7 @@ export default async function PortfolioPage() {
             title="Nature Photography"
             subtitle="Exploring the beauty and wonder of the natural world"
           />
-          <GalleryGrid photos={naturePhotos} />
+          <PhotoGallery photos={naturePhotos} />
         </div>
       </section>
     </div>

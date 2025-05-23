@@ -7,6 +7,7 @@ interface GalleryGridProps {
   columns?: 1 | 2 | 3 | 4;
   className?: string;
   gap?: 'sm' | 'md' | 'lg';
+  onPhotoClick?: (index: number) => void;
 }
 
 const columnClasses = {
@@ -27,6 +28,7 @@ export function GalleryGrid({
   columns = 3,
   className,
   gap = 'md',
+  onPhotoClick,
 }: GalleryGridProps) {
   return (
     <div
@@ -38,14 +40,19 @@ export function GalleryGrid({
       )}
     >
       {photos.map((photo, index) => (
-        <PhotoCard
+        <div
           key={photo.id}
-          src={photo.url}
-          alt={photo.title}
-          title={photo.title}
-          description={photo.description}
-          priority={index < 4} // Prioritize loading first 4 images
-        />
+          onClick={() => onPhotoClick?.(index)}
+          className="cursor-pointer"
+        >
+          <PhotoCard
+            src={photo.url}
+            alt={photo.title}
+            title={photo.title}
+            description={photo.description}
+            priority={index < 4} // Prioritize loading first 4 images
+          />
+        </div>
       ))}
     </div>
   );

@@ -1,173 +1,207 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
+import { supabase } from '@/lib/supabase/client';
 
-interface PhotoUploadProps {
-  onUploadComplete: (photo: {
-    id: string;
-    url: string;
-    thumbnail: string;
-    title: string;
-    description?: string;
-  }) => void;
-  onError: (error: string) => void;
+interface Category {
+  id: string;
+  name: string;
 }
 
-export function PhotoUpload({ onUploadComplete, onError }: PhotoUploadProps) {
-  const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+interface PhotoUploadProps {
+  onUploadComplete?: () => void;
+}
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setFilePreview(previewUrl);
-    }
+export function PhotoUpload({ onUploadComplete }: PhotoUploadProps) {
+  const router = useRouter();
+  const [isUploading, setIsUploading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [currentTag, setCurrentTag] = useState('');
+
+  // Fetch categories on component mount
+  React.useEffect(() => {
+    const fetchCategories = async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching categories:', error);
+        return;
+      }
+
+      setCategories(data || []);
+    };
+
+    fetchCategories();
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png'],
-      'image/webp': ['.webp'],
-    },
-    maxSize: 10 * 1024 * 1024, // 10MB
-    multiple: false,
-  });
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) return;
 
-  const handleUpload = async () => {
-    if (!filePreview || !title) return;
+    const file = acceptedFiles[0];
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    setIsUploading(true);
 
     try {
-      setIsUploading(true);
-      setUploadProgress(0);
-
-      // Convert the preview URL back to a File object
-      const response = await fetch(filePreview);
-      const blob = await response.blob();
-      const file = new File([blob], 'photo.jpg', { type: blob.type });
-
-      // Create form data
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('title', title);
-      if (description) {
-        formData.append('description', description);
-      }
-      formData.append('categoryIds', '[]'); // Empty array for now
-      formData.append('tagIds', '[]'); // Empty array for now
+      formData.append('title', file.name.split('.')[0]); // Use filename as default title
+      formData.append('description', '');
+      
+      // Add selected categories
+      selectedCategories.forEach(categoryId => {
+        formData.append('categoryIds', categoryId);
+      });
 
-      // Upload to API
-      const result = await fetch('/api/photos/upload', {
+      // Add tags
+      tags.forEach(tag => {
+        formData.append('tags', tag);
+      });
+
+      const response = await fetch('/api/photos/upload', {
         method: 'POST',
         body: formData,
       });
 
-      if (!result.ok) {
-        throw new Error('Failed to upload photo');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to upload photo');
       }
 
-      const photo = await result.json();
-      onUploadComplete(photo);
-
-      // Reset the form
-      setFilePreview(null);
-      setTitle('');
-      setDescription('');
-      setUploadProgress(0);
+      const photo = await response.json();
+      toast.success('Photo uploaded successfully');
+      
+      if (onUploadComplete) {
+        onUploadComplete();
+      }
+      
+      router.refresh();
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to upload photo');
+      console.error('Error uploading photo:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to upload photo');
     } finally {
       setIsUploading(false);
     }
+  }, [selectedCategories, tags, router, onUploadComplete]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
+    },
+    maxFiles: 1,
+    disabled: isUploading
+  });
+
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && currentTag.trim()) {
+      e.preventDefault();
+      if (!tags.includes(currentTag.trim())) {
+        setTags(prev => [...prev, currentTag.trim()]);
+      }
+      setCurrentTag('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(prev => prev.filter(tag => tag !== tagToRemove));
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-          isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-        }`}
+        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+          ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <input {...getInputProps()} />
-        {filePreview ? (
-          <div className="relative w-full h-64">
-            <Image
-              src={filePreview}
-              alt="Preview"
-              fill
-              className="object-contain"
-            />
+        {isUploading ? (
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <p className="mt-2 text-sm text-gray-600">Uploading...</p>
           </div>
+        ) : isDragActive ? (
+          <p className="text-blue-500">Drop the image here...</p>
         ) : (
-          <div className="space-y-2">
-            <p className="text-lg font-medium">
-              {isDragActive ? 'Drop the photo here' : 'Drag and drop a photo here'}
-            </p>
-            <p className="text-sm text-gray-500">
-              or click to select a file
-            </p>
-            <p className="text-xs text-gray-400">
-              Supported formats: JPG, PNG, WebP (max 10MB)
-            </p>
+          <div>
+            <p className="text-gray-600">Drag and drop an image here, or click to select</p>
+            <p className="text-sm text-gray-500 mt-1">Supports: JPEG, PNG, GIF, WebP</p>
           </div>
         )}
       </div>
 
-      {filePreview && (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-              Title *
-            </label>
-            <input
-              type="text"
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Categories
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {categories.map(category => (
+              <button
+                key={category.id}
+                onClick={() => handleCategoryChange(category.id)}
+                className={`px-3 py-1 rounded-full text-sm
+                  ${selectedCategories.includes(category.id)
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                {category.name}
+              </button>
+            ))}
           </div>
-
-          <div className="space-y-2">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-            />
-          </div>
-
-          <button
-            onClick={handleUpload}
-            disabled={isUploading || !title}
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isUploading ? 'Uploading...' : 'Upload Photo'}
-          </button>
-
-          {isUploading && (
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div
-                className="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-          )}
         </div>
-      )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tags
+          </label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {tags.map(tag => (
+              <span
+                key={tag}
+                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700"
+              >
+                {tag}
+                <button
+                  onClick={() => removeTag(tag)}
+                  className="ml-2 text-gray-500 hover:text-gray-700"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <input
+            type="text"
+            value={currentTag}
+            onChange={(e) => setCurrentTag(e.target.value)}
+            onKeyDown={handleTagKeyDown}
+            placeholder="Add a tag and press Enter"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+      </div>
     </div>
   );
 } 

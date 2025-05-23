@@ -4,6 +4,7 @@ import "./globals.css";
 import Navigation from "@/components/layout/Navigation";
 import { AuthProvider } from "@/context/AuthContext";
 import Link from 'next/link';
+import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -90,6 +91,7 @@ export default function RootLayout({
             </footer>
           </div>
         </AuthProvider>
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );

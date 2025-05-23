@@ -165,8 +165,10 @@ export default function AdminPhotos() {
           </select>
         </div>
         <PhotoUpload
-          onUploadComplete={handleUploadComplete}
-          onError={setError}
+          onUploadComplete={() => {
+            // Refresh the page to show new photos
+            router.refresh();
+          }}
         />
       </div>
 
