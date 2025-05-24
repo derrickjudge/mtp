@@ -4,7 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { supabase } from '@/lib/supabase/client';
+import { photoService } from '@/services/photoService';
 
 interface Category {
   id: string;
@@ -26,17 +26,17 @@ export function PhotoUpload({ onUploadComplete }: PhotoUploadProps) {
   // Fetch categories on component mount
   React.useEffect(() => {
     const fetchCategories = async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-
-      if (error) {
+      try {
+        const response = await fetch('/api/categories');
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories');
+        }
+        const data = await response.json();
+        setCategories(data);
+      } catch (error) {
         console.error('Error fetching categories:', error);
-        return;
+        toast.error('Failed to fetch categories');
       }
-
-      setCategories(data || []);
     };
 
     fetchCategories();

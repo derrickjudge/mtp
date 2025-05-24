@@ -1,6 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
-import { getPrismaClient } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { Category, Tag, Photo } from '@/types/photo';
 import sharp from 'sharp';
 
@@ -56,25 +56,6 @@ const convertPrismaToPhoto = (prismaPhoto: any): PhotoWithRelations => ({
   })),
 });
 
-// Helper function to handle Prisma errors
-const handlePrismaError = async <T>(operation: () => Promise<T>): Promise<T> => {
-  const prisma = getPrismaClient();
-  if (!prisma) {
-    throw new Error('Prisma client not available');
-  }
-
-  try {
-    return await operation();
-  } catch (error: any) {
-    if (error.code === '42P05' && error.message.includes('prepared statement')) {
-      // If we get a prepared statement error, disconnect and retry
-      await prisma.$disconnect();
-      return await operation();
-    }
-    throw error;
-  }
-};
-
 export const photoService = {
   async uploadPhoto({
     file,
@@ -87,11 +68,6 @@ export const photoService = {
     authorId,
     metadata,
   }: UploadPhotoParams): Promise<PhotoWithRelations> {
-    const prisma = getPrismaClient();
-    if (!prisma) {
-      throw new Error('Prisma client not available');
-    }
-
     // Generate unique file name
     const uniqueFileName = `${Date.now()}-${fileName}`;
     const thumbnailFileName = `thumbnails/${uniqueFileName}`;
@@ -126,45 +102,36 @@ export const photoService = {
     );
 
     // Create photo record in database
-    const photo = await handlePrismaError(() =>
-      prisma.photo.create({
-        data: {
-          title,
-          description,
-          url: `${r2Config.publicUrl}/${uniqueFileName}`,
-          thumbnail: `${r2Config.publicUrl}/${thumbnailFileName}`,
-          categories: {
-            connect: categoryIds.map(id => ({ id })),
-          },
-          tags: {
-            connect: tagIds.map(id => ({ id })),
-          },
-          author: {
-            connect: { id: authorId },
-          },
-          metadata,
+    const photo = await prisma.photo.create({
+      data: {
+        title,
+        description,
+        url: `${r2Config.publicUrl}/${uniqueFileName}`,
+        thumbnail: `${r2Config.publicUrl}/${thumbnailFileName}`,
+        categories: {
+          connect: categoryIds.map(id => ({ id })),
         },
-        include: {
-          categories: true,
-          tags: true,
+        tags: {
+          connect: tagIds.map(id => ({ id })),
         },
-      })
-    );
+        author: {
+          connect: { id: authorId },
+        },
+        metadata,
+      },
+      include: {
+        categories: true,
+        tags: true,
+      },
+    });
 
     return convertPrismaToPhoto(photo);
   },
 
   async deletePhoto(id: string): Promise<void> {
-    const prisma = getPrismaClient();
-    if (!prisma) {
-      throw new Error('Prisma client not available');
-    }
-
-    const photo = await handlePrismaError(() =>
-      prisma.photo.findUnique({
-        where: { id },
-      })
-    );
+    const photo = await prisma.photo.findUnique({
+      where: { id },
+    });
 
     if (!photo) {
       throw new Error('Photo not found');
@@ -194,11 +161,9 @@ export const photoService = {
     }
 
     // Delete from database
-    await handlePrismaError(() =>
-      prisma.photo.delete({
-        where: { id },
-      })
-    );
+    await prisma.photo.delete({
+      where: { id },
+    });
   },
 
   async getPhotos(options?: {
@@ -208,63 +173,49 @@ export const photoService = {
     tagId?: string;
     featured?: boolean;
   }): Promise<PhotoWithRelations[]> {
-    const prisma = getPrismaClient();
-    if (!prisma) {
-      throw new Error('Prisma client not available');
-    }
-
-    const photos = await handlePrismaError(() =>
-      prisma.photo.findMany({
-        where: {
-          published: true,
-          ...(options?.categoryId && {
-            categories: {
-              some: {
-                id: options.categoryId,
-              },
+    const photos = await prisma.photo.findMany({
+      where: {
+        published: true,
+        ...(options?.categoryId && {
+          categories: {
+            some: {
+              id: options.categoryId,
             },
-          }),
-          ...(options?.tagId && {
-            tags: {
-              some: {
-                id: options.tagId,
-              },
+          },
+        }),
+        ...(options?.tagId && {
+          tags: {
+            some: {
+              id: options.tagId,
             },
-          }),
-          ...(options?.featured && {
-            featured: true,
-          }),
-        },
-        include: {
-          categories: true,
-          tags: true,
-        },
-        take: options?.take,
-        skip: options?.skip,
-        orderBy: {
-          createdAt: 'desc',
-        },
-      })
-    );
+          },
+        }),
+        ...(options?.featured && {
+          featured: true,
+        }),
+      },
+      include: {
+        categories: true,
+        tags: true,
+      },
+      take: options?.take,
+      skip: options?.skip,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
     return photos.map(convertPrismaToPhoto);
   },
 
   async getPhotoById(id: string): Promise<PhotoWithRelations | null> {
-    const prisma = getPrismaClient();
-    if (!prisma) {
-      throw new Error('Prisma client not available');
-    }
-
-    const photo = await handlePrismaError(() =>
-      prisma.photo.findUnique({
-        where: { id },
-        include: {
-          categories: true,
-          tags: true,
-        },
-      })
-    );
+    const photo = await prisma.photo.findUnique({
+      where: { id },
+      include: {
+        categories: true,
+        tags: true,
+      },
+    });
 
     return photo ? convertPrismaToPhoto(photo) : null;
   },

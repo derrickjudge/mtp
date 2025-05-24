@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { PhotoUpload } from '@/components/photos/PhotoUpload';
 import { PhotoGrid } from '@/components/photos/PhotoGrid';
 import { Photo } from '@/types/photo';
-import { supabase } from '@/lib/supabase/client';
+import { photoService } from '@/services/photoService';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 interface Category {
   id: string;
@@ -22,13 +24,12 @@ export default function AdminPhotos() {
 
   const fetchCategories = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setCategories(data || []);
+      const response = await fetch('/api/categories');
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+      const data = await response.json();
+      setCategories(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch categories');
     }
@@ -36,19 +37,10 @@ export default function AdminPhotos() {
 
   const fetchPhotos = useCallback(async () => {
     try {
-      let query = supabase
-        .from('photos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setPhotos(data || []);
+      const photos = await photoService.getPhotos({
+        categoryId: selectedCategory || undefined,
+      });
+      setPhotos(photos);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch photos');
     } finally {
@@ -58,19 +50,14 @@ export default function AdminPhotos() {
 
   const checkAuth = useCallback(async () => {
     try {
-      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      const session = await getServerSession(authOptions);
       
-      if (authError || !session) {
+      if (!session?.user) {
         router.push('/admin/login');
         return;
       }
 
-      // Check if user is admin using the is_admin RPC function
-      const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', { 
-        user_id: session.user.id 
-      });
-
-      if (adminError || !isAdmin) {
+      if (session.user.role !== 'ADMIN') {
         setError('You do not have permission to access this page');
         return;
       }
@@ -87,25 +74,8 @@ export default function AdminPhotos() {
     checkAuth();
   }, [checkAuth]);
 
-  const handleUploadComplete = async (photo: { id: string; url: string; thumbnail: string; title: string; description?: string }) => {
+  const handleUploadComplete = async () => {
     try {
-      // Create a new photo record in the database
-      const { data, error } = await supabase
-        .from('photos')
-        .insert([
-          {
-            title: photo.title,
-            url: photo.url,
-            thumbnail: photo.thumbnail,
-            description: photo.description,
-            category_id: selectedCategory || null,
-          }
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
-
       // Refresh the photos list
       await fetchPhotos();
     } catch (err) {
@@ -131,7 +101,7 @@ export default function AdminPhotos() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Photo Management</h1>
         <button
-          onClick={() => supabase.auth.signOut()}
+          onClick={() => router.push('/api/auth/signout')}
           className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
         >
           Sign Out
@@ -165,10 +135,7 @@ export default function AdminPhotos() {
           </select>
         </div>
         <PhotoUpload
-          onUploadComplete={() => {
-            // Refresh the page to show new photos
-            router.refresh();
-          }}
+          onUploadComplete={handleUploadComplete}
         />
       </div>
 

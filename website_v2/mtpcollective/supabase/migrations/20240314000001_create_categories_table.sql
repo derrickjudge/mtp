@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS categories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
+  slug TEXT NOT NULL UNIQUE,
   description TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -27,16 +28,22 @@ CREATE POLICY "Categories are deletable by authenticated users" ON categories
   FOR DELETE USING (auth.role() = 'authenticated');
 
 -- Create updated_at trigger
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = timezone('utc'::text, now());
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 CREATE TRIGGER set_updated_at
   BEFORE UPDATE ON categories
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- Insert some default categories
-INSERT INTO categories (name, description) VALUES
-  ('Landscape', 'Beautiful landscapes and nature scenes'),
-  ('Portrait', 'Portrait photography and headshots'),
-  ('Street', 'Street photography and urban scenes'),
-  ('Architecture', 'Architectural photography and buildings'),
-  ('Travel', 'Travel photography and destinations')
+-- Insert default categories
+INSERT INTO categories (name, slug, description) VALUES
+  ('Concerts', 'concerts', 'Live music and performance photography'),
+  ('Automotive', 'automotive', 'Car and motorsport photography'),
+  ('Nature', 'nature', 'Landscape and wildlife photography')
 ON CONFLICT (name) DO NOTHING; 

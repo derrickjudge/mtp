@@ -4,6 +4,22 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
+// Create a single Prisma Client instance to be used across the application
+export const prisma = global.prisma || new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error', 'warn'],
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma;
+}
+
+// Handle cleanup in serverless environment
+if (process.env.NODE_ENV === 'production') {
+  process.on('beforeExit', async () => {
+    await prisma.$disconnect();
+  });
+}
+
 // Only create Prisma Client in production or when explicitly needed
 const prismaClientSingleton = () => {
   if (process.env.NODE_ENV === 'production') {
@@ -30,15 +46,6 @@ export const getPrismaClient = () => {
 // Initialize prisma only in production
 if (process.env.NODE_ENV === 'production') {
   globalThis.prisma = prismaClientSingleton();
-}
-
-// Handle cleanup in serverless environment
-if (process.env.NODE_ENV === 'production') {
-  process.on('beforeExit', async () => {
-    if (globalThis.prisma) {
-      await globalThis.prisma.$disconnect();
-    }
-  });
 }
 
 // Helper function to handle Prisma errors

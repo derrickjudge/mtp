@@ -14,11 +14,14 @@
     "check-admin": "ts-node --esm scripts/check-admin-status.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.810.0",
+    "@auth/prisma-adapter": "^2.9.1",
+    "@aws-sdk/client-s3": "^3.817.0",
     "@prisma/client": "^6.8.2",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.39.3",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "dotenv": "^16.5.0",
     "next": "^14.2.28",
@@ -27,7 +30,7 @@
     "react-dom": "^18",
     "react-dropzone": "^14.3.8",
     "react-hot-toast": "^2.5.2",
-    "sharp": "^0.34.1",
+    "sharp": "^0.34.2",
     "tailwind-merge": "^3.3.0",
     "yet-another-react-lightbox": "^3.23.2"
   },
