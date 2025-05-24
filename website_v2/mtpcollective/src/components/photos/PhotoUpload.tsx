@@ -4,7 +4,6 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { photoService } from '@/services/photoService';
 
 interface Category {
   id: string;

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { PhotoUpload } from '@/components/photos/PhotoUpload';
 import { PhotoGrid } from '@/components/photos/PhotoGrid';
 import { Photo } from '@/types/photo';
-import { photoService } from '@/services/photoService';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -37,10 +36,11 @@ export default function AdminPhotos() {
 
   const fetchPhotos = useCallback(async () => {
     try {
-      const photos = await photoService.getPhotos({
-        categoryId: selectedCategory || undefined,
-      });
-      setPhotos(photos);
+      const url = selectedCategory ? `/api/photos?category=${selectedCategory}` : '/api/photos';
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch photos');
+      const data = await response.json();
+      setPhotos(data.photos || data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch photos');
     } finally {
@@ -50,7 +50,8 @@ export default function AdminPhotos() {
 
   const checkAuth = useCallback(async () => {
     try {
-      const session = await getServerSession(authOptions);
+      const response = await fetch('/api/auth/session');
+      const session = await response.json();
       
       if (!session?.user) {
         router.push('/admin/login');
@@ -76,7 +77,6 @@ export default function AdminPhotos() {
 
   const handleUploadComplete = async () => {
     try {
-      // Refresh the photos list
       await fetchPhotos();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save photo');

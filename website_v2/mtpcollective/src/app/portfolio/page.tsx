@@ -1,9 +1,8 @@
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
-import { photoService, PhotoWithRelations } from '@/services/photoService';
 import { PhotoGallery } from '@/components/photos/PhotoGallery';
-import type { Photo, Category, Tag } from '@/types/photo';
+import type { Photo } from '@/types/photo';
 
 // Make this page dynamic to prevent Prisma initialization during build
 export const dynamic = 'force-dynamic';
@@ -145,30 +144,25 @@ const samplePhotos = {
   ],
 };
 
-export default async function PortfolioPage() {
-  let concertPhotos: Photo[] = [];
-  let automotivePhotos: Photo[] = [];
-  let naturePhotos: Photo[] = [];
-
+async function fetchPhotosByCategory(category: string): Promise<Photo[]> {
   try {
-    // Fetch photos for each category
-    const [concertPhotosWithRelations, automotivePhotosWithRelations, naturePhotosWithRelations] = await Promise.all([
-      photoService.getPhotos({ categoryId: 'concert' }),
-      photoService.getPhotos({ categoryId: 'automotive' }),
-      photoService.getPhotos({ categoryId: 'nature' }),
-    ]) as [PhotoWithRelations[], PhotoWithRelations[], PhotoWithRelations[]];
-
-    // Map to Photo[] type
-    concertPhotos = concertPhotosWithRelations;
-    automotivePhotos = automotivePhotosWithRelations;
-    naturePhotos = naturePhotosWithRelations;
-  } catch (error) {
-    console.error('Error fetching photos:', error);
-    // Use sample photos if fetch fails
-    concertPhotos = samplePhotos.concert;
-    automotivePhotos = samplePhotos.automotive;
-    naturePhotos = samplePhotos.nature;
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/photos?category=${category}`, {
+      next: { revalidate: 60 } // Revalidate every minute
+    });
+    if (!res.ok) throw new Error('Failed to fetch');
+    const data = await res.json();
+    return data.photos || [];
+  } catch {
+    return samplePhotos[category as keyof typeof samplePhotos] || [];
   }
+}
+
+export default async function PortfolioPage() {
+  const [concertPhotos, automotivePhotos, naturePhotos] = await Promise.all([
+    fetchPhotosByCategory('concert'),
+    fetchPhotosByCategory('automotive'),
+    fetchPhotosByCategory('nature'),
+  ]);
 
   return (
     <div className="min-h-screen bg-black text-white">
