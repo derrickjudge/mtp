@@ -1,236 +1,64 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
-
-// Validate environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-// Debug logging function
-const debug = (message: string, data?: any) => {
-  console.log(`[DEBUG] ${message}`, data || '');
-  // Also show in UI for development
-  if (process.env.NODE_ENV === 'development') {
-    const debugElement = document.getElementById('debug-output');
-    if (debugElement) {
-      debugElement.innerHTML += `<div class="text-gray-300">${message} ${data ? JSON.stringify(data) : ''}</div>`;
-    }
-  }
-};
-
-debug('Initializing login page');
-debug('Supabase URL:', supabaseUrl);
-debug('Supabase Anon Key exists:', !!supabaseAnonKey);
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing required environment variables. Please ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in .env.local');
-}
-
-// Create a client for admin operations
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    storageKey: 'sb-denljmcgyghtpcygsocd-auth-token',
-    storage: {
-      getItem: (key) => {
-        debug('Getting storage item:', key);
-        if (typeof window === 'undefined') {
-          return null;
-        }
-        const value = localStorage.getItem(key);
-        debug('Storage value:', value);
-        return value;
-      },
-      setItem: (key, value) => {
-        debug('Setting storage item:', { key, value });
-        if (typeof window === 'undefined') {
-          return;
-        }
-        localStorage.setItem(key, value);
-      },
-      removeItem: (key) => {
-        debug('Removing storage item:', key);
-        if (typeof window === 'undefined') {
-          return;
-        }
-        localStorage.removeItem(key);
-      },
-    },
-  },
-});
+import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn, getSession } from 'next-auth/react';
 
 export default function AdminLogin() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [debugMessages, setDebugMessages] = useState<string[]>([]);
 
-  const addDebugMessage = (message: string, data?: any) => {
-    const fullMessage = `${message} ${data ? JSON.stringify(data) : ''}`;
-    debug(message, data);
-    setDebugMessages(prev => [...prev, fullMessage]);
-  };
+  const callbackUrl = searchParams.get('callbackUrl') || '/admin/photos';
 
   useEffect(() => {
-    // Check if we have a valid session on mount
+    // Check if we already have a valid session
     const checkSession = async () => {
       try {
-        addDebugMessage('Checking initial session...');
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const session = await getSession();
         
-        if (sessionError) {
-          addDebugMessage('Session check error:', sessionError);
-          return;
-        }
-
-        addDebugMessage('Session exists:', !!session);
-        
-        if (session) {
-          addDebugMessage('User ID:', session.user.id);
-          // Check if user is admin
-          const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', { user_id: session.user.id });
-          
-          addDebugMessage('Admin check result:', { isAdmin, adminError });
-          
-          if (adminError) {
-            addDebugMessage('Admin check error:', adminError);
-            await supabase.auth.signOut();
-            return;
-          }
-
-          if (isAdmin) {
-            addDebugMessage('User is admin, redirecting to photos page...');
-            router.push('/admin/photos');
-          } else {
-            addDebugMessage('User is not admin, signing out...');
-            await supabase.auth.signOut();
-          }
+        if (session?.user) {
+          // User is already logged in, redirect to admin panel
+          router.push(callbackUrl);
         }
       } catch (err) {
-        addDebugMessage('Error checking session:', err);
+        console.error('Error checking session:', err);
       } finally {
         setIsInitialized(true);
       }
     };
 
     checkSession();
-  }, [router]);
+  }, [router, callbackUrl]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    setDebugMessages([]); // Clear previous debug messages
 
     try {
-      addDebugMessage('Attempting login with email:', email);
-      
-      // First, sign in with email and password
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const result = await signIn('credentials', {
         email,
         password,
+        redirect: false,
       });
 
-      addDebugMessage('Auth response:', { 
-        hasData: !!authData, 
-        hasSession: !!authData?.session,
-        error: authError 
-      });
-
-      if (authError) {
-        addDebugMessage('Auth error:', {
-          message: authError.message,
-          status: authError.status,
-          name: authError.name
-        });
-        throw new Error('Invalid email or password');
+      if (result?.error) {
+        setError('Invalid email or password');
+        return;
       }
 
-      if (!authData.session) {
-        addDebugMessage('No session in auth response');
-        throw new Error('Authentication failed');
-      }
-
-      addDebugMessage('Session established, user ID:', authData.session.user.id);
-
-      // Set the auth cookie with the session data
-      const authToken = JSON.stringify(authData.session);
-      document.cookie = `sb-denljmcgyghtpcygsocd-auth-token=${authToken}; path=/; max-age=3600; SameSite=Lax`;
-      addDebugMessage('Auth cookie set');
-
-      // Wait a moment to ensure the session is fully established
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Get the current session to verify it's active
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      addDebugMessage('Session verification:', {
-        hasSession: !!session,
-        error: sessionError
-      });
-      
-      if (sessionError) {
-        addDebugMessage('Session verification error:', sessionError);
-        throw new Error('Authentication failed');
-      }
-      if (!session) {
-        addDebugMessage('No session after verification');
-        throw new Error('Authentication failed');
-      }
-
-      addDebugMessage('Checking admin role for user:', session.user.id);
-
-      // Check if the user has admin role using the is_admin function
-      const { data: isAdmin, error: roleError } = await supabase
-        .rpc('is_admin', { user_id: session.user.id });
-
-      addDebugMessage('Role check response:', { 
-        isAdmin, 
-        roleError,
-        errorDetails: roleError ? {
-          code: roleError.code,
-          message: roleError.message,
-          details: roleError.details,
-          hint: roleError.hint
-        } : null
-      });
-
-      if (roleError) {
-        addDebugMessage('Error checking admin role:', {
-          error: roleError,
-          code: roleError.code,
-          message: roleError.message,
-          details: roleError.details,
-          hint: roleError.hint
-        });
-        await supabase.auth.signOut();
-        throw new Error('Invalid email or password');
-      }
-
-      if (!isAdmin) {
-        addDebugMessage('User is not an admin, signing out...');
-        await supabase.auth.signOut();
-        throw new Error('Invalid email or password');
-      }
-
-      addDebugMessage('Login successful, redirecting to photos page...');
-      // Add a small delay to ensure session is fully established
-      await new Promise(resolve => setTimeout(resolve, 500));
-      try {
-        router.replace('/admin/photos');
-      } catch (err) {
-        addDebugMessage('Router redirect failed, using window.location:', err);
-        window.location.href = '/admin/photos';
+      if (result?.ok) {
+        // Successful login, redirect to admin panel
+        router.push(callbackUrl);
       }
     } catch (err) {
-      addDebugMessage('Login error:', err);
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      console.error('Login error:', err);
+      setError('Authentication failed');
     } finally {
       setIsLoading(false);
     }
@@ -314,13 +142,6 @@ export default function AdminLogin() {
             </button>
           </div>
         </form>
-
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-8 p-4 bg-gray-800 rounded-lg">
-            <h3 className="text-lg font-medium text-white mb-2">Debug Logs</h3>
-            <div id="debug-output" className="text-sm text-gray-300 space-y-1 max-h-96 overflow-y-auto"></div>
-          </div>
-        )}
       </div>
     </div>
   );

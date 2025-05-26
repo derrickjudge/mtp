@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import { PhotoUpload } from '@/components/photos/PhotoUpload';
 import { PhotoGrid } from '@/components/photos/PhotoGrid';
 import { Photo } from '@/types/photo';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 
 interface Category {
   id: string;
@@ -15,6 +14,7 @@ interface Category {
 
 export default function AdminPhotos() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -48,32 +48,23 @@ export default function AdminPhotos() {
     }
   }, [selectedCategory]);
 
-  const checkAuth = useCallback(async () => {
-    try {
-      const response = await fetch('/api/auth/session');
-      const session = await response.json();
-      
-      if (!session?.user) {
-        router.push('/admin/login');
-        return;
-      }
-
-      if (session.user.role !== 'ADMIN') {
-        setError('You do not have permission to access this page');
-        return;
-      }
-
-      fetchCategories();
-      fetchPhotos();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to authenticate');
-      router.push('/admin/login');
-    }
-  }, [router, fetchCategories, fetchPhotos]);
-
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    if (status === 'loading') return; // Still loading session
+
+    if (status === 'unauthenticated' || !session?.user) {
+      router.push('/admin/login');
+      return;
+    }
+
+    if (session.user.role !== 'ADMIN') {
+      setError('You do not have permission to access this page');
+      return;
+    }
+
+    // User is authenticated and has admin role
+    fetchCategories();
+    fetchPhotos();
+  }, [status, session, router, fetchCategories, fetchPhotos]);
 
   const handleUploadComplete = async () => {
     try {
@@ -88,10 +79,25 @@ export default function AdminPhotos() {
     fetchPhotos();
   };
 
-  if (isLoading) {
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/admin/login' });
+  };
+
+  if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+      </div>
+    );
+  }
+
+  if (!session?.user || session.user.role !== 'ADMIN') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900">Access Denied</h2>
+          <p className="text-gray-600">You do not have permission to access this page.</p>
+        </div>
       </div>
     );
   }
@@ -101,7 +107,7 @@ export default function AdminPhotos() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Photo Management</h1>
         <button
-          onClick={() => router.push('/api/auth/signout')}
+          onClick={handleSignOut}
           className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
         >
           Sign Out
