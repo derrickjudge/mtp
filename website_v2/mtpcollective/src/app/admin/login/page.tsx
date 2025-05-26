@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, getSession } from 'next-auth/react';
 
-export default function AdminLogin() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -144,5 +144,17 @@ export default function AdminLogin() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function AdminLogin() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 } 

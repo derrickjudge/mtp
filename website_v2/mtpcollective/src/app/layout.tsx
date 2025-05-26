@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/layout/Navigation";
-import { SessionProvider } from "next-auth/react";
+import { AuthProvider } from "@/components/providers/SessionProvider";
 import Link from 'next/link';
 import { Toaster } from 'react-hot-toast';
 
@@ -22,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} font-sans antialiased bg-black text-white min-h-screen flex flex-col`}>
-        <SessionProvider>
+        <AuthProvider>
           <div className="min-h-screen flex flex-col">
             <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80">
               <div className="container mx-auto px-4 py-4">
@@ -90,7 +90,7 @@ export default function RootLayout({
               </div>
             </footer>
           </div>
-        </SessionProvider>
+        </AuthProvider>
         <Toaster position="bottom-right" />
       </body>
     </html>
