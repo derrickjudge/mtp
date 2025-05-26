@@ -9,8 +9,8 @@ export default withAuth(
     console.log(`[Middleware] Processing request for: ${pathname}`);
     console.log(`[Middleware] User role: ${token?.role}`);
 
-    // If trying to access admin routes, check for admin role
-    if (pathname.startsWith('/admin')) {
+    // If trying to access admin routes (but NOT the login page), check for admin role
+    if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
       if (!token || token.role !== 'ADMIN') {
         console.log(`[Middleware] Access denied - user role: ${token?.role}`);
         return NextResponse.redirect(new URL('/admin/login', req.url));
