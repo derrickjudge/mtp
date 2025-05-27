@@ -11,6 +11,7 @@
     "test:watch": "jest --watch",
     "create-admin": "node scripts/create-admin-user.js",
     "create-categories": "node scripts/create-categories.js",
+    "test-r2": "ts-node --esm scripts/test-r2-access.ts",
     "setup-admin": "ts-node --esm scripts/setup-admin.ts",
     "setup-admin-role": "ts-node --esm scripts/setup-admin-role.ts",
     "check-admin": "ts-node --esm scripts/check-admin-status.ts"

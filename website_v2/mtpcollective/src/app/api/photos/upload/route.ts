@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { photoService } from '@/services/photoService';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import sharp from 'sharp';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +22,6 @@ export async function POST(req: NextRequest) {
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const categoryIds = formData.getAll('categoryIds') as string[];
-    const tags = formData.getAll('tags') as string[];
 
     if (!file || !title) {
       return NextResponse.json(
@@ -28,6 +30,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if R2 is configured
+    const hasR2Config = process.env.R2_BUCKET_NAME && 
+                       process.env.R2_ACCESS_KEY_ID && 
+                       process.env.R2_SECRET_ACCESS_KEY;
+
+    if (!hasR2Config) {
+      return NextResponse.json(
+        { 
+          message: 'Photo upload is not configured yet. Please set up Cloudflare R2 environment variables.',
+          details: 'Missing R2_BUCKET_NAME, R2_ACCESS_KEY_ID, or R2_SECRET_ACCESS_KEY environment variables.'
+        },
+        { status: 503 }
+      );
+    }
+
+    // If R2 is configured, use the original photoService
+    const { photoService } = await import('@/services/photoService');
+    
     // Convert File to Buffer
     const buffer = Buffer.from(await file.arrayBuffer());
 
