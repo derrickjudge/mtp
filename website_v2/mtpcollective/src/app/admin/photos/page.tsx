@@ -103,57 +103,59 @@ export default function AdminPhotos() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Photo Management</h1>
-        <button
-          onClick={handleSignOut}
-          className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-        >
-          Sign Out
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Upload New Photo</h2>
-        <div className="mb-4">
-          <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-            Category
-          </label>
-          <select
-            id="category"
-            value={selectedCategory}
-            onChange={(e) => handleCategoryChange(e.target.value)}
-            className="w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-white">Photo Management</h1>
+          <button
+            onClick={handleSignOut}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
-            <option value="">Select a category</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+            Sign Out
+          </button>
         </div>
-        <PhotoUpload
-          onUploadComplete={handleUploadComplete}
-        />
-      </div>
 
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Your Photos</h2>
-        {photos.length > 0 ? (
-          <PhotoGrid photos={photos} />
-        ) : (
-          <p className="text-gray-500 text-center py-8">
-            No photos uploaded yet. Upload your first photo above!
-          </p>
+        {error && (
+          <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
         )}
+
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-gray-100">Upload New Photo</h2>
+          <div className="mb-4">
+            <label htmlFor="category" className="block text-sm font-medium text-gray-200 mb-2">
+              Filter by Category
+            </label>
+            <select
+              id="category"
+              value={selectedCategory}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              className="w-full max-w-xs rounded-md border-gray-600 bg-gray-800 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            >
+              <option value="">All categories</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <PhotoUpload
+            onUploadComplete={handleUploadComplete}
+          />
+        </div>
+
+        <div>
+          <h2 className="text-xl font-semibold mb-4 text-gray-100">Your Photos</h2>
+          {photos.length > 0 ? (
+            <PhotoGrid photos={photos} />
+          ) : (
+            <p className="text-gray-400 text-center py-8">
+              No photos uploaded yet. Upload your first photo above!
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
