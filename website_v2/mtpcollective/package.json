@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
+    "create-admin": "node scripts/create-admin-user.js",
     "setup-admin": "ts-node --esm scripts/setup-admin.ts",
     "setup-admin-role": "ts-node --esm scripts/setup-admin-role.ts",
     "check-admin": "ts-node --esm scripts/check-admin-status.ts"
