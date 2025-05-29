@@ -6,49 +6,15 @@ Now that authentication is working, here's how to get the admin panel fully func
 
 ### **1. Create Categories (Required for Photo Upload)**
 
-Since the database needs categories, you can create them using the browser console:
+Categories can now be managed through the admin interface:
 
 1. **Go to the admin panel**: https://mtp-delta.vercel.app/admin/photos
-2. **Open browser console** (F12 → Console tab)
-3. **Run this script** to create default categories:
-
-```javascript
-// Create categories via API
-async function createCategories() {
-  const categories = [
-    { name: 'Concerts', description: 'Live music and performance photography' },
-    { name: 'Automotive', description: 'Car and motorsport photography' },
-    { name: 'Nature', description: 'Landscape and wildlife photography' }
-  ];
-
-  for (const category of categories) {
-    try {
-      const response = await fetch('/api/categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(category)
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log(`✅ Created: ${result.name}`);
-      } else {
-        const error = await response.json();
-        console.log(`❌ Error: ${error.message}`);
-      }
-    } catch (err) {
-      console.log(`❌ Failed to create ${category.name}:`, err);
-    }
-  }
-  
-  console.log('🎉 Done! Refresh the page to see categories.');
-}
-
-// Run the function
-createCategories();
-```
-
-4. **Refresh the page** - you should now see categories in the dropdown!
+2. **Click "Manage Categories"** button in the top right
+3. **Create your categories** using the form:
+   - **Concerts**: Live music and performance photography
+   - **Automotive**: Car and motorsport photography  
+   - **Nature**: Landscape and wildlife photography
+4. **Return to photos page** to see categories in the dropdown
 
 ### **2. Set Up Photo Storage (For Upload Functionality)**
 
@@ -70,11 +36,11 @@ Photo uploads require Cloudflare R2 configuration. See the [R2 Setup Guide](./se
 - Authentication (login/logout)
 - Admin panel access
 - Dark theme UI
-- Category management API
+- Category management UI with full CRUD operations
+- Category API endpoints
 
 ⚠️ **Needs Setup:**
 - Photo upload (requires R2 configuration)
-- Categories (can be created via console script above)
 
 ### **4. Testing the Admin Panel**
 
@@ -82,11 +48,25 @@ Photo uploads require Cloudflare R2 configuration. See the [R2 Setup Guide](./se
    - Email: `admin@mtpcollective.com`
    - Password: `admin123`
 
-2. **Create categories** using the console script above
+2. **Manage Categories**: https://mtp-delta.vercel.app/admin/categories
+   - Create, edit, and delete categories
+   - Validation prevents duplicate names
+   - Safety checks prevent deleting categories with photos
 
-3. **Try photo upload** (will show helpful error message about R2 setup)
+3. **Upload Photos**: https://mtp-delta.vercel.app/admin/photos
+   - Will show helpful error message about R2 setup until configured
 
-### **5. UI Improvements Made**
+### **5. Category Management Features**
+
+✅ **Full CRUD Operations:**
+- ✅ **Create** categories with name and description
+- ✅ **Edit** existing categories
+- ✅ **Delete** categories (with safety checks)
+- ✅ **View** all categories with creation dates
+- ✅ **Validation** prevents duplicate names
+- ✅ **Protection** prevents deleting categories that contain photos
+
+### **6. UI Improvements Made**
 
 ✅ **Fixed Issues:**
 - Grey text is now more readable (gray-200, gray-300)
@@ -94,5 +74,6 @@ Photo uploads require Cloudflare R2 configuration. See the [R2 Setup Guide](./se
 - Category dropdown has better contrast
 - Upload area has improved dark theme
 - Better error messages and feedback
+- Professional category management interface
 
-The admin panel is now much more usable with proper dark theme styling! 
+The admin panel now provides a complete category management system with a professional UI! 🎉 
