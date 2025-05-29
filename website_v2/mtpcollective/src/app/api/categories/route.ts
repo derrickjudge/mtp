@@ -53,6 +53,18 @@ export async function POST(req: NextRequest) {
     // Create slug from name
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+    // Check if category with this name already exists
+    const existingCategory = await prisma.category.findFirst({
+      where: { name },
+    });
+
+    if (existingCategory) {
+      return NextResponse.json(
+        { message: 'A category with this name already exists' },
+        { status: 409 }
+      );
+    }
+
     const category = await prisma.category.create({
       data: {
         name,
