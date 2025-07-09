@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 
 interface Category {
@@ -15,8 +13,6 @@ interface Category {
 }
 
 export default function AdminCategories() {
-  const router = useRouter();
-  const { data: session, status } = useSession();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,20 +24,8 @@ export default function AdminCategories() {
   });
 
   useEffect(() => {
-    if (status === 'loading') return;
-
-    if (status === 'unauthenticated' || !session?.user) {
-      router.push('/admin/login');
-      return;
-    }
-
-    if (session.user.role !== 'ADMIN') {
-      setError('You do not have permission to access this page');
-      return;
-    }
-
     fetchCategories();
-  }, [status, session, router]);
+  }, []);
 
   const fetchCategories = async () => {
     try {
@@ -137,168 +121,129 @@ export default function AdminCategories() {
     setFormData({ name: '', description: '' });
   };
 
-  const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/admin/login' });
-  };
-
-  if (status === 'loading' || isLoading) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+      <div className="flex items-center justify-center min-h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
       </div>
     );
   }
 
-  if (!session?.user || session.user.role !== 'ADMIN') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-white">Access Denied</h2>
-          <p className="text-gray-400">You do not have permission to access this page.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Category Management</h1>
-            <p className="text-gray-400 mt-2">Manage photo categories for your portfolio</p>
-          </div>
-          <div className="flex gap-4">
-            <button
-              onClick={() => router.push('/admin/photos')}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-            >
-              Back to Photos
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            >
-              Sign Out
-            </button>
-          </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white">Category Management</h1>
+        <p className="text-gray-400 mt-1">Manage photo categories for your portfolio</p>
+      </div>
+
+      {error && (
+        <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Create/Edit Form */}
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-100">
+            {editingCategory ? 'Edit Category' : 'Create New Category'}
+          </h2>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-200 mb-2">
+                Category Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                placeholder="e.g., Concerts, Nature, Automotive"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-200 mb-2">
+                Description
+              </label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+                className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                placeholder="Optional description for this category"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                disabled={isCreating}
+                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {isCreating ? 'Saving...' : editingCategory ? 'Update Category' : 'Create Category'}
+              </button>
+              {editingCategory && (
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-4 py-2 text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
         </div>
 
-        {error && (
-          <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-6">
-            {error}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Create/Edit Form */}
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-100">
-              {editingCategory ? 'Edit Category' : 'Create New Category'}
-            </h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-200 mb-2">
-                  Category Name *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., Concerts, Nature, Automotive"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-200 mb-2">
-                  Description
-                </label>
-                <textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Brief description of this category..."
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  disabled={isCreating}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isCreating ? 'Saving...' : (editingCategory ? 'Update Category' : 'Create Category')}
-                </button>
-                
-                {editingCategory && (
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-600 rounded-md hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-
-          {/* Categories List */}
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-100">
-              Existing Categories ({categories.length})
-            </h2>
-            
-            {categories.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-400">No categories created yet.</p>
-                <p className="text-gray-500 text-sm mt-2">Create your first category to get started!</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {categories.map((category) => (
-                  <div
-                    key={category.id}
-                    className="bg-gray-700 rounded-lg p-4 border border-gray-600"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-white">{category.name}</h3>
-                        {category.description && (
-                          <p className="text-gray-300 text-sm mt-1">{category.description}</p>
-                        )}
-                        <p className="text-gray-500 text-xs mt-2">
-                          Created: {new Date(category.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      
-                      <div className="flex gap-2 ml-4">
-                        <button
-                          onClick={() => handleEdit(category)}
-                          className="px-3 py-1 text-xs font-medium text-blue-300 bg-blue-900/30 rounded hover:bg-blue-900/50 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(category)}
-                          className="px-3 py-1 text-xs font-medium text-red-300 bg-red-900/30 rounded hover:bg-red-900/50 focus:outline-none focus:ring-1 focus:ring-red-500"
-                        >
-                          Delete
-                        </button>
-                      </div>
+        {/* Categories List */}
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-100">Existing Categories</h2>
+          
+          {categories.length > 0 ? (
+            <div className="space-y-3">
+              {categories.map((category) => (
+                <div key={category.id} className="bg-gray-700 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-white">{category.name}</h3>
+                      <p className="text-sm text-gray-400 mt-1">{category.slug}</p>
+                      {category.description && (
+                        <p className="text-sm text-gray-300 mt-2">{category.description}</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        Created: {new Date(category.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <button
+                        onClick={() => handleEdit(category)}
+                        className="px-3 py-1 text-sm text-blue-300 bg-blue-600/20 rounded hover:bg-blue-600/30"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(category)}
+                        className="px-3 py-1 text-sm text-red-300 bg-red-600/20 rounded hover:bg-red-600/30"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-gray-400 text-lg mb-2">No categories yet</div>
+              <p className="text-gray-500">Create your first category to organize your photos</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
