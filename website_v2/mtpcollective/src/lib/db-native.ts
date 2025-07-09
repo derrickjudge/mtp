@@ -25,6 +25,51 @@ export class NativeDBService {
     });
   }
 
+  // Ensure junction tables exist
+  async ensureJunctionTables(): Promise<void> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Create _CategoryToPhoto junction table if it doesn't exist
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "_CategoryToPhoto" (
+          "A" TEXT NOT NULL,
+          "B" TEXT NOT NULL,
+          CONSTRAINT "_CategoryToPhoto_pkey" PRIMARY KEY ("A", "B"),
+          CONSTRAINT "_CategoryToPhoto_A_fkey" FOREIGN KEY ("A") REFERENCES "Category"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "_CategoryToPhoto_B_fkey" FOREIGN KEY ("B") REFERENCES "Photo"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+
+      // Create _PhotoToTag junction table if it doesn't exist
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "_PhotoToTag" (
+          "A" TEXT NOT NULL,
+          "B" TEXT NOT NULL,
+          CONSTRAINT "_PhotoToTag_pkey" PRIMARY KEY ("A", "B"),
+          CONSTRAINT "_PhotoToTag_A_fkey" FOREIGN KEY ("A") REFERENCES "Photo"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "_PhotoToTag_B_fkey" FOREIGN KEY ("B") REFERENCES "Tag"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+
+      // Create indexes for better performance
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_CategoryToPhoto_B_index" ON "_CategoryToPhoto"("B")
+      `);
+      
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_PhotoToTag_B_index" ON "_PhotoToTag"("B")
+      `);
+
+    } catch (error) {
+      console.warn('Error ensuring junction tables:', error);
+      // Don't throw error - tables might already exist
+    } finally {
+      await client.end();
+    }
+  }
+
   async findUserByEmail(email: string): Promise<any> {
     const client = this.createClient();
     try {
@@ -64,6 +109,9 @@ export class NativeDBService {
     tagId?: string;
     featured?: boolean;
   }): Promise<any[]> {
+    // Ensure junction tables exist before querying
+    await this.ensureJunctionTables();
+    
     const client = this.createClient();
     try {
       await client.connect();
@@ -203,6 +251,9 @@ export class NativeDBService {
   }
 
   async getCategoryWithPhotos(id: string): Promise<any> {
+    // Ensure junction tables exist before querying
+    await this.ensureJunctionTables();
+    
     const client = this.createClient();
     try {
       await client.connect();
@@ -263,6 +314,9 @@ export class NativeDBService {
   async linkPhotoToCategories(photoId: string, categoryIds: string[]): Promise<void> {
     if (categoryIds.length === 0) return;
     
+    // Ensure junction tables exist before linking
+    await this.ensureJunctionTables();
+    
     const client = this.createClient();
     try {
       await client.connect();
@@ -272,7 +326,7 @@ export class NativeDBService {
       const params = categoryIds.flatMap(categoryId => [categoryId, photoId]);
       
       await client.query(
-        `INSERT INTO "_CategoryToPhoto" ("A", "B") VALUES ${values}`,
+        `INSERT INTO "_CategoryToPhoto" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`,
         params
       );
     } finally {
@@ -283,6 +337,9 @@ export class NativeDBService {
   async linkPhotoToTags(photoId: string, tagIds: string[]): Promise<void> {
     if (tagIds.length === 0) return;
     
+    // Ensure junction tables exist before linking
+    await this.ensureJunctionTables();
+    
     const client = this.createClient();
     try {
       await client.connect();
@@ -292,7 +349,7 @@ export class NativeDBService {
       const params = tagIds.flatMap(tagId => [tagId, photoId]);
       
       await client.query(
-        `INSERT INTO "_PhotoToTag" ("A", "B") VALUES ${values}`,
+        `INSERT INTO "_PhotoToTag" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`,
         params
       );
     } finally {
@@ -317,6 +374,9 @@ export class NativeDBService {
   }
 
   async deletePhoto(id: string): Promise<boolean> {
+    // Ensure junction tables exist before deleting
+    await this.ensureJunctionTables();
+    
     const client = this.createClient();
     try {
       await client.connect();
@@ -335,6 +395,9 @@ export class NativeDBService {
   }
 
   async getPhotoWithRelations(id: string): Promise<any> {
+    // Ensure junction tables exist before querying
+    await this.ensureJunctionTables();
+    
     const client = this.createClient();
     try {
       await client.connect();
