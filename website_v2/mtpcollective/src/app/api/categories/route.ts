@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, withPrisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -14,10 +14,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const categories = await prisma.category.findMany({
-      orderBy: {
-        name: 'asc',
-      },
+    const categories = await withPrisma(async (client) => {
+      return await client.category.findMany({
+        orderBy: {
+          name: 'asc',
+        },
+      });
     });
 
     return NextResponse.json(categories);
@@ -54,8 +56,10 @@ export async function POST(req: NextRequest) {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     // Check if category with this name already exists
-    const existingCategory = await prisma.category.findFirst({
-      where: { name },
+    const existingCategory = await withPrisma(async (client) => {
+      return await client.category.findFirst({
+        where: { name },
+      });
     });
 
     if (existingCategory) {
@@ -65,12 +69,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const category = await prisma.category.create({
-      data: {
-        name,
-        slug,
-        description: description || '',
-      },
+    const category = await withPrisma(async (client) => {
+      return await client.category.create({
+        data: {
+          name,
+          slug,
+          description: description || '',
+        },
+      });
     });
 
     return NextResponse.json(category, { status: 201 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, withPrisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -30,8 +30,10 @@ export async function PUT(
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     // Check if category exists
-    const existingCategory = await prisma.category.findUnique({
-      where: { id: params.id },
+    const existingCategory = await withPrisma(async (client) => {
+      return await client.category.findUnique({
+        where: { id: params.id },
+      });
     });
 
     if (!existingCategory) {
@@ -42,11 +44,13 @@ export async function PUT(
     }
 
     // Check if name is already taken by another category
-    const nameConflict = await prisma.category.findFirst({
-      where: {
-        name,
-        id: { not: params.id },
-      },
+    const nameConflict = await withPrisma(async (client) => {
+      return await client.category.findFirst({
+        where: {
+          name,
+          id: { not: params.id },
+        },
+      });
     });
 
     if (nameConflict) {
@@ -56,13 +60,15 @@ export async function PUT(
       );
     }
 
-    const category = await prisma.category.update({
-      where: { id: params.id },
-      data: {
-        name,
-        slug,
-        description: description || '',
-      },
+    const category = await withPrisma(async (client) => {
+      return await client.category.update({
+        where: { id: params.id },
+        data: {
+          name,
+          slug,
+          description: description || '',
+        },
+      });
     });
 
     return NextResponse.json(category);
@@ -90,11 +96,13 @@ export async function DELETE(
     }
 
     // Check if category exists
-    const existingCategory = await prisma.category.findUnique({
-      where: { id: params.id },
-      include: {
-        photos: true,
-      },
+    const existingCategory = await withPrisma(async (client) => {
+      return await client.category.findUnique({
+        where: { id: params.id },
+        include: {
+          photos: true,
+        },
+      });
     });
 
     if (!existingCategory) {
@@ -114,8 +122,10 @@ export async function DELETE(
       );
     }
 
-    await prisma.category.delete({
-      where: { id: params.id },
+    await withPrisma(async (client) => {
+      return await client.category.delete({
+        where: { id: params.id },
+      });
     });
 
     return NextResponse.json({ message: 'Category deleted successfully' });
