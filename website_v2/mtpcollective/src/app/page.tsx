@@ -2,6 +2,7 @@ import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
 import Link from 'next/link';
 import type { Photo } from '@/types/photo';
+import { nativeDB } from '@/lib/db-native';
 
 // Make this page dynamic
 export const dynamic = 'force-dynamic';
@@ -16,18 +17,11 @@ interface Category {
 
 async function fetchFeaturedPhotos(): Promise<Photo[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/photos?featured=true&take=6`, {
-      next: { revalidate: 60 },
-      headers: {
-        'Cache-Control': 'no-cache',
-      },
+    const photos = await nativeDB.findPhotos({
+      featured: true,
+      take: 6,
     });
-    if (!res.ok) {
-      console.error('Failed to fetch featured photos:', res.status, res.statusText);
-      return [];
-    }
-    const data = await res.json();
-    return data.photos || [];
+    return photos;
   } catch (error) {
     console.error('Error fetching featured photos:', error);
     return [];
@@ -36,17 +30,8 @@ async function fetchFeaturedPhotos(): Promise<Photo[]> {
 
 async function fetchCategories(): Promise<Category[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/categories`, {
-      next: { revalidate: 60 },
-      headers: {
-        'Cache-Control': 'no-cache',
-      },
-    });
-    if (!res.ok) {
-      console.error('Failed to fetch categories:', res.status, res.statusText);
-      return [];
-    }
-    return await res.json();
+    const categories = await nativeDB.findCategories();
+    return categories;
   } catch (error) {
     console.error('Error fetching categories:', error);
     return [];
@@ -55,18 +40,11 @@ async function fetchCategories(): Promise<Category[]> {
 
 async function fetchPhotosByCategory(categoryId: string, take: number = 1): Promise<Photo[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/photos?category=${categoryId}&take=${take}`, {
-      next: { revalidate: 60 },
-      headers: {
-        'Cache-Control': 'no-cache',
-      },
+    const photos = await nativeDB.findPhotos({
+      categoryId,
+      take,
     });
-    if (!res.ok) {
-      console.error('Failed to fetch photos for category:', categoryId, res.status, res.statusText);
-      return [];
-    }
-    const data = await res.json();
-    return data.photos || [];
+    return photos;
   } catch (error) {
     console.error('Error fetching photos for category:', categoryId, error);
     return [];

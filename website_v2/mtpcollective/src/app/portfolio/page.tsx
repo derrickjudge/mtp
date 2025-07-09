@@ -3,6 +3,7 @@ import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
 import { PhotoGallery } from '@/components/photos/PhotoGallery';
 import type { Photo } from '@/types/photo';
+import { nativeDB } from '@/lib/db-native';
 
 // Make this page dynamic to prevent Prisma initialization during build
 export const dynamic = 'force-dynamic';
@@ -21,17 +22,8 @@ interface CategoryWithPhotos extends Category {
 
 async function fetchCategories(): Promise<Category[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/categories`, {
-      next: { revalidate: 60 },
-      headers: {
-        'Cache-Control': 'no-cache',
-      },
-    });
-    if (!res.ok) {
-      console.error('Failed to fetch categories:', res.status, res.statusText);
-      return [];
-    }
-    return await res.json();
+    const categories = await nativeDB.findCategories();
+    return categories;
   } catch (error) {
     console.error('Error fetching categories:', error);
     return [];
@@ -40,18 +32,10 @@ async function fetchCategories(): Promise<Category[]> {
 
 async function fetchPhotosByCategory(categoryId: string): Promise<Photo[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/photos?category=${categoryId}`, {
-      next: { revalidate: 60 },
-      headers: {
-        'Cache-Control': 'no-cache',
-      },
+    const photos = await nativeDB.findPhotos({
+      categoryId,
     });
-    if (!res.ok) {
-      console.error('Failed to fetch photos for category:', categoryId, res.status, res.statusText);
-      return [];
-    }
-    const data = await res.json();
-    return data.photos || [];
+    return photos;
   } catch (error) {
     console.error('Error fetching photos for category:', categoryId, error);
     return [];
