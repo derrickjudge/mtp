@@ -31,8 +31,20 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Helper function to handle database operations with automatic reconnection
+// Helper function for serverless environments that creates isolated connections
 export const withPrisma = async <T>(operation: (client: PrismaClient) => Promise<T>): Promise<T> => {
+  // In serverless environments, always create a fresh connection to avoid prepared statement conflicts
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+    const client = createPrismaClient();
+    try {
+      const result = await operation(client);
+      return result;
+    } finally {
+      await client.$disconnect();
+    }
+  }
+  
+  // In development, use the global client with error handling
   let client = prisma;
   let shouldDisconnect = false;
 
@@ -40,7 +52,7 @@ export const withPrisma = async <T>(operation: (client: PrismaClient) => Promise
     const result = await operation(client);
     return result;
   } catch (error: any) {
-    // Handle prepared statement errors and other connection issues in serverless environments
+    // Handle prepared statement errors and other connection issues
     if (
       error.code === '42P05' || 
       error.message?.includes('prepared statement') ||
@@ -49,14 +61,7 @@ export const withPrisma = async <T>(operation: (client: PrismaClient) => Promise
     ) {
       console.warn('Prisma connection issue detected, creating fresh connection...', error.message);
       
-      // Disconnect the current client
-      try {
-        await client.$disconnect();
-      } catch (disconnectError) {
-        console.warn('Error disconnecting client:', disconnectError);
-      }
-      
-      // Create a fresh connection
+      // Create a completely fresh connection
       client = createPrismaClient();
       shouldDisconnect = true;
       
