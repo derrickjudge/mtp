@@ -122,7 +122,7 @@ export default async function PortfolioPage() {
           <div className="max-w-7xl mx-auto text-center">
             <h2 className="text-3xl font-bold text-white mb-4">Portfolio Coming Soon</h2>
             <p className="text-xl text-gray-400 mb-8">
-              We're currently building our portfolio. Check back soon to see our latest work!
+              We&apos;re currently building our portfolio. Check back soon to see our latest work!
             </p>
             <div className="bg-gray-800 rounded-lg p-8 max-w-md mx-auto">
               <div className="text-6xl mb-4">📸</div>

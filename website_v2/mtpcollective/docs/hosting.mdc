@@ -18,8 +18,10 @@ alwaysApply: false
 - After starting a server, VERIFY that it's running properly without errors before proceeding
 - Actively scan console output for error messages and fix them before moving on
 - Never assume the server is running correctly without verification
+- Always test the build locally before pushing to github
 - Always ask before pushing code to github
-- Always push code to dev branch unless specifically asked to push to prod
+- Always push code to dev branch unless specifically asked to push to another branch
+- Do not push to push to main
 
 ## Code Implementation Guidelines
 - Balance readability with performance - code should be both maintainable and efficient
