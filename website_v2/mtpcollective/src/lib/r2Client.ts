@@ -1,17 +1,10 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
 
-// Debug logging
-console.log('R2 Environment Variables:', {
-  bucket: process.env.R2_BUCKET_NAME,
-  publicUrl: process.env.R2_PUBLIC_URL,
-  endpoint: process.env.R2_ENDPOINT,
-  accessKeyId: process.env.R2_ACCESS_KEY_ID ? 'exists' : 'missing',
-  secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ? 'exists' : 'missing'
-});
+// SECURITY FIX: Removed debug logging that exposed environment variables
+// Only log non-sensitive configuration validation
 
-export const R2_BUCKET_NAME = r2Config.bucketName;
-export const R2_PUBLIC_URL = r2Config.publicUrl;
+const { R2_BUCKET_NAME, R2_PUBLIC_URL } = process.env;
 
 if (!R2_BUCKET_NAME || !R2_PUBLIC_URL) {
   throw new Error('R2 configuration is missing. Please check your environment variables.');

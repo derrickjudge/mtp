@@ -5,10 +5,12 @@ import bcrypt from 'bcryptjs';
 
 // Updated auth configuration with native PostgreSQL client only
 export const authOptions: NextAuthOptions = {
+  // SECURITY: Add secret for JWT signing
+  secret: process.env.NEXTAUTH_SECRET,
   // Use JWT strategy only - no database adapter
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 7 * 24 * 60 * 60, // SECURITY FIX: Reduced from 30 days to 7 days
   },
   pages: {
     signIn: '/admin/login',
