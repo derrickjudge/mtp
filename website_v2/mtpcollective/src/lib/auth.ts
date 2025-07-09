@@ -1,14 +1,11 @@
 import type { NextAuthOptions } from 'next-auth';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { prisma } from '@/lib/prisma';
 import { nativeDB } from '@/lib/db-native';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 
-// Updated auth configuration with native PostgreSQL client
+// Updated auth configuration with native PostgreSQL client only
 export const authOptions: NextAuthOptions = {
-  // Only use PrismaAdapter in development to avoid serverless issues
-  adapter: process.env.NODE_ENV === 'development' ? PrismaAdapter(prisma) : undefined,
+  // Use JWT strategy only - no database adapter
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
