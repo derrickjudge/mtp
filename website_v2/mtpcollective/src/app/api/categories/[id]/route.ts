@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma, withPrisma } from '@/lib/prisma';
+import { withServerlessDB, withRetry } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -30,9 +30,11 @@ export async function PUT(
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     // Check if category exists
-    const existingCategory = await withPrisma(async (client) => {
-      return await client.category.findUnique({
-        where: { id: params.id },
+    const existingCategory = await withRetry(async () => {
+      return await withServerlessDB(async (client) => {
+        return await client.category.findUnique({
+          where: { id: params.id },
+        });
       });
     });
 
@@ -44,12 +46,14 @@ export async function PUT(
     }
 
     // Check if name is already taken by another category
-    const nameConflict = await withPrisma(async (client) => {
-      return await client.category.findFirst({
-        where: {
-          name,
-          id: { not: params.id },
-        },
+    const nameConflict = await withRetry(async () => {
+      return await withServerlessDB(async (client) => {
+        return await client.category.findFirst({
+          where: {
+            name,
+            id: { not: params.id },
+          },
+        });
       });
     });
 
@@ -60,14 +64,16 @@ export async function PUT(
       );
     }
 
-    const category = await withPrisma(async (client) => {
-      return await client.category.update({
-        where: { id: params.id },
-        data: {
-          name,
-          slug,
-          description: description || '',
-        },
+    const category = await withRetry(async () => {
+      return await withServerlessDB(async (client) => {
+        return await client.category.update({
+          where: { id: params.id },
+          data: {
+            name,
+            slug,
+            description: description || '',
+          },
+        });
       });
     });
 
@@ -96,12 +102,14 @@ export async function DELETE(
     }
 
     // Check if category exists
-    const existingCategory = await withPrisma(async (client) => {
-      return await client.category.findUnique({
-        where: { id: params.id },
-        include: {
-          photos: true,
-        },
+    const existingCategory = await withRetry(async () => {
+      return await withServerlessDB(async (client) => {
+        return await client.category.findUnique({
+          where: { id: params.id },
+          include: {
+            photos: true,
+          },
+        });
       });
     });
 
@@ -122,9 +130,11 @@ export async function DELETE(
       );
     }
 
-    await withPrisma(async (client) => {
-      return await client.category.delete({
-        where: { id: params.id },
+    await withRetry(async () => {
+      return await withServerlessDB(async (client) => {
+        return await client.category.delete({
+          where: { id: params.id },
+        });
       });
     });
 

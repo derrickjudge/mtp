@@ -1,6 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
-import { withPrisma } from '@/lib/prisma';
+import { withServerlessDB, withRetry } from '@/lib/db';
 import { PrismaClient } from '@prisma/client';
 import { Category, Tag, Photo } from '@/types/photo';
 import sharp from 'sharp';
@@ -103,36 +103,44 @@ export const photoService = {
     );
 
     // Create photo record in database
-    const photo = await withPrisma((prisma: PrismaClient) => prisma.photo.create({
-      data: {
-        title,
-        description,
-        url: `${r2Config.publicUrl}/${uniqueFileName}`,
-        thumbnail: `${r2Config.publicUrl}/${thumbnailFileName}`,
-        categories: {
-          connect: categoryIds.map(id => ({ id })),
-        },
-        tags: {
-          connect: tagIds.map(id => ({ id })),
-        },
-        author: {
-          connect: { id: authorId },
-        },
-        metadata,
-      },
-      include: {
-        categories: true,
-        tags: true,
-      },
-    }));
+    const photo = await withRetry(async () => {
+      return await withServerlessDB(async (client) => {
+        return await client.photo.create({
+          data: {
+            title,
+            description,
+            url: `${r2Config.publicUrl}/${uniqueFileName}`,
+            thumbnail: `${r2Config.publicUrl}/${thumbnailFileName}`,
+            categories: {
+              connect: categoryIds.map(id => ({ id })),
+            },
+            tags: {
+              connect: tagIds.map(id => ({ id })),
+            },
+            author: {
+              connect: { id: authorId },
+            },
+            metadata,
+          },
+          include: {
+            categories: true,
+            tags: true,
+          },
+        });
+      });
+    });
 
     return convertPrismaToPhoto(photo);
   },
 
   async deletePhoto(id: string): Promise<void> {
-    const photo = await withPrisma((prisma: PrismaClient) => prisma.photo.findUnique({
-      where: { id },
-    }));
+    const photo = await withRetry(async () => {
+      return await withServerlessDB(async (client) => {
+        return await client.photo.findUnique({
+          where: { id },
+        });
+      });
+    });
 
     if (!photo) {
       throw new Error('Photo not found');
@@ -162,9 +170,13 @@ export const photoService = {
     }
 
     // Delete from database
-    await withPrisma((prisma: PrismaClient) => prisma.photo.delete({
-      where: { id },
-    }));
+    await withRetry(async () => {
+      return await withServerlessDB(async (client) => {
+        return await client.photo.delete({
+          where: { id },
+        });
+      });
+    });
   },
 
   async getPhotos(options?: {
@@ -174,49 +186,57 @@ export const photoService = {
     tagId?: string;
     featured?: boolean;
   }): Promise<PhotoWithRelations[]> {
-    const photos = await withPrisma((prisma: PrismaClient) => prisma.photo.findMany({
-      where: {
-        published: true,
-        ...(options?.categoryId && {
-          categories: {
-            some: {
-              id: options.categoryId,
-            },
+    const photos = await withRetry(async () => {
+      return await withServerlessDB(async (client) => {
+        return await client.photo.findMany({
+          where: {
+            published: true,
+            ...(options?.categoryId && {
+              categories: {
+                some: {
+                  id: options.categoryId,
+                },
+              },
+            }),
+            ...(options?.tagId && {
+              tags: {
+                some: {
+                  id: options.tagId,
+                },
+              },
+            }),
+            ...(options?.featured && {
+              featured: true,
+            }),
           },
-        }),
-        ...(options?.tagId && {
-          tags: {
-            some: {
-              id: options.tagId,
-            },
+          include: {
+            categories: true,
+            tags: true,
           },
-        }),
-        ...(options?.featured && {
-          featured: true,
-        }),
-      },
-      include: {
-        categories: true,
-        tags: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: options?.take,
-      skip: options?.skip,
-    }));
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: options?.take,
+          skip: options?.skip,
+        });
+      });
+    });
 
     return photos.map(convertPrismaToPhoto);
   },
 
   async getPhotoById(id: string): Promise<PhotoWithRelations | null> {
-    const photo = await withPrisma((prisma: PrismaClient) => prisma.photo.findUnique({
-      where: { id },
-      include: {
-        categories: true,
-        tags: true,
-      },
-    }));
+    const photo = await withRetry(async () => {
+      return await withServerlessDB(async (client) => {
+        return await client.photo.findUnique({
+          where: { id },
+          include: {
+            categories: true,
+            tags: true,
+          },
+        });
+      });
+    });
 
     return photo ? convertPrismaToPhoto(photo) : null;
   },
