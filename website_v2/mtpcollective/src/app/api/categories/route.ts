@@ -5,15 +5,7 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        { message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
+    // Public endpoint - no authentication required for GET
     const categories = await nativeDB.findCategories();
     return NextResponse.json(categories);
   } catch (error) {
