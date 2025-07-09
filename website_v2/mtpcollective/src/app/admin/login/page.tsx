@@ -16,10 +16,16 @@ function LoginForm() {
   const callbackUrl = searchParams.get('callbackUrl') || '/admin/photos';
 
   useEffect(() => {
-    // Check if we already have a valid session
+    // Check if we already have a valid session with timeout
     const checkSession = async () => {
       try {
-        const session = await getSession();
+        // Add a timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Session check timeout')), 5000);
+        });
+        
+        const sessionPromise = getSession();
+        const session = await Promise.race([sessionPromise, timeoutPromise]) as any;
         
         if (session?.user) {
           // User is already logged in, redirect to admin panel
@@ -27,6 +33,7 @@ function LoginForm() {
         }
       } catch (err) {
         console.error('Error checking session:', err);
+        // Continue to login form even if session check fails
       } finally {
         setIsInitialized(true);
       }
@@ -64,6 +71,7 @@ function LoginForm() {
     }
   };
 
+  // Show loading spinner for maximum 5 seconds
   if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
