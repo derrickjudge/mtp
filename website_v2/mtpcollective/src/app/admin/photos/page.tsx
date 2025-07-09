@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { PhotoUpload } from '@/components/photos/PhotoUpload';
-import { PhotoGrid } from '@/components/photos/PhotoGrid';
+import { AdminPhotoGrid } from '@/components/photos/AdminPhotoGrid';
 import { Photo } from '@/types/photo';
 
 interface Category {
@@ -54,6 +54,24 @@ export default function AdminPhotos() {
       await fetchPhotos();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save photo');
+    }
+  };
+
+  const handlePhotoUpdated = async () => {
+    try {
+      await fetchPhotos();
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh photos');
+    }
+  };
+
+  const handlePhotoDeleted = async () => {
+    try {
+      await fetchPhotos();
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh photos');
     }
   };
 
@@ -115,7 +133,11 @@ export default function AdminPhotos() {
         </div>
 
         {photos.length > 0 ? (
-          <PhotoGrid photos={photos} />
+          <AdminPhotoGrid 
+            photos={photos} 
+            onPhotoUpdated={handlePhotoUpdated}
+            onPhotoDeleted={handlePhotoDeleted}
+          />
         ) : (
           <div className="text-center py-12">
             <div className="text-gray-400 text-lg mb-2">No photos found</div>

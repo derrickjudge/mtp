@@ -394,6 +394,58 @@ export class NativeDBService {
     }
   }
 
+  async updatePhoto(id: string, data: {
+    title: string;
+    description?: string;
+    published?: boolean;
+    featured?: boolean;
+  }): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        `UPDATE "Photo" 
+         SET title = $2, description = $3, published = $4, featured = $5, "updatedAt" = NOW() 
+         WHERE id = $1 
+         RETURNING id, title, description, url, thumbnail, published, featured, metadata, "authorId", "createdAt", "updatedAt"`,
+        [id, data.title, data.description || null, data.published ?? true, data.featured ?? false]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async clearPhotoCategories(photoId: string): Promise<void> {
+    // Ensure junction tables exist before clearing
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      await client.query('DELETE FROM "_CategoryToPhoto" WHERE "B" = $1', [photoId]);
+    } finally {
+      await client.end();
+    }
+  }
+
+  async clearPhotoTags(photoId: string): Promise<void> {
+    // Ensure junction tables exist before clearing
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      await client.query('DELETE FROM "_PhotoToTag" WHERE "A" = $1', [photoId]);
+    } finally {
+      await client.end();
+    }
+  }
+
   async getPhotoWithRelations(id: string): Promise<any> {
     // Ensure junction tables exist before querying
     await this.ensureJunctionTables();

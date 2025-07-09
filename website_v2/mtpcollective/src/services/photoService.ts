@@ -183,4 +183,52 @@ export const photoService = {
     const photo = await nativeDB.getPhotoWithRelations(id);
     return photo ? convertNativeToPhoto(photo) : null;
   },
+
+  async updatePhoto(id: string, data: {
+    title: string;
+    description?: string;
+    categoryIds: string[];
+    tagIds: string[];
+    published?: boolean;
+    featured?: boolean;
+  }): Promise<PhotoWithRelations> {
+    // First, check if photo exists
+    const existingPhoto = await nativeDB.findPhotoById(id);
+    if (!existingPhoto) {
+      throw new Error('Photo not found');
+    }
+
+    // Update the photo record
+    const updatedPhoto = await nativeDB.updatePhoto(id, {
+      title: data.title,
+      description: data.description,
+      published: data.published ?? true,
+      featured: data.featured ?? false,
+    });
+
+    if (!updatedPhoto) {
+      throw new Error('Failed to update photo');
+    }
+
+    // Update category relationships
+    await nativeDB.clearPhotoCategories(id);
+    if (data.categoryIds.length > 0) {
+      await nativeDB.linkPhotoToCategories(id, data.categoryIds);
+    }
+
+    // Update tag relationships
+    await nativeDB.clearPhotoTags(id);
+    if (data.tagIds.length > 0) {
+      await nativeDB.linkPhotoToTags(id, data.tagIds);
+    }
+
+    // Get the updated photo with relations
+    const photoWithRelations = await nativeDB.getPhotoWithRelations(id);
+    
+    if (!photoWithRelations) {
+      throw new Error('Failed to retrieve updated photo');
+    }
+
+    return convertNativeToPhoto(photoWithRelations);
+  },
 }; 
