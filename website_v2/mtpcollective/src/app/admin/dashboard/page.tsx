@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { 
   PhotoIcon, 
   TagIcon, 
@@ -9,7 +11,6 @@ import {
   EyeIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
-import Link from 'next/link';
 
 interface DashboardStats {
   photos: number;
@@ -205,11 +206,14 @@ export default function AdminDashboard() {
             <div className="space-y-3">
               {stats.recentPhotos.map((photo) => (
                 <div key={photo.id} className="flex items-center space-x-3">
-                  <img
-                    src={photo.url}
-                    alt={photo.title}
-                    className="w-12 h-12 rounded-lg object-cover"
-                  />
+                  <div className="relative w-12 h-12 rounded-lg overflow-hidden">
+                    <Image
+                      src={photo.url}
+                      alt={photo.title}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">
                       {photo.title}

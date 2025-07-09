@@ -160,7 +160,7 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
           <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-semibold text-white mb-4">Delete Photo</h3>
             <p className="text-gray-300 mb-6">
-              Are you sure you want to delete "{deletingPhoto.title}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{deletingPhoto.title}&quot;? This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-4">
               <button
