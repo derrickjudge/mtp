@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withServerlessDB, withRetry } from '@/lib/db';
+import { rawDB } from '@/lib/db-raw';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -30,13 +30,7 @@ export async function PUT(
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     // Check if category exists
-    const existingCategory = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.category.findUnique({
-          where: { id: params.id },
-        });
-      });
-    });
+    const existingCategory = await rawDB.findCategoryById(params.id);
 
     if (!existingCategory) {
       return NextResponse.json(
@@ -46,36 +40,23 @@ export async function PUT(
     }
 
     // Check if name is already taken by another category
-    const nameConflict = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.category.findFirst({
-          where: {
-            name,
-            id: { not: params.id },
-          },
-        });
-      });
-    });
+    const nameConflict = await rawDB.findCategoryByName(name);
 
-    if (nameConflict) {
+    if (nameConflict && nameConflict.id !== params.id) {
       return NextResponse.json(
         { message: 'A category with this name already exists' },
         { status: 409 }
       );
     }
 
-    const category = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.category.update({
-          where: { id: params.id },
-          data: {
-            name,
-            slug,
-            description: description || '',
-          },
-        });
-      });
-    });
+    const category = await rawDB.updateCategory(params.id, name, slug, description || '');
+
+    if (!category) {
+      return NextResponse.json(
+        { message: 'Failed to update category' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(category);
   } catch (error) {
@@ -101,17 +82,8 @@ export async function DELETE(
       );
     }
 
-    // Check if category exists
-    const existingCategory = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.category.findUnique({
-          where: { id: params.id },
-          include: {
-            photos: true,
-          },
-        });
-      });
-    });
+    // Check if category exists and get photo count
+    const existingCategory = await rawDB.getCategoryWithPhotos(params.id);
 
     if (!existingCategory) {
       return NextResponse.json(
@@ -121,22 +93,17 @@ export async function DELETE(
     }
 
     // Check if category has photos
-    if (existingCategory.photos.length > 0) {
+    const photoCount = parseInt(existingCategory.photo_count) || 0;
+    if (photoCount > 0) {
       return NextResponse.json(
         { 
-          message: `Cannot delete category "${existingCategory.name}" because it contains ${existingCategory.photos.length} photo(s). Please move or delete the photos first.` 
+          message: `Cannot delete category "${existingCategory.name}" because it contains ${photoCount} photo(s). Please move or delete the photos first.` 
         },
         { status: 409 }
       );
     }
 
-    await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.category.delete({
-          where: { id: params.id },
-        });
-      });
-    });
+    await rawDB.deleteCategory(params.id);
 
     return NextResponse.json({ message: 'Category deleted successfully' });
   } catch (error) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withServerlessDB, withRetry } from '@/lib/db';
+import { rawDB } from '@/lib/db-raw';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -14,16 +14,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const categories = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.category.findMany({
-          orderBy: {
-            name: 'asc',
-          },
-        });
-      });
-    });
-
+    const categories = await rawDB.findCategories();
     return NextResponse.json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -58,13 +49,7 @@ export async function POST(req: NextRequest) {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     // Check if category with this name already exists
-    const existingCategory = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.category.findFirst({
-          where: { name },
-        });
-      });
-    });
+    const existingCategory = await rawDB.findCategoryByName(name);
 
     if (existingCategory) {
       return NextResponse.json(
@@ -73,17 +58,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const category = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.category.create({
-          data: {
-            name,
-            slug,
-            description: description || '',
-          },
-        });
-      });
-    });
+    const category = await rawDB.createCategory(name, slug, description || '');
+
+    if (!category) {
+      return NextResponse.json(
+        { message: 'Failed to create category' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(category, { status: 201 });
   } catch (error) {

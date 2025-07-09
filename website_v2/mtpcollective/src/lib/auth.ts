@@ -2,10 +2,11 @@ import type { NextAuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import { withServerlessDB, withRetry } from '@/lib/db';
+import { rawDB } from '@/lib/db-raw';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 
-// Updated auth configuration with proper environment variable setup
+// Updated auth configuration with raw SQL fallback for user operations
 export const authOptions: NextAuthOptions = {
   // Only use PrismaAdapter in development to avoid serverless issues
   adapter: process.env.NODE_ENV === 'development' ? PrismaAdapter(prisma) : undefined,
@@ -30,15 +31,8 @@ export const authOptions: NextAuthOptions = {
             throw new Error('Invalid credentials');
           }
 
-          const user = await withRetry(async () => {
-            return await withServerlessDB(async (client) => {
-              return await client.user.findUnique({
-                where: {
-                  email,
-                },
-              });
-            });
-          });
+          // Use raw SQL to avoid prepared statement issues
+          const user = await rawDB.findUserByEmail(email);
 
           if (!user || !user.password) {
             throw new Error('Invalid credentials');
@@ -90,15 +84,8 @@ export const authOptions: NextAuthOptions = {
       // Return previous token if the access token has not expired yet
       if (token.email) {
         try {
-          const dbUser = await withRetry(async () => {
-            return await withServerlessDB(async (client) => {
-              return await client.user.findFirst({
-                where: {
-                  email: token.email!,
-                },
-              });
-            });
-          });
+          // Use raw SQL to avoid prepared statement issues
+          const dbUser = await rawDB.findUserByEmail(token.email);
 
           if (dbUser) {
             return {
