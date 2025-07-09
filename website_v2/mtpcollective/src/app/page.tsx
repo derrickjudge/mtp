@@ -1,7 +1,95 @@
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
+import Link from 'next/link';
+import type { Photo } from '@/types/photo';
 
-export default function HomePage() {
+// Make this page dynamic
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+}
+
+async function fetchFeaturedPhotos(): Promise<Photo[]> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/photos?featured=true&take=6`, {
+      next: { revalidate: 60 },
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
+    if (!res.ok) {
+      console.error('Failed to fetch featured photos:', res.status, res.statusText);
+      return [];
+    }
+    const data = await res.json();
+    return data.photos || [];
+  } catch (error) {
+    console.error('Error fetching featured photos:', error);
+    return [];
+  }
+}
+
+async function fetchCategories(): Promise<Category[]> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/categories`, {
+      next: { revalidate: 60 },
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
+    if (!res.ok) {
+      console.error('Failed to fetch categories:', res.status, res.statusText);
+      return [];
+    }
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
+  }
+}
+
+async function fetchPhotosByCategory(categoryId: string, take: number = 1): Promise<Photo[]> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/photos?category=${categoryId}&take=${take}`, {
+      next: { revalidate: 60 },
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
+    if (!res.ok) {
+      console.error('Failed to fetch photos for category:', categoryId, res.status, res.statusText);
+      return [];
+    }
+    const data = await res.json();
+    return data.photos || [];
+  } catch (error) {
+    console.error('Error fetching photos for category:', categoryId, error);
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  // Fetch featured photos and categories
+  const [featuredPhotos, categories] = await Promise.all([
+    fetchFeaturedPhotos(),
+    fetchCategories(),
+  ]);
+
+  // Fetch one photo per category for specialties section
+  const categoriesWithPhotos = await Promise.all(
+    categories.map(async (category) => ({
+      ...category,
+      photos: await fetchPhotosByCategory(category.id, 1),
+    }))
+  );
+
+  const specialtiesWithPhotos = categoriesWithPhotos.filter(category => category.photos.length > 0);
+
   return (
     <div className="min-h-screen bg-black text-white" role="main">
       {/* Hero Section */}
@@ -34,22 +122,37 @@ export default function HomePage() {
           <h2 className="text-4xl font-bold text-center mb-16 text-white">
             Featured Photos
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {Object.entries(imageUrls.featured).map(([key, url]) => (
-              <div key={key} className="relative w-full" style={{ height: '400px' }}>
-                <div className="absolute inset-0 group overflow-hidden rounded-lg">
-                  <Image
-                    src={url}
-                    alt={`Featured photo ${key}`}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    className="transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          {featuredPhotos.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {featuredPhotos.slice(0, 6).map((photo) => (
+                <div key={photo.id} className="relative w-full" style={{ height: '400px' }}>
+                  <div className="absolute inset-0 group overflow-hidden rounded-lg">
+                    <Image
+                      src={photo.thumbnail || photo.url}
+                      alt={photo.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <h3 className="text-white font-semibold text-lg">{photo.title}</h3>
+                      {photo.description && (
+                        <p className="text-gray-300 text-sm mt-1">{photo.description}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">📸</div>
+              <p className="text-gray-400 text-lg">
+                Featured photos coming soon! Check back for our latest work.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -59,26 +162,43 @@ export default function HomePage() {
           <h2 className="text-4xl font-bold text-center mb-16 text-white">
             Our Specialties
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {Object.entries(imageUrls.specialties).map(([key, url]) => (
-              <div key={key} className="relative w-full" style={{ height: '400px' }}>
-                <div className="absolute inset-0 group overflow-hidden rounded-lg">
-                  <Image
-                    src={url}
-                    alt={`${key} photography`}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    className="transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end justify-center p-8">
-                    <h3 className="text-2xl font-bold text-white capitalize transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                      {key}
-                    </h3>
+          {specialtiesWithPhotos.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {specialtiesWithPhotos.map((category) => (
+                <Link key={category.id} href="/portfolio" className="block">
+                  <div className="relative w-full" style={{ height: '400px' }}>
+                    <div className="absolute inset-0 group overflow-hidden rounded-lg cursor-pointer">
+                      <Image
+                        src={category.photos[0].thumbnail || category.photos[0].url}
+                        alt={`${category.name} photography`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end justify-center p-8">
+                        <h3 className="text-2xl font-bold text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                          {category.name}
+                        </h3>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">🎨</div>
+              <p className="text-gray-400 text-lg">
+                Our photography specialties are being curated. Visit our portfolio to see our work!
+              </p>
+              <Link
+                href="/portfolio"
+                className="inline-block mt-4 px-6 py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                View Portfolio
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

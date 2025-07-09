@@ -8,161 +8,70 @@ import type { Photo } from '@/types/photo';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // Disable static generation
 
-// Sample photos for development
-const samplePhotos = {
-  concert: [
-    {
-      id: 'concert-1',
-      title: 'Rock Concert 2024',
-      description: 'Capturing the energy of live music',
-      url: '/images/portfolio/concert-1.jpg',
-      thumbnail: '/images/portfolio/concert-1.jpg',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      published: true,
-      featured: false,
-      authorId: 'sample-author',
-      categories: [{ id: 'concert', name: 'Concert', slug: 'concert' }],
-      tags: [{ id: 'music', name: 'Music', slug: 'music' }, { id: 'live', name: 'Live', slug: 'live' }],
-    },
-    {
-      id: 'concert-2',
-      title: 'Jazz Night',
-      description: 'Intimate jazz performance',
-      url: '/images/portfolio/concert-2.jpg',
-      thumbnail: '/images/portfolio/concert-2.jpg',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      published: true,
-      featured: false,
-      authorId: 'sample-author',
-      categories: [{ id: 'concert', name: 'Concert', slug: 'concert' }],
-      tags: [{ id: 'jazz', name: 'Jazz', slug: 'jazz' }, { id: 'night', name: 'Night', slug: 'night' }],
-    },
-    {
-      id: 'concert-3',
-      title: 'Summer Festival',
-      description: 'Outdoor music festival',
-      url: '/images/portfolio/concert-3.jpg',
-      thumbnail: '/images/portfolio/concert-3.jpg',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      published: true,
-      featured: false,
-      authorId: 'sample-author',
-      categories: [{ id: 'concert', name: 'Concert', slug: 'concert' }],
-      tags: [{ id: 'festival', name: 'Festival', slug: 'festival' }, { id: 'summer', name: 'Summer', slug: 'summer' }],
-    },
-  ],
-  automotive: [
-    {
-      id: 'auto-1',
-      title: 'Classic Car Show',
-      description: 'Vintage automobiles on display',
-      url: '/images/portfolio/auto-1.jpg',
-      thumbnail: '/images/portfolio/auto-1.jpg',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      published: true,
-      featured: false,
-      authorId: 'sample-author',
-      categories: [{ id: 'automotive', name: 'Automotive', slug: 'automotive' }],
-      tags: [{ id: 'classic', name: 'Classic', slug: 'classic' }, { id: 'vintage', name: 'Vintage', slug: 'vintage' }],
-    },
-    {
-      id: 'auto-2',
-      title: 'Sports Car',
-      description: 'Modern sports car photography',
-      url: '/images/portfolio/auto-2.jpg',
-      thumbnail: '/images/portfolio/auto-2.jpg',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      published: true,
-      featured: false,
-      authorId: 'sample-author',
-      categories: [{ id: 'automotive', name: 'Automotive', slug: 'automotive' }],
-      tags: [{ id: 'sports', name: 'Sports', slug: 'sports' }, { id: 'modern', name: 'Modern', slug: 'modern' }],
-    },
-    {
-      id: 'auto-3',
-      title: 'Car Meet',
-      description: 'Local car enthusiast gathering',
-      url: '/images/portfolio/auto-3.jpg',
-      thumbnail: '/images/portfolio/auto-3.jpg',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      published: true,
-      featured: false,
-      authorId: 'sample-author',
-      categories: [{ id: 'automotive', name: 'Automotive', slug: 'automotive' }],
-      tags: [{ id: 'meet', name: 'Meet', slug: 'meet' }, { id: 'local', name: 'Local', slug: 'local' }],
-    },
-  ],
-  nature: [
-    {
-      id: 'nature-1',
-      title: 'Mountain Sunrise',
-      description: 'Early morning mountain view',
-      url: '/images/portfolio/nature-1.jpg',
-      thumbnail: '/images/portfolio/nature-1.jpg',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      published: true,
-      featured: false,
-      authorId: 'sample-author',
-      categories: [{ id: 'nature', name: 'Nature', slug: 'nature' }],
-      tags: [{ id: 'mountains', name: 'Mountains', slug: 'mountains' }, { id: 'sunrise', name: 'Sunrise', slug: 'sunrise' }],
-    },
-    {
-      id: 'nature-2',
-      title: 'Forest Path',
-      description: 'Serene forest trail',
-      url: '/images/portfolio/nature-2.jpg',
-      thumbnail: '/images/portfolio/nature-2.jpg',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      published: true,
-      featured: false,
-      authorId: 'sample-author',
-      categories: [{ id: 'nature', name: 'Nature', slug: 'nature' }],
-      tags: [{ id: 'forest', name: 'Forest', slug: 'forest' }, { id: 'trail', name: 'Trail', slug: 'trail' }],
-    },
-    {
-      id: 'nature-3',
-      title: 'Ocean Sunset',
-      description: 'Beautiful coastal sunset',
-      url: '/images/portfolio/nature-3.jpg',
-      thumbnail: '/images/portfolio/nature-3.jpg',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      published: true,
-      featured: false,
-      authorId: 'sample-author',
-      categories: [{ id: 'nature', name: 'Nature', slug: 'nature' }],
-      tags: [{ id: 'ocean', name: 'Ocean', slug: 'ocean' }, { id: 'sunset', name: 'Sunset', slug: 'sunset' }],
-    },
-  ],
-};
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+}
 
-async function fetchPhotosByCategory(category: string): Promise<Photo[]> {
+interface CategoryWithPhotos extends Category {
+  photos: Photo[];
+}
+
+async function fetchCategories(): Promise<Category[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/photos?category=${category}`, {
-      next: { revalidate: 60 } // Revalidate every minute
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/categories`, {
+      next: { revalidate: 60 },
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
     });
-    if (!res.ok) throw new Error('Failed to fetch');
+    if (!res.ok) {
+      console.error('Failed to fetch categories:', res.status, res.statusText);
+      return [];
+    }
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
+  }
+}
+
+async function fetchPhotosByCategory(categoryId: string): Promise<Photo[]> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/photos?category=${categoryId}`, {
+      next: { revalidate: 60 },
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
+    if (!res.ok) {
+      console.error('Failed to fetch photos for category:', categoryId, res.status, res.statusText);
+      return [];
+    }
     const data = await res.json();
     return data.photos || [];
-  } catch {
-    return samplePhotos[category as keyof typeof samplePhotos] || [];
+  } catch (error) {
+    console.error('Error fetching photos for category:', categoryId, error);
+    return [];
   }
 }
 
 export default async function PortfolioPage() {
-  const [concertPhotos, automotivePhotos, naturePhotos] = await Promise.all([
-    fetchPhotosByCategory('concert'),
-    fetchPhotosByCategory('automotive'),
-    fetchPhotosByCategory('nature'),
-  ]);
+  // Fetch all categories
+  const categories = await fetchCategories();
+  
+  // Fetch photos for each category
+  const categoriesWithPhotos: CategoryWithPhotos[] = await Promise.all(
+    categories.map(async (category) => ({
+      ...category,
+      photos: await fetchPhotosByCategory(category.id),
+    }))
+  );
+
+  // Filter out categories with no photos
+  const categoriesWithContent = categoriesWithPhotos.filter(category => category.photos.length > 0);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -184,47 +93,46 @@ export default async function PortfolioPage() {
               Portfolio
             </h1>
             <p className="text-xl md:text-2xl text-gray-200 font-light max-w-2xl mx-auto">
-              Explore our photography collections showcasing the art of capturing moments in concerts, automotive events, and nature.
+              Explore our photography collections showcasing the art of capturing moments across different genres.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Concert Photography */}
-      <section className="py-24 px-4 md:px-8 bg-black">
-        <div className="max-w-7xl mx-auto">
-          <SectionHeader
-            title="Concert Photography"
-            subtitle="Capturing the energy and emotion of live performances"
-            className="mb-12"
-          />
-          <PhotoGallery photos={concertPhotos} columns={3} gap="lg" />
-        </div>
-      </section>
-
-      {/* Automotive Photography */}
-      <section className="py-24 px-4 md:px-8 bg-zinc-900">
-        <div className="max-w-7xl mx-auto">
-          <SectionHeader
-            title="Automotive Photography"
-            subtitle="Showcasing the beauty and power of automotive design"
-            className="mb-12"
-          />
-          <PhotoGallery photos={automotivePhotos} columns={3} gap="lg" />
-        </div>
-      </section>
-
-      {/* Nature Photography */}
-      <section className="py-24 px-4 md:px-8 bg-black">
-        <div className="max-w-7xl mx-auto">
-          <SectionHeader
-            title="Nature Photography"
-            subtitle="Exploring the beauty and wonder of the natural world"
-            className="mb-12"
-          />
-          <PhotoGallery photos={naturePhotos} columns={3} gap="lg" />
-        </div>
-      </section>
+      {/* Dynamic Category Sections */}
+      {categoriesWithContent.length > 0 ? (
+        categoriesWithContent.map((category, index) => (
+          <section 
+            key={category.id} 
+            className={`py-24 px-4 md:px-8 ${index % 2 === 0 ? 'bg-black' : 'bg-zinc-900'}`}
+          >
+            <div className="max-w-7xl mx-auto">
+              <SectionHeader
+                title={`${category.name} Photography`}
+                subtitle={category.description || `Showcasing our ${category.name.toLowerCase()} photography collection`}
+                className="mb-12"
+              />
+              <PhotoGallery photos={category.photos} columns={3} gap="lg" />
+            </div>
+          </section>
+        ))
+      ) : (
+        // No categories with photos found
+        <section className="py-24 px-4 md:px-8 bg-black">
+          <div className="max-w-7xl mx-auto text-center">
+            <h2 className="text-3xl font-bold text-white mb-4">Portfolio Coming Soon</h2>
+            <p className="text-xl text-gray-400 mb-8">
+              We're currently building our portfolio. Check back soon to see our latest work!
+            </p>
+            <div className="bg-gray-800 rounded-lg p-8 max-w-md mx-auto">
+              <div className="text-6xl mb-4">📸</div>
+              <p className="text-gray-300">
+                New photos are being added regularly. Follow us on social media for updates!
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 } 
