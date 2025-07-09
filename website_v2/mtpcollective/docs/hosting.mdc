@@ -23,6 +23,29 @@ alwaysApply: false
 - Always push code to dev branch unless specifically asked to push to another branch
 - Do not push to push to main
 
+## Database Access Patterns
+- **API Routes should use `photoService`** for all photo-related operations
+  - Handles file uploads to R2/S3 storage
+  - Processes images (resize, thumbnails) with Sharp
+  - Manages photo-category and photo-tag relationships
+  - Provides proper data transformation for API responses
+  - Handles file deletion from storage
+  - Use for: `/api/photos/*` endpoints that need CRUD operations
+
+- **SSR Pages should use `nativeDB` directly** for read-only operations
+  - Direct database access is faster for read operations
+  - Avoids unnecessary overhead of image processing logic
+  - Prevents SSR issues with localhost API calls
+  - Use for: `page.tsx` files that need to fetch data during server-side rendering
+
+- **Categories API uses `nativeDB`** for simple CRUD operations
+  - No file handling required
+  - Simple database operations
+  - Use for: `/api/categories/*` endpoints
+
+- **Consistency Rule**: Both `photoService` and `nativeDB` should return compatible data structures
+- **Architecture Principle**: Use the right tool for the job - don't force a single solution everywhere
+
 ## Code Implementation Guidelines
 - Balance readability with performance - code should be both maintainable and efficient
 - Fully implement all requested functionality
