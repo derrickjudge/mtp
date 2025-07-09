@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 
+// Updated auth configuration with proper environment variable setup
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
