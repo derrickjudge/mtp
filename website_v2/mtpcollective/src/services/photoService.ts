@@ -1,6 +1,7 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
-import { prisma } from '@/lib/prisma';
+import { withPrisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 import { Category, Tag, Photo } from '@/types/photo';
 import sharp from 'sharp';
 
@@ -102,7 +103,7 @@ export const photoService = {
     );
 
     // Create photo record in database
-    const photo = await prisma.photo.create({
+    const photo = await withPrisma((prisma: PrismaClient) => prisma.photo.create({
       data: {
         title,
         description,
@@ -123,15 +124,15 @@ export const photoService = {
         categories: true,
         tags: true,
       },
-    });
+    }));
 
     return convertPrismaToPhoto(photo);
   },
 
   async deletePhoto(id: string): Promise<void> {
-    const photo = await prisma.photo.findUnique({
+    const photo = await withPrisma((prisma: PrismaClient) => prisma.photo.findUnique({
       where: { id },
-    });
+    }));
 
     if (!photo) {
       throw new Error('Photo not found');
@@ -161,9 +162,9 @@ export const photoService = {
     }
 
     // Delete from database
-    await prisma.photo.delete({
+    await withPrisma((prisma: PrismaClient) => prisma.photo.delete({
       where: { id },
-    });
+    }));
   },
 
   async getPhotos(options?: {
@@ -173,7 +174,7 @@ export const photoService = {
     tagId?: string;
     featured?: boolean;
   }): Promise<PhotoWithRelations[]> {
-    const photos = await prisma.photo.findMany({
+    const photos = await withPrisma((prisma: PrismaClient) => prisma.photo.findMany({
       where: {
         published: true,
         ...(options?.categoryId && {
@@ -198,24 +199,24 @@ export const photoService = {
         categories: true,
         tags: true,
       },
-      take: options?.take,
-      skip: options?.skip,
       orderBy: {
         createdAt: 'desc',
       },
-    });
+      take: options?.take,
+      skip: options?.skip,
+    }));
 
     return photos.map(convertPrismaToPhoto);
   },
 
   async getPhotoById(id: string): Promise<PhotoWithRelations | null> {
-    const photo = await prisma.photo.findUnique({
+    const photo = await withPrisma((prisma: PrismaClient) => prisma.photo.findUnique({
       where: { id },
       include: {
         categories: true,
         tags: true,
       },
-    });
+    }));
 
     return photo ? convertPrismaToPhoto(photo) : null;
   },

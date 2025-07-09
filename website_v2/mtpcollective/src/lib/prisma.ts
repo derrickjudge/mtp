@@ -4,11 +4,22 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-// Create a single Prisma Client instance to be used across the application
-export const prisma = global.prisma || new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error', 'warn'],
-});
+// Create Prisma client with proper serverless configuration
+const createPrismaClient = () => {
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    datasources: {
+      db: {
+        url: process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL,
+      },
+    },
+  });
+};
 
+// Use global variable to prevent multiple instances in development
+export const prisma = global.prisma || createPrismaClient();
+
+// In development, store the client globally to prevent hot reload issues
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;
 }
@@ -20,49 +31,30 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Only create Prisma Client in production or when explicitly needed
-const prismaClientSingleton = () => {
-  if (process.env.NODE_ENV === 'production') {
-    return new PrismaClient({
-      log: ['error', 'warn'],
-      datasources: {
-        db: {
-          url: process.env.POSTGRES_PRISMA_URL,
-        },
-      },
-    });
-  }
-  return undefined;
-};
-
-// Export a function to get the Prisma client
-export const getPrismaClient = () => {
-  if (process.env.NODE_ENV === 'production') {
-    return globalThis.prisma ?? prismaClientSingleton();
-  }
-  return undefined;
-};
-
-// Initialize prisma only in production
-if (process.env.NODE_ENV === 'production') {
-  globalThis.prisma = prismaClientSingleton();
-}
-
-// Helper function to handle Prisma errors
-export const handlePrismaError = async <T>(operation: () => Promise<T>): Promise<T> => {
-  const prisma = getPrismaClient();
-  if (!prisma) {
-    throw new Error('Prisma client not available');
-  }
-
+// Helper function to handle database operations with automatic reconnection
+export const withPrisma = async <T>(operation: (client: PrismaClient) => Promise<T>): Promise<T> => {
   try {
-    return await operation();
+    const result = await operation(prisma);
+    return result;
   } catch (error: any) {
-    if (error.code === '42P05' && error.message.includes('prepared statement')) {
-      // If we get a prepared statement error, disconnect and retry
+    // Handle prepared statement errors in serverless environments
+    if (error.code === '42P05' || error.message?.includes('prepared statement')) {
+      console.warn('Prisma connection issue detected, reconnecting...');
+      
+      // Disconnect and create a fresh connection
       await prisma.$disconnect();
-      return await operation();
+      const freshClient = createPrismaClient();
+      
+      try {
+        const result = await operation(freshClient);
+        await freshClient.$disconnect();
+        return result;
+      } catch (retryError) {
+        await freshClient.$disconnect();
+        throw retryError;
+      }
     }
+    
     throw error;
   }
 }; 
