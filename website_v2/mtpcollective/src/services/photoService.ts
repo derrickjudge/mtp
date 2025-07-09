@@ -1,7 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
-import { withServerlessDB, withRetry } from '@/lib/db';
-import { PrismaClient } from '@prisma/client';
+import { nativeDB } from '@/lib/db-native';
 import { Category, Tag, Photo } from '@/types/photo';
 import sharp from 'sharp';
 
@@ -31,30 +30,21 @@ export type PhotoWithRelations = Photo & {
   tags: Tag[];
 };
 
-// Helper function to convert Prisma's null to undefined
-const convertPrismaToPhoto = (prismaPhoto: any): PhotoWithRelations => ({
-  id: prismaPhoto.id,
-  title: prismaPhoto.title,
-  description: prismaPhoto.description || undefined,
-  url: prismaPhoto.url,
-  thumbnail: prismaPhoto.thumbnail || undefined,
-  published: prismaPhoto.published,
-  featured: prismaPhoto.featured,
-  metadata: prismaPhoto.metadata || undefined,
-  createdAt: prismaPhoto.createdAt.toISOString(),
-  updatedAt: prismaPhoto.updatedAt.toISOString(),
-  authorId: prismaPhoto.authorId,
-  categories: prismaPhoto.categories.map((category: any) => ({
-    id: category.id,
-    name: category.name,
-    slug: category.slug,
-    description: category.description || undefined,
-  })),
-  tags: prismaPhoto.tags.map((tag: any) => ({
-    id: tag.id,
-    name: tag.name,
-    slug: tag.slug,
-  })),
+// Helper function to convert native DB result to Photo type
+const convertNativeToPhoto = (nativePhoto: any): PhotoWithRelations => ({
+  id: nativePhoto.id,
+  title: nativePhoto.title,
+  description: nativePhoto.description || undefined,
+  url: nativePhoto.url,
+  thumbnail: nativePhoto.thumbnail || undefined,
+  published: nativePhoto.published,
+  featured: nativePhoto.featured,
+  metadata: nativePhoto.metadata ? (typeof nativePhoto.metadata === 'string' ? JSON.parse(nativePhoto.metadata) : nativePhoto.metadata) : undefined,
+  createdAt: nativePhoto.createdAt instanceof Date ? nativePhoto.createdAt.toISOString() : nativePhoto.createdAt,
+  updatedAt: nativePhoto.updatedAt instanceof Date ? nativePhoto.updatedAt.toISOString() : nativePhoto.updatedAt,
+  authorId: nativePhoto.authorId,
+  categories: nativePhoto.categories ? (Array.isArray(nativePhoto.categories) ? nativePhoto.categories : JSON.parse(nativePhoto.categories)) : [],
+  tags: nativePhoto.tags ? (Array.isArray(nativePhoto.tags) ? nativePhoto.tags : JSON.parse(nativePhoto.tags)) : [],
 });
 
 export const photoService = {
@@ -102,45 +92,41 @@ export const photoService = {
       })
     );
 
-    // Create photo record in database
-    const photo = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.photo.create({
-          data: {
-            title,
-            description,
-            url: `${r2Config.publicUrl}/${uniqueFileName}`,
-            thumbnail: `${r2Config.publicUrl}/${thumbnailFileName}`,
-            categories: {
-              connect: categoryIds.map(id => ({ id })),
-            },
-            tags: {
-              connect: tagIds.map(id => ({ id })),
-            },
-            author: {
-              connect: { id: authorId },
-            },
-            metadata,
-          },
-          include: {
-            categories: true,
-            tags: true,
-          },
-        });
-      });
+    // Create photo record in database using native client
+    const photo = await nativeDB.createPhoto({
+      title,
+      description,
+      url: `${r2Config.publicUrl}/${uniqueFileName}`,
+      thumbnail: `${r2Config.publicUrl}/${thumbnailFileName}`,
+      authorId,
+      metadata,
     });
 
-    return convertPrismaToPhoto(photo);
+    if (!photo) {
+      throw new Error('Failed to create photo record');
+    }
+
+    // Link photo to categories and tags
+    if (categoryIds.length > 0) {
+      await nativeDB.linkPhotoToCategories(photo.id, categoryIds);
+    }
+
+    if (tagIds.length > 0) {
+      await nativeDB.linkPhotoToTags(photo.id, tagIds);
+    }
+
+    // Get the photo with its relations
+    const photoWithRelations = await nativeDB.getPhotoWithRelations(photo.id);
+    
+    if (!photoWithRelations) {
+      throw new Error('Failed to retrieve photo with relations');
+    }
+
+    return convertNativeToPhoto(photoWithRelations);
   },
 
   async deletePhoto(id: string): Promise<void> {
-    const photo = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.photo.findUnique({
-          where: { id },
-        });
-      });
-    });
+    const photo = await nativeDB.findPhotoById(id);
 
     if (!photo) {
       throw new Error('Photo not found');
@@ -170,13 +156,7 @@ export const photoService = {
     }
 
     // Delete from database
-    await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.photo.delete({
-          where: { id },
-        });
-      });
-    });
+    await nativeDB.deletePhoto(id);
   },
 
   async getPhotos(options?: {
@@ -186,58 +166,21 @@ export const photoService = {
     tagId?: string;
     featured?: boolean;
   }): Promise<PhotoWithRelations[]> {
-    const photos = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.photo.findMany({
-          where: {
-            published: true,
-            ...(options?.categoryId && {
-              categories: {
-                some: {
-                  id: options.categoryId,
-                },
-              },
-            }),
-            ...(options?.tagId && {
-              tags: {
-                some: {
-                  id: options.tagId,
-                },
-              },
-            }),
-            ...(options?.featured && {
-              featured: true,
-            }),
-          },
-          include: {
-            categories: true,
-            tags: true,
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-          take: options?.take,
-          skip: options?.skip,
-        });
-      });
-    });
+    const photos = await nativeDB.findPhotos(options);
 
-    return photos.map(convertPrismaToPhoto);
+    // For each photo, we need to get its relations
+    const photosWithRelations = await Promise.all(
+      photos.map(async (photo) => {
+        const photoWithRelations = await nativeDB.getPhotoWithRelations(photo.id);
+        return photoWithRelations ? convertNativeToPhoto(photoWithRelations) : null;
+      })
+    );
+
+    return photosWithRelations.filter(Boolean) as PhotoWithRelations[];
   },
 
   async getPhotoById(id: string): Promise<PhotoWithRelations | null> {
-    const photo = await withRetry(async () => {
-      return await withServerlessDB(async (client) => {
-        return await client.photo.findUnique({
-          where: { id },
-          include: {
-            categories: true,
-            tags: true,
-          },
-        });
-      });
-    });
-
-    return photo ? convertPrismaToPhoto(photo) : null;
+    const photo = await nativeDB.getPhotoWithRelations(id);
+    return photo ? convertNativeToPhoto(photo) : null;
   },
 }; 

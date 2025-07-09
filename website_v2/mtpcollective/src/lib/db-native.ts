@@ -223,6 +223,164 @@ export class NativeDBService {
       await client.end();
     }
   }
+
+  async createPhoto(data: {
+    title: string;
+    description?: string;
+    url: string;
+    thumbnail?: string;
+    authorId: string;
+    metadata?: any;
+    published?: boolean;
+    featured?: boolean;
+  }): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        `INSERT INTO "Photo" (id, title, description, url, thumbnail, published, featured, metadata, "authorId", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+         RETURNING id, title, description, url, thumbnail, published, featured, metadata, "authorId", "createdAt", "updatedAt"`,
+        [
+          data.title,
+          data.description || null,
+          data.url,
+          data.thumbnail || null,
+          data.published ?? true,
+          data.featured ?? false,
+          data.metadata ? JSON.stringify(data.metadata) : null,
+          data.authorId
+        ]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async linkPhotoToCategories(photoId: string, categoryIds: string[]): Promise<void> {
+    if (categoryIds.length === 0) return;
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Insert multiple category-photo relationships
+      const values = categoryIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
+      const params = categoryIds.flatMap(categoryId => [categoryId, photoId]);
+      
+      await client.query(
+        `INSERT INTO "_CategoryToPhoto" ("A", "B") VALUES ${values}`,
+        params
+      );
+    } finally {
+      await client.end();
+    }
+  }
+
+  async linkPhotoToTags(photoId: string, tagIds: string[]): Promise<void> {
+    if (tagIds.length === 0) return;
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Insert multiple tag-photo relationships
+      const values = tagIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
+      const params = tagIds.flatMap(tagId => [tagId, photoId]);
+      
+      await client.query(
+        `INSERT INTO "_PhotoToTag" ("A", "B") VALUES ${values}`,
+        params
+      );
+    } finally {
+      await client.end();
+    }
+  }
+
+  async findPhotoById(id: string): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        'SELECT id, title, description, url, thumbnail, published, featured, metadata, "authorId", "createdAt", "updatedAt" FROM "Photo" WHERE id = $1 LIMIT 1',
+        [id]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async deletePhoto(id: string): Promise<boolean> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Delete photo relationships first
+      await client.query('DELETE FROM "_CategoryToPhoto" WHERE "B" = $1', [id]);
+      await client.query('DELETE FROM "_PhotoToTag" WHERE "A" = $1', [id]);
+      
+      // Delete the photo
+      await client.query('DELETE FROM "Photo" WHERE id = $1', [id]);
+      
+      return true;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async getPhotoWithRelations(id: string): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Get photo with categories and tags
+      const result = await client.query(
+        `SELECT 
+           p.id, p.title, p.description, p.url, p.thumbnail, p.published, p.featured, 
+           p.metadata, p."authorId", p."createdAt", p."updatedAt",
+           COALESCE(
+             json_agg(
+               DISTINCT jsonb_build_object(
+                 'id', c.id, 
+                 'name', c.name, 
+                 'slug', c.slug, 
+                 'description', c.description
+               )
+             ) FILTER (WHERE c.id IS NOT NULL), 
+             '[]'
+           ) as categories,
+           COALESCE(
+             json_agg(
+               DISTINCT jsonb_build_object(
+                 'id', t.id, 
+                 'name', t.name, 
+                 'slug', t.slug
+               )
+             ) FILTER (WHERE t.id IS NOT NULL), 
+             '[]'
+           ) as tags
+         FROM "Photo" p
+         LEFT JOIN "_CategoryToPhoto" cp ON p.id = cp."B"
+         LEFT JOIN "Category" c ON cp."A" = c.id
+         LEFT JOIN "_PhotoToTag" pt ON p.id = pt."A"
+         LEFT JOIN "Tag" t ON pt."B" = t.id
+         WHERE p.id = $1
+         GROUP BY p.id, p.title, p.description, p.url, p.thumbnail, p.published, p.featured, p.metadata, p."authorId", p."createdAt", p."updatedAt"
+         LIMIT 1`,
+        [id]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
 }
 
 export const nativeDB = new NativeDBService(); 
