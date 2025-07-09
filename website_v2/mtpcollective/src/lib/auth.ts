@@ -1,12 +1,11 @@
 import type { NextAuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
-import { withServerlessDB, withRetry } from '@/lib/db';
-import { rawDB } from '@/lib/db-raw';
+import { nativeDB } from '@/lib/db-native';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 
-// Updated auth configuration with raw SQL fallback for user operations
+// Updated auth configuration with native PostgreSQL client
 export const authOptions: NextAuthOptions = {
   // Only use PrismaAdapter in development to avoid serverless issues
   adapter: process.env.NODE_ENV === 'development' ? PrismaAdapter(prisma) : undefined,
@@ -31,8 +30,8 @@ export const authOptions: NextAuthOptions = {
             throw new Error('Invalid credentials');
           }
 
-          // Use raw SQL to avoid prepared statement issues
-          const user = await rawDB.findUserByEmail(email);
+          // Use native PostgreSQL client to completely bypass Prisma
+          const user = await nativeDB.findUserByEmail(email);
 
           if (!user || !user.password) {
             throw new Error('Invalid credentials');
@@ -84,8 +83,8 @@ export const authOptions: NextAuthOptions = {
       // Return previous token if the access token has not expired yet
       if (token.email) {
         try {
-          // Use raw SQL to avoid prepared statement issues
-          const dbUser = await rawDB.findUserByEmail(token.email);
+          // Use native PostgreSQL client to completely bypass Prisma
+          const dbUser = await nativeDB.findUserByEmail(token.email);
 
           if (dbUser) {
             return {

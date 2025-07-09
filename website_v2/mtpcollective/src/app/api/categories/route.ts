@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rawDB } from '@/lib/db-raw';
+import { nativeDB } from '@/lib/db-native';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const categories = await rawDB.findCategories();
+    const categories = await nativeDB.findCategories();
     return NextResponse.json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     // Check if category with this name already exists
-    const existingCategory = await rawDB.findCategoryByName(name);
+    const existingCategory = await nativeDB.findCategoryByName(name);
 
     if (existingCategory) {
       return NextResponse.json(
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const category = await rawDB.createCategory(name, slug, description || '');
+    const category = await nativeDB.createCategory(name, slug, description || '');
 
     if (!category) {
       return NextResponse.json(

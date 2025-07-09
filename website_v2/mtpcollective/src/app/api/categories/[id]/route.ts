@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rawDB } from '@/lib/db-raw';
+import { nativeDB } from '@/lib/db-native';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -30,7 +30,7 @@ export async function PUT(
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     // Check if category exists
-    const existingCategory = await rawDB.findCategoryById(params.id);
+    const existingCategory = await nativeDB.findCategoryById(params.id);
 
     if (!existingCategory) {
       return NextResponse.json(
@@ -40,7 +40,7 @@ export async function PUT(
     }
 
     // Check if name is already taken by another category
-    const nameConflict = await rawDB.findCategoryByName(name);
+    const nameConflict = await nativeDB.findCategoryByName(name);
 
     if (nameConflict && nameConflict.id !== params.id) {
       return NextResponse.json(
@@ -49,7 +49,7 @@ export async function PUT(
       );
     }
 
-    const category = await rawDB.updateCategory(params.id, name, slug, description || '');
+    const category = await nativeDB.updateCategory(params.id, name, slug, description || '');
 
     if (!category) {
       return NextResponse.json(
@@ -83,7 +83,7 @@ export async function DELETE(
     }
 
     // Check if category exists and get photo count
-    const existingCategory = await rawDB.getCategoryWithPhotos(params.id);
+    const existingCategory = await nativeDB.getCategoryWithPhotos(params.id);
 
     if (!existingCategory) {
       return NextResponse.json(
@@ -103,7 +103,7 @@ export async function DELETE(
       );
     }
 
-    await rawDB.deleteCategory(params.id);
+    await nativeDB.deleteCategory(params.id);
 
     return NextResponse.json({ message: 'Category deleted successfully' });
   } catch (error) {
