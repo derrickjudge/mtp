@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { DocumentTextIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, PlusIcon, PencilIcon, TrashIcon, PhotoIcon, TagIcon } from '@heroicons/react/24/outline';
+import { Editor } from '@tinymce/tinymce-react';
+import Image from 'next/image';
 
 interface Article {
   id: string;
@@ -10,45 +12,86 @@ interface Article {
   slug: string;
   content: string;
   excerpt?: string;
+  coverImage?: string;
   published: boolean;
+  featured: boolean;
   createdAt: string;
   updatedAt: string;
+  categories?: Category[];
+  tags?: Tag[];
+}
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+}
+
+interface Tag {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface Photo {
+  id: string;
+  title: string;
+  url: string;
+  thumbnail?: string;
 }
 
 export default function AdminArticles() {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showPhotoSelector, setShowPhotoSelector] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     content: '',
     excerpt: '',
+    coverImage: '',
     published: false,
+    featured: false,
+    categoryIds: [] as string[],
+    tagIds: [] as string[],
   });
 
   useEffect(() => {
-    fetchArticles();
+    fetchData();
   }, []);
 
-  const fetchArticles = async () => {
+  const fetchData = async () => {
     try {
-      const response = await fetch('/api/articles');
-      if (!response.ok) {
-        // If articles API doesn't exist yet, just set empty array
-        if (response.status === 404) {
-          setArticles([]);
-          return;
-        }
-        throw new Error('Failed to fetch articles');
+      const [articlesRes, categoriesRes, photosRes] = await Promise.all([
+        fetch('/api/articles'),
+        fetch('/api/categories'),
+        fetch('/api/photos?take=50') // Get recent photos for selection
+      ]);
+
+      if (articlesRes.ok) {
+        const articlesData = await articlesRes.json();
+        setArticles(articlesData);
       }
-      const data = await response.json();
-      setArticles(data);
+
+      if (categoriesRes.ok) {
+        const categoriesData = await categoriesRes.json();
+        setCategories(categoriesData);
+      }
+
+      if (photosRes.ok) {
+        const photosData = await photosRes.json();
+        setPhotos(photosData.photos || []);
+      }
     } catch (err) {
-      console.error('Articles API not implemented yet:', err);
-      setArticles([]);
+      console.error('Error fetching data:', err);
+      setError('Failed to load data');
     } finally {
       setIsLoading(false);
     }
@@ -97,14 +140,19 @@ export default function AdminArticles() {
         toast.success('Article created successfully');
       }
 
-      setFormData({ title: '', content: '', excerpt: '', published: false });
+      setFormData({ 
+        title: '', 
+        content: '', 
+        excerpt: '', 
+        coverImage: '',
+        published: false, 
+        featured: false,
+        categoryIds: [],
+        tagIds: []
+      });
       setShowForm(false);
     } catch (err) {
-      if (err instanceof Error && err.message.includes('404')) {
-        toast.error('Articles API not implemented yet');
-      } else {
-        toast.error(err instanceof Error ? err.message : 'Failed to save article');
-      }
+      toast.error(err instanceof Error ? err.message : 'Failed to save article');
     } finally {
       setIsCreating(false);
     }
@@ -116,7 +164,11 @@ export default function AdminArticles() {
       title: article.title,
       content: article.content,
       excerpt: article.excerpt || '',
+      coverImage: article.coverImage || '',
       published: article.published,
+      featured: article.featured,
+      categoryIds: article.categories?.map(c => c.id) || [],
+      tagIds: article.tags?.map(t => t.id) || [],
     });
     setShowForm(true);
   };
@@ -145,7 +197,16 @@ export default function AdminArticles() {
 
   const handleCancel = () => {
     setEditingArticle(null);
-    setFormData({ title: '', content: '', excerpt: '', published: false });
+    setFormData({ 
+      title: '', 
+      content: '', 
+      excerpt: '', 
+      coverImage: '',
+      published: false, 
+      featured: false,
+      categoryIds: [],
+      tagIds: []
+    });
     setShowForm(false);
   };
 
@@ -156,7 +217,12 @@ export default function AdminArticles() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ...article, published: !article.published }),
+        body: JSON.stringify({ 
+          ...article, 
+          published: !article.published,
+          categoryIds: article.categories?.map(c => c.id) || [],
+          tagIds: article.tags?.map(t => t.id) || [],
+        }),
       });
 
       if (!response.ok) {
@@ -169,6 +235,21 @@ export default function AdminArticles() {
     } catch (err) {
       toast.error('Failed to update article status');
     }
+  };
+
+  const handlePhotoSelect = (photo: Photo) => {
+    setFormData(prev => ({ ...prev, coverImage: photo.url }));
+    setShowPhotoSelector(false);
+    toast.success('Cover image selected');
+  };
+
+  const handleCategoryToggle = (categoryId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      categoryIds: prev.categoryIds.includes(categoryId)
+        ? prev.categoryIds.filter(id => id !== categoryId)
+        : [...prev.categoryIds, categoryId]
+    }));
   };
 
   if (isLoading) {
@@ -209,7 +290,8 @@ export default function AdminArticles() {
             {editingArticle ? 'Edit Article' : 'Create New Article'}
           </h2>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Title */}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-200 mb-2">
                 Title *
@@ -225,6 +307,7 @@ export default function AdminArticles() {
               />
             </div>
 
+            {/* Excerpt */}
             <div>
               <label htmlFor="excerpt" className="block text-sm font-medium text-gray-200 mb-2">
                 Excerpt
@@ -235,38 +318,119 @@ export default function AdminArticles() {
                 onChange={(e) => setFormData(prev => ({ ...prev, excerpt: e.target.value }))}
                 rows={2}
                 className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Brief description or excerpt"
+                placeholder="Brief description or excerpt for SEO and previews"
               />
             </div>
 
+            {/* Cover Image */}
             <div>
-              <label htmlFor="content" className="block text-sm font-medium text-gray-200 mb-2">
+              <label className="block text-sm font-medium text-gray-200 mb-2">
+                Cover Image
+              </label>
+              <div className="flex items-center space-x-4">
+                {formData.coverImage && (
+                  <div className="relative w-32 h-20 rounded-md overflow-hidden">
+                    <Image
+                      src={formData.coverImage}
+                      alt="Cover image"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotoSelector(true)}
+                    className="inline-flex items-center px-3 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600"
+                  >
+                    <PhotoIcon className="w-4 h-4 mr-2" />
+                    Select Photo
+                  </button>
+                  {formData.coverImage && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, coverImage: '' }))}
+                      className="px-3 py-2 text-red-300 bg-red-600/20 rounded-md hover:bg-red-600/30"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Categories */}
+            <div>
+              <label className="block text-sm font-medium text-gray-200 mb-2">
+                Categories
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {categories.map((category) => (
+                  <label key={category.id} className="flex items-center space-x-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={formData.categoryIds.includes(category.id)}
+                      onChange={() => handleCategoryToggle(category.id)}
+                      className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-300">{category.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Rich Text Editor */}
+            <div>
+              <label className="block text-sm font-medium text-gray-200 mb-2">
                 Content *
               </label>
-              <textarea
-                id="content"
-                value={formData.content}
-                onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                rows={12}
-                className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Write your article content here..."
-                required
-              />
+              <div className="bg-white rounded-md">
+                <Editor
+                  apiKey="no-api-key" // Use the free version
+                  value={formData.content}
+                  onEditorChange={(content: string) => setFormData(prev => ({ ...prev, content }))}
+                  init={{
+                    height: 400,
+                    menubar: false,
+                    plugins: [
+                      'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                      'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                      'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                    ],
+                    toolbar: 'undo redo | blocks | ' +
+                      'bold italic forecolor | alignleft aligncenter ' +
+                      'alignright alignjustify | bullist numlist outdent indent | ' +
+                      'removeformat | help',
+                    content_style: 'body { font-family: Helvetica, Arial, sans-serif; font-size: 14px }'
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="published"
-                checked={formData.published}
-                onChange={(e) => setFormData(prev => ({ ...prev, published: e.target.checked }))}
-                className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="published" className="ml-2 text-sm text-gray-200">
-                Publish immediately
+            {/* Publishing Options */}
+            <div className="flex items-center space-x-6">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.published}
+                  onChange={(e) => setFormData(prev => ({ ...prev, published: e.target.checked }))}
+                  className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-200">Publish immediately</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.featured}
+                  onChange={(e) => setFormData(prev => ({ ...prev, featured: e.target.checked }))}
+                  className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-200">Featured article</span>
               </label>
             </div>
 
+            {/* Form Actions */}
             <div className="flex gap-3">
               <button
                 type="submit"
@@ -287,6 +451,47 @@ export default function AdminArticles() {
         </div>
       )}
 
+      {/* Photo Selector Modal */}
+      {showPhotoSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">Select Cover Image</h3>
+              <button
+                onClick={() => setShowPhotoSelector(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {photos.map((photo) => (
+                <div
+                  key={photo.id}
+                  className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500"
+                  onClick={() => handlePhotoSelect(photo)}
+                >
+                  <Image
+                    src={photo.thumbnail || photo.url}
+                    alt={photo.title}
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-xs truncate">
+                    {photo.title}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {photos.length === 0 && (
+              <div className="text-center py-8 text-gray-400">
+                No photos available. Upload some photos first.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Articles List */}
       <div className="bg-gray-800 rounded-lg p-6">
         <h2 className="text-xl font-semibold mb-4 text-gray-100">Your Articles</h2>
@@ -299,16 +504,35 @@ export default function AdminArticles() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-medium text-white">{article.title}</h3>
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        article.published 
-                          ? 'bg-green-600/20 text-green-300' 
-                          : 'bg-yellow-600/20 text-yellow-300'
-                      }`}>
-                        {article.published ? 'Published' : 'Draft'}
-                      </span>
+                      <div className="flex gap-1">
+                        <span className={`px-2 py-1 text-xs rounded ${
+                          article.published 
+                            ? 'bg-green-600/20 text-green-300' 
+                            : 'bg-yellow-600/20 text-yellow-300'
+                        }`}>
+                          {article.published ? 'Published' : 'Draft'}
+                        </span>
+                        {article.featured && (
+                          <span className="px-2 py-1 text-xs rounded bg-purple-600/20 text-purple-300">
+                            Featured
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {article.excerpt && (
                       <p className="text-sm text-gray-300 mb-2">{article.excerpt}</p>
+                    )}
+                    {article.categories && article.categories.length > 0 && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <TagIcon className="w-4 h-4 text-gray-500" />
+                        <div className="flex gap-1">
+                          {article.categories.map((category) => (
+                            <span key={category.id} className="text-xs text-blue-300 bg-blue-600/20 px-2 py-1 rounded">
+                              {category.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     )}
                     <p className="text-xs text-gray-500">
                       Created: {new Date(article.createdAt).toLocaleDateString()}
