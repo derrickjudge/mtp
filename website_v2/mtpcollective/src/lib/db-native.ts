@@ -53,6 +53,28 @@ export class NativeDBService {
         )
       `);
 
+      // Create _ArticleToCategory junction table if it doesn't exist
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "_ArticleToCategory" (
+          "A" TEXT NOT NULL,
+          "B" TEXT NOT NULL,
+          CONSTRAINT "_ArticleToCategory_pkey" PRIMARY KEY ("A", "B"),
+          CONSTRAINT "_ArticleToCategory_A_fkey" FOREIGN KEY ("A") REFERENCES "Article"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "_ArticleToCategory_B_fkey" FOREIGN KEY ("B") REFERENCES "Category"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+
+      // Create _ArticleToTag junction table if it doesn't exist
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "_ArticleToTag" (
+          "A" TEXT NOT NULL,
+          "B" TEXT NOT NULL,
+          CONSTRAINT "_ArticleToTag_pkey" PRIMARY KEY ("A", "B"),
+          CONSTRAINT "_ArticleToTag_A_fkey" FOREIGN KEY ("A") REFERENCES "Article"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "_ArticleToTag_B_fkey" FOREIGN KEY ("B") REFERENCES "Tag"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+
       // Create indexes for better performance
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_CategoryToPhoto_B_index" ON "_CategoryToPhoto"("B")
@@ -60,6 +82,14 @@ export class NativeDBService {
       
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_PhotoToTag_B_index" ON "_PhotoToTag"("B")
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_ArticleToCategory_B_index" ON "_ArticleToCategory"("B")
+      `);
+      
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_ArticleToTag_B_index" ON "_ArticleToTag"("B")
       `);
 
     } catch (error) {
@@ -487,6 +517,316 @@ export class NativeDBService {
          LEFT JOIN "Tag" t ON pt."B" = t.id
          WHERE p.id = $1
          GROUP BY p.id, p.title, p.description, p.url, p.thumbnail, p.published, p.featured, p.metadata, p."authorId", p."createdAt", p."updatedAt"
+         LIMIT 1`,
+        [id]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  // Article methods
+  async findArticles(options?: {
+    take?: number;
+    skip?: number;
+    published?: boolean;
+    featured?: boolean;
+    categoryId?: string;
+    tagId?: string;
+  }): Promise<any[]> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      let query = `
+        SELECT DISTINCT a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", 
+               a.published, a.featured, a."createdAt", a."updatedAt", a."authorId"
+        FROM "Article" a
+        WHERE 1=1
+      `;
+      
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (options?.published !== undefined) {
+        query += ` AND a.published = $${paramIndex}`;
+        params.push(options.published);
+        paramIndex++;
+      }
+
+      if (options?.featured) {
+        query += ` AND a.featured = true`;
+      }
+
+      if (options?.categoryId) {
+        query += ` AND EXISTS (
+          SELECT 1 FROM "_ArticleToCategory" ac 
+          WHERE ac."A" = a.id AND ac."B" = $${paramIndex}
+        )`;
+        params.push(options.categoryId);
+        paramIndex++;
+      }
+
+      query += ` ORDER BY a."createdAt" DESC`;
+
+      if (options?.take) {
+        query += ` LIMIT $${paramIndex}`;
+        params.push(options.take);
+        paramIndex++;
+      }
+
+      if (options?.skip) {
+        query += ` OFFSET $${paramIndex}`;
+        params.push(options.skip);
+      }
+
+      const result = await client.query(query, params);
+      return result.rows;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async findArticleById(id: string): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        'SELECT id, title, slug, content, excerpt, "coverImage", published, featured, "authorId", "createdAt", "updatedAt" FROM "Article" WHERE id = $1 LIMIT 1',
+        [id]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async findArticleBySlug(slug: string): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        'SELECT id, title, slug, content, excerpt, "coverImage", published, featured, "authorId", "createdAt", "updatedAt" FROM "Article" WHERE slug = $1 LIMIT 1',
+        [slug]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async createArticle(data: {
+    title: string;
+    slug: string;
+    content: string;
+    excerpt?: string;
+    coverImage?: string;
+    published?: boolean;
+    featured?: boolean;
+    metaDescription?: string;
+    authorId: string;
+  }): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        `INSERT INTO "Article" (id, title, slug, content, excerpt, "coverImage", published, featured, "authorId", "createdAt", "updatedAt") 
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW()) 
+         RETURNING id, title, slug, content, excerpt, "coverImage", published, featured, "authorId", "createdAt", "updatedAt"`,
+        [
+          data.title,
+          data.slug,
+          data.content,
+          data.excerpt || null,
+          data.coverImage || null,
+          data.published ?? false,
+          data.featured ?? false,
+          data.authorId
+        ]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async updateArticle(id: string, data: {
+    title: string;
+    slug: string;
+    content: string;
+    excerpt?: string;
+    coverImage?: string;
+    published?: boolean;
+    featured?: boolean;
+  }): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        `UPDATE "Article" 
+         SET title = $2, slug = $3, content = $4, excerpt = $5, "coverImage" = $6, 
+             published = $7, featured = $8, "updatedAt" = NOW() 
+         WHERE id = $1 
+         RETURNING id, title, slug, content, excerpt, "coverImage", published, featured, "authorId", "createdAt", "updatedAt"`,
+        [
+          id,
+          data.title,
+          data.slug,
+          data.content,
+          data.excerpt || null,
+          data.coverImage || null,
+          data.published ?? false,
+          data.featured ?? false
+        ]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async deleteArticle(id: string): Promise<boolean> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Delete article relationships first
+      await client.query('DELETE FROM "_ArticleToCategory" WHERE "A" = $1', [id]);
+      await client.query('DELETE FROM "_ArticleToTag" WHERE "A" = $1', [id]);
+      
+      // Delete the article
+      const result = await client.query('DELETE FROM "Article" WHERE id = $1', [id]);
+      
+      return (result.rowCount ?? 0) > 0;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async linkArticleToCategories(articleId: string, categoryIds: string[]): Promise<void> {
+    if (categoryIds.length === 0) return;
+    
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Insert multiple article-category relationships
+      const values = categoryIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
+      const params = categoryIds.flatMap(categoryId => [articleId, categoryId]);
+      
+      await client.query(
+        `INSERT INTO "_ArticleToCategory" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`,
+        params
+      );
+    } finally {
+      await client.end();
+    }
+  }
+
+  async linkArticleToTags(articleId: string, tagIds: string[]): Promise<void> {
+    if (tagIds.length === 0) return;
+    
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Insert multiple article-tag relationships
+      const values = tagIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
+      const params = tagIds.flatMap(tagId => [articleId, tagId]);
+      
+      await client.query(
+        `INSERT INTO "_ArticleToTag" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`,
+        params
+      );
+    } finally {
+      await client.end();
+    }
+  }
+
+  async clearArticleCategories(articleId: string): Promise<void> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      await client.query('DELETE FROM "_ArticleToCategory" WHERE "A" = $1', [articleId]);
+    } finally {
+      await client.end();
+    }
+  }
+
+  async clearArticleTags(articleId: string): Promise<void> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      await client.query('DELETE FROM "_ArticleToTag" WHERE "A" = $1', [articleId]);
+    } finally {
+      await client.end();
+    }
+  }
+
+  async getArticleWithRelations(id: string): Promise<any> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Get article with categories and tags
+      const result = await client.query(
+        `SELECT 
+           a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", 
+           a.published, a.featured, a."authorId", a."createdAt", a."updatedAt",
+           COALESCE(
+             json_agg(
+               DISTINCT jsonb_build_object(
+                 'id', c.id, 
+                 'name', c.name, 
+                 'slug', c.slug, 
+                 'description', c.description
+               )
+             ) FILTER (WHERE c.id IS NOT NULL), 
+             '[]'
+           ) as categories,
+           COALESCE(
+             json_agg(
+               DISTINCT jsonb_build_object(
+                 'id', t.id, 
+                 'name', t.name, 
+                 'slug', t.slug
+               )
+             ) FILTER (WHERE t.id IS NOT NULL), 
+             '[]'
+           ) as tags
+         FROM "Article" a
+         LEFT JOIN "_ArticleToCategory" ac ON a.id = ac."A"
+         LEFT JOIN "Category" c ON ac."B" = c.id
+         LEFT JOIN "_ArticleToTag" at ON a.id = at."A"
+         LEFT JOIN "Tag" t ON at."B" = t.id
+         WHERE a.id = $1
+         GROUP BY a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", a.published, a.featured, a."authorId", a."createdAt", a."updatedAt"
          LIMIT 1`,
         [id]
       );
