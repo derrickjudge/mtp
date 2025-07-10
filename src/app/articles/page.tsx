@@ -219,7 +219,13 @@ function FeaturedArticleCard({ article }: { article: Article }) {
           {article.title}
         </h3>
         {article.excerpt && (
-          <p className="text-gray-300 mb-4 line-clamp-3">{article.excerpt}</p>
+          <p className="text-gray-300 mb-4 overflow-hidden" style={{ 
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical'
+          }}>
+            {article.excerpt}
+          </p>
         )}
         <div className="flex items-center justify-between text-sm text-gray-400">
           <div className="flex items-center space-x-4">
@@ -262,7 +268,13 @@ function ArticleCard({ article }: { article: Article }) {
           {article.title}
         </h3>
         {article.excerpt && (
-          <p className="text-gray-300 mb-4 line-clamp-2">{article.excerpt}</p>
+          <p className="text-gray-300 mb-4 overflow-hidden" style={{ 
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical'
+          }}>
+            {article.excerpt}
+          </p>
         )}
         <div className="flex items-center justify-between text-sm text-gray-400">
           <span className="flex items-center">
