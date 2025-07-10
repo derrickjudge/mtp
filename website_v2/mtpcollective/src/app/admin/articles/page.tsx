@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { DocumentTextIcon, PlusIcon, PencilIcon, TrashIcon, PhotoIcon, TagIcon } from '@heroicons/react/24/outline';
-import { Editor } from '@tinymce/tinymce-react';
+// TinyMCE Editor removed - using textarea instead
 import Image from 'next/image';
 
 interface Article {
@@ -385,31 +385,20 @@ export default function AdminArticles() {
               <label className="block text-sm font-medium text-gray-200 mb-2">
                 Content *
               </label>
-              <div className="bg-white rounded-md">
-                <Editor
-                  apiKey="no-api-key" // Use the free version
-                  value={formData.content}
-                  onEditorChange={(content: string) => setFormData(prev => ({ ...prev, content }))}
-                  init={{
-                    height: 400,
-                    menubar: false,
-                    plugins: [
-                      'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                      'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                      'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
-                    ],
-                    toolbar: 'undo redo | blocks | ' +
-                      'bold italic forecolor | alignleft aligncenter ' +
-                      'alignright alignjustify | bullist numlist outdent indent | ' +
-                      'removeformat | help',
-                    content_style: 'body { font-family: Helvetica, Arial, sans-serif; font-size: 14px }'
-                  }}
-                />
-              </div>
+              <textarea
+                value={formData.content}
+                onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                rows={15}
+                className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
+                placeholder="Write your article content here... You can use basic HTML tags like <p>, <h2>, <h3>, <strong>, <em>, <ul>, <li>, etc."
+                required
+              />
+              <p className="mt-2 text-xs text-gray-400">
+                You can use basic HTML tags for formatting: &lt;p&gt;, &lt;h2&gt;, &lt;h3&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;a&gt;, etc.
+              </p>
             </div>
 
-            {/* Publishing Options */}
-            <div className="flex items-center space-x-6">
+            {/* Publishing Options */}            <div className="flex items-center space-x-6">
               <label className="flex items-center">
                 <input
                   type="checkbox"
