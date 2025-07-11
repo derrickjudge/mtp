@@ -52,15 +52,20 @@ async function getArticles(): Promise<Article[]> {
       take: 50,
     });
     
-    // Get articles with their categories and tags (same as API)
-    const articlesWithRelations = await Promise.all(
-      articles.map(async (article) => {
-        const articleWithRelations = await nativeDB.getArticleWithRelations(article.id);
-        return articleWithRelations;
-      })
-    );
-
-    return articlesWithRelations;
+    // Try to get articles with their categories and tags (same as API)
+    try {
+      const articlesWithRelations = await Promise.all(
+        articles.map(async (article) => {
+          const articleWithRelations = await nativeDB.getArticleWithRelations(article.id);
+          return articleWithRelations;
+        })
+      );
+      return articlesWithRelations;
+    } catch (relationError) {
+      console.warn('Failed to fetch article relations, returning articles without categories:', relationError);
+      // Fallback: return articles without categories to ensure page isn't blank
+      return articles;
+    }
   } catch (error) {
     console.error('Error fetching articles:', error);
     return [];
@@ -101,12 +106,6 @@ export default async function ArticlesPage({
   const selectedCategory = searchParams.category
     ? categories.find(cat => cat.slug === searchParams.category)
     : null;
-
-  // Debug logging (remove in production)
-  console.log('Articles fetched:', articles.length);
-  console.log('Filtered articles:', filteredArticles.length);
-  console.log('Featured articles:', featuredArticles.length);
-  console.log('Regular articles:', regularArticles.length);
 
   return (
     <div className="min-h-screen bg-black">
