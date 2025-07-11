@@ -19,7 +19,15 @@ export async function GET(req: NextRequest) {
       skip,
     });
 
-    return NextResponse.json(articles);
+    // Get articles with their categories and tags
+    const articlesWithRelations = await Promise.all(
+      articles.map(async (article) => {
+        const articleWithRelations = await nativeDB.getArticleWithRelations(article.id);
+        return articleWithRelations;
+      })
+    );
+
+    return NextResponse.json(articlesWithRelations);
   } catch (error) {
     console.error('Error fetching articles:', error);
     return NextResponse.json(
