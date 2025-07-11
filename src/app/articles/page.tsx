@@ -51,7 +51,16 @@ async function getArticles(): Promise<Article[]> {
       published: true,
       take: 50,
     });
-    return articles;
+    
+    // Get articles with their categories and tags (same as API)
+    const articlesWithRelations = await Promise.all(
+      articles.map(async (article) => {
+        const articleWithRelations = await nativeDB.getArticleWithRelations(article.id);
+        return articleWithRelations;
+      })
+    );
+
+    return articlesWithRelations;
   } catch (error) {
     console.error('Error fetching articles:', error);
     return [];
@@ -83,7 +92,7 @@ export default async function ArticlesPage({
     ? articles.filter(article => 
         article.categories?.some(cat => cat.slug === searchParams.category)
       )
-    : articles;
+    : articles; // Show ALL articles when no category is selected
 
   // Separate featured and regular articles
   const featuredArticles = filteredArticles.filter(article => article.featured);
@@ -92,6 +101,12 @@ export default async function ArticlesPage({
   const selectedCategory = searchParams.category
     ? categories.find(cat => cat.slug === searchParams.category)
     : null;
+
+  // Debug logging (remove in production)
+  console.log('Articles fetched:', articles.length);
+  console.log('Filtered articles:', filteredArticles.length);
+  console.log('Featured articles:', featuredArticles.length);
+  console.log('Regular articles:', regularArticles.length);
 
   return (
     <div className="min-h-screen bg-black">
