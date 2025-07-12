@@ -7,7 +7,8 @@ import {
   HomeIcon, 
   PhotoIcon, 
   TagIcon, 
-  DocumentTextIcon, 
+  DocumentTextIcon,
+  CalendarDaysIcon,
   UsersIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline';
@@ -24,6 +25,7 @@ const navigation: NavItem[] = [
   { name: 'Photos', href: '/admin/photos', icon: PhotoIcon },
   { name: 'Categories', href: '/admin/categories', icon: TagIcon },
   { name: 'Articles', href: '/admin/articles', icon: DocumentTextIcon },
+  { name: 'Events', href: '/admin/events', icon: CalendarDaysIcon },
   { name: 'Users', href: '/admin/users', icon: UsersIcon },
   { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },
 ];

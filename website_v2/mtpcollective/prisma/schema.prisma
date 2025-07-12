@@ -17,6 +17,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   photos        Photo[]
   articles      Article[]
+  events        Event[]
 }
 
 model Photo {
@@ -27,6 +28,7 @@ model Photo {
   thumbnail   String?
   categories  Category[]  @relation("PhotoCategories")
   tags        Tag[]       @relation("PhotoTags")
+  events      Event[]     @relation("EventPhotos")
   published   Boolean     @default(false)
   featured    Boolean     @default(false)
   metadata    Json?
@@ -45,6 +47,26 @@ model Article {
   coverImage  String?
   categories  Category[]  @relation("ArticleCategories")
   tags        Tag[]       @relation("ArticleTags")
+  events      Event[]     @relation("EventArticles")
+  published   Boolean     @default(false)
+  featured    Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  author      User        @relation(fields: [authorId], references: [id])
+  authorId    String
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String?
+  date        DateTime?
+  location    String?
+  coverImage  String?
+  photos      Photo[]     @relation("EventPhotos")
+  articles    Article[]   @relation("EventArticles")
+  categories  Category[]  @relation("EventCategories")
   published   Boolean     @default(false)
   featured    Boolean     @default(false)
   createdAt   DateTime    @default(now())
@@ -60,6 +82,7 @@ model Category {
   description String?
   photos      Photo[]   @relation("PhotoCategories")
   articles    Article[] @relation("ArticleCategories")
+  events      Event[]   @relation("EventCategories")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }

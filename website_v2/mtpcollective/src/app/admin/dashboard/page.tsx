@@ -7,6 +7,7 @@ import {
   PhotoIcon, 
   TagIcon, 
   DocumentTextIcon, 
+  CalendarDaysIcon,
   UsersIcon,
   EyeIcon,
   PlusIcon
@@ -16,6 +17,7 @@ interface DashboardStats {
   photos: number;
   categories: number;
   articles: number;
+  events: number;
   users: number;
   recentPhotos: Array<{
     id: string;
@@ -30,6 +32,7 @@ export default function AdminDashboard() {
     photos: 0,
     categories: 0,
     articles: 0,
+    events: 0,
     users: 0,
     recentPhotos: []
   });
@@ -42,22 +45,27 @@ export default function AdminDashboard() {
   const fetchDashboardStats = async () => {
     try {
       // Fetch all stats in parallel
-      const [photosRes, categoriesRes, usersRes] = await Promise.all([
+      const [photosRes, categoriesRes, articlesRes, eventsRes, usersRes] = await Promise.all([
         fetch('/api/photos'),
         fetch('/api/categories'),
+        fetch('/api/articles'),
+        fetch('/api/events'),
         fetch('/api/users')
       ]);
 
-      const [photosData, categoriesData, usersData] = await Promise.all([
+      const [photosData, categoriesData, articlesData, eventsData, usersData] = await Promise.all([
         photosRes.json(),
         categoriesRes.json(),
+        articlesRes.json(),
+        eventsRes.json(),
         usersRes.json()
       ]);
 
       setStats({
         photos: photosData.photos?.length || photosData.length || 0,
         categories: categoriesData.length || 0,
-        articles: 0, // TODO: Implement articles API
+        articles: articlesData.length || 0,
+        events: eventsData.length || 0,
         users: usersData.length || 0,
         recentPhotos: photosData.photos?.slice(0, 4) || photosData.slice(0, 4) || []
       });
@@ -91,6 +99,13 @@ export default function AdminDashboard() {
       href: '/admin/articles'
     },
     {
+      name: 'Events',
+      value: stats.events,
+      icon: CalendarDaysIcon,
+      color: 'bg-indigo-500',
+      href: '/admin/events'
+    },
+    {
       name: 'Users',
       value: stats.users,
       icon: UsersIcon,
@@ -108,11 +123,11 @@ export default function AdminDashboard() {
       color: 'bg-blue-600 hover:bg-blue-700'
     },
     {
-      name: 'Create Category',
-      description: 'Organize your photos with categories',
-      href: '/admin/categories',
-      icon: TagIcon,
-      color: 'bg-green-600 hover:bg-green-700'
+      name: 'Create Event',
+      description: 'Organize your photography events',
+      href: '/admin/events',
+      icon: CalendarDaysIcon,
+      color: 'bg-indigo-600 hover:bg-indigo-700'
     },
     {
       name: 'Write Article',
@@ -148,7 +163,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {statCards.map((card) => (
           <Link key={card.name} href={card.href}>
             <div className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer">
