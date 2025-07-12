@@ -54,6 +54,32 @@ export default async function ArticlesPage() {
         </div>
       </div>
 
+      {/* Debug Section - TEMPORARY */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-gray-800 rounded-lg p-6 mb-8">
+          <h2 className="text-2xl font-bold text-yellow-400 mb-4">🔧 DEBUG INFO (Temporary)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <h3 className="font-bold text-white mb-2">Articles Found:</h3>
+              <p className="text-blue-400 text-xl">{articles.length} articles</p>
+            </div>
+            <div>
+              <h3 className="font-bold text-white mb-2">Database Methods:</h3>
+              <p className="text-green-400">{Object.keys(nativeDB || {}).length} methods available</p>
+            </div>
+          </div>
+          
+          {articles.length > 0 && (
+            <div className="mt-4">
+              <h3 className="font-bold text-white mb-2">Raw Article Data:</h3>
+              <pre className="text-xs text-gray-300 bg-gray-900 p-3 rounded overflow-x-auto max-h-48 overflow-y-auto">
+                {JSON.stringify(articles, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Articles Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {articles.length > 0 ? (

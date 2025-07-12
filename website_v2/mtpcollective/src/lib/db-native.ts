@@ -75,6 +75,37 @@ export class NativeDBService {
         )
       `);
 
+      // Create Event junction tables
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "_EventPhotos" (
+          "A" TEXT NOT NULL,
+          "B" TEXT NOT NULL,
+          CONSTRAINT "_EventPhotos_pkey" PRIMARY KEY ("A", "B"),
+          CONSTRAINT "_EventPhotos_A_fkey" FOREIGN KEY ("A") REFERENCES "Event"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "_EventPhotos_B_fkey" FOREIGN KEY ("B") REFERENCES "Photo"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "_EventArticles" (
+          "A" TEXT NOT NULL,
+          "B" TEXT NOT NULL,
+          CONSTRAINT "_EventArticles_pkey" PRIMARY KEY ("A", "B"),
+          CONSTRAINT "_EventArticles_A_fkey" FOREIGN KEY ("A") REFERENCES "Event"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "_EventArticles_B_fkey" FOREIGN KEY ("B") REFERENCES "Article"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "_EventCategories" (
+          "A" TEXT NOT NULL,
+          "B" TEXT NOT NULL,
+          CONSTRAINT "_EventCategories_pkey" PRIMARY KEY ("A", "B"),
+          CONSTRAINT "_EventCategories_A_fkey" FOREIGN KEY ("A") REFERENCES "Event"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "_EventCategories_B_fkey" FOREIGN KEY ("B") REFERENCES "Category"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+
       // Create indexes for better performance
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_CategoryToPhoto_B_index" ON "_CategoryToPhoto"("B")
@@ -90,6 +121,18 @@ export class NativeDBService {
       
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_ArticleToTag_B_index" ON "_ArticleToTag"("B")
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_EventPhotos_B_index" ON "_EventPhotos"("B")
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_EventArticles_B_index" ON "_EventArticles"("B")
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_EventCategories_B_index" ON "_EventCategories"("B")
       `);
 
     } catch (error) {
@@ -827,6 +870,370 @@ export class NativeDBService {
          LEFT JOIN "Tag" t ON at."B" = t.id
          WHERE a.id = $1
          GROUP BY a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", a.published, a.featured, a."authorId", a."createdAt", a."updatedAt"
+         LIMIT 1`,
+        [id]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  // Event CRUD operations
+  async findEvents(options?: {
+    take?: number;
+    skip?: number;
+    published?: boolean;
+    featured?: boolean;
+    categoryId?: string;
+    upcoming?: boolean;
+  }): Promise<any[]> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      let query = `
+        SELECT DISTINCT e.id, e.name, e.slug, e.description, e.date, e.location, 
+               e."coverImage", e.published, e.featured, e."createdAt", e."updatedAt", e."authorId"
+        FROM "Event" e
+        WHERE 1=1
+      `;
+      
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (options?.published !== undefined) {
+        query += ` AND e.published = $${paramIndex}`;
+        params.push(options.published);
+        paramIndex++;
+      }
+
+      if (options?.featured) {
+        query += ` AND e.featured = true`;
+      }
+
+      if (options?.categoryId) {
+        query += ` AND EXISTS (
+          SELECT 1 FROM "_EventCategories" ec 
+          WHERE ec."A" = e.id AND ec."B" = $${paramIndex}
+        )`;
+        params.push(options.categoryId);
+        paramIndex++;
+      }
+
+      if (options?.upcoming) {
+        query += ` AND e.date > NOW()`;
+      }
+
+      query += ` ORDER BY e.date DESC NULLS LAST, e."createdAt" DESC`;
+
+      if (options?.take) {
+        query += ` LIMIT $${paramIndex}`;
+        params.push(options.take);
+        paramIndex++;
+      }
+
+      if (options?.skip) {
+        query += ` OFFSET $${paramIndex}`;
+        params.push(options.skip);
+      }
+
+      const result = await client.query(query, params);
+      return result.rows;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async findEventById(id: string): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        'SELECT id, name, slug, description, date, location, "coverImage", published, featured, "authorId", "createdAt", "updatedAt" FROM "Event" WHERE id = $1 LIMIT 1',
+        [id]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async findEventBySlug(slug: string): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        'SELECT id, name, slug, description, date, location, "coverImage", published, featured, "authorId", "createdAt", "updatedAt" FROM "Event" WHERE slug = $1 LIMIT 1',
+        [slug]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async createEvent(data: {
+    name: string;
+    slug: string;
+    description?: string;
+    date?: string;
+    location?: string;
+    coverImage?: string;
+    published?: boolean;
+    featured?: boolean;
+    authorId: string;
+  }): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        `INSERT INTO "Event" (id, name, slug, description, date, location, "coverImage", published, featured, "authorId", "createdAt", "updatedAt") 
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW()) 
+         RETURNING id, name, slug, description, date, location, "coverImage", published, featured, "authorId", "createdAt", "updatedAt"`,
+        [
+          data.name,
+          data.slug,
+          data.description || null,
+          data.date ? new Date(data.date).toISOString() : null,
+          data.location || null,
+          data.coverImage || null,
+          data.published ?? false,
+          data.featured ?? false,
+          data.authorId
+        ]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async updateEvent(id: string, data: {
+    name: string;
+    slug: string;
+    description?: string;
+    date?: string;
+    location?: string;
+    coverImage?: string;
+    published?: boolean;
+    featured?: boolean;
+  }): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        `UPDATE "Event" 
+         SET name = $2, slug = $3, description = $4, date = $5, location = $6, 
+             "coverImage" = $7, published = $8, featured = $9, "updatedAt" = NOW() 
+         WHERE id = $1 
+         RETURNING id, name, slug, description, date, location, "coverImage", published, featured, "authorId", "createdAt", "updatedAt"`,
+        [
+          id,
+          data.name,
+          data.slug,
+          data.description || null,
+          data.date ? new Date(data.date).toISOString() : null,
+          data.location || null,
+          data.coverImage || null,
+          data.published ?? false,
+          data.featured ?? false
+        ]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async deleteEvent(id: string): Promise<boolean> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Delete event relationships first
+      await client.query('DELETE FROM "_EventCategories" WHERE "A" = $1', [id]);
+      await client.query('DELETE FROM "_EventPhotos" WHERE "A" = $1', [id]);
+      await client.query('DELETE FROM "_EventArticles" WHERE "A" = $1', [id]);
+      
+      // Delete the event
+      const result = await client.query('DELETE FROM "Event" WHERE id = $1', [id]);
+      
+      return (result.rowCount ?? 0) > 0;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async linkEventToCategories(eventId: string, categoryIds: string[]): Promise<void> {
+    if (categoryIds.length === 0) return;
+    
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const values = categoryIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
+      const params = categoryIds.flatMap(categoryId => [eventId, categoryId]);
+      
+      await client.query(
+        `INSERT INTO "_EventCategories" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`,
+        params
+      );
+    } finally {
+      await client.end();
+    }
+  }
+
+  async linkEventToPhotos(eventId: string, photoIds: string[]): Promise<void> {
+    if (photoIds.length === 0) return;
+    
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const values = photoIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
+      const params = photoIds.flatMap(photoId => [eventId, photoId]);
+      
+      await client.query(
+        `INSERT INTO "_EventPhotos" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`,
+        params
+      );
+    } finally {
+      await client.end();
+    }
+  }
+
+  async linkEventToArticles(eventId: string, articleIds: string[]): Promise<void> {
+    if (articleIds.length === 0) return;
+    
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const values = articleIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
+      const params = articleIds.flatMap(articleId => [eventId, articleId]);
+      
+      await client.query(
+        `INSERT INTO "_EventArticles" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`,
+        params
+      );
+    } finally {
+      await client.end();
+    }
+  }
+
+  async clearEventCategories(eventId: string): Promise<void> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      await client.query('DELETE FROM "_EventCategories" WHERE "A" = $1', [eventId]);
+    } finally {
+      await client.end();
+    }
+  }
+
+  async clearEventPhotos(eventId: string): Promise<void> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      await client.query('DELETE FROM "_EventPhotos" WHERE "A" = $1', [eventId]);
+    } finally {
+      await client.end();
+    }
+  }
+
+  async clearEventArticles(eventId: string): Promise<void> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      await client.query('DELETE FROM "_EventArticles" WHERE "A" = $1', [eventId]);
+    } finally {
+      await client.end();
+    }
+  }
+
+  async getEventWithRelations(id: string): Promise<any> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        `SELECT 
+           e.id, e.name, e.slug, e.description, e.date, e.location, e."coverImage", 
+           e.published, e.featured, e."authorId", e."createdAt", e."updatedAt",
+           COALESCE(
+             json_agg(
+               DISTINCT jsonb_build_object(
+                 'id', c.id, 
+                 'name', c.name, 
+                 'slug', c.slug, 
+                 'description', c.description
+               )
+             ) FILTER (WHERE c.id IS NOT NULL), 
+             '[]'
+           ) as categories,
+           COALESCE(
+             json_agg(
+               DISTINCT jsonb_build_object(
+                 'id', p.id, 
+                 'title', p.title, 
+                 'url', p.url, 
+                 'thumbnail', p.thumbnail
+               )
+             ) FILTER (WHERE p.id IS NOT NULL), 
+             '[]'
+           ) as photos,
+           COALESCE(
+             json_agg(
+               DISTINCT jsonb_build_object(
+                 'id', a.id, 
+                 'title', a.title, 
+                 'slug', a.slug, 
+                 'excerpt', a.excerpt,
+                 'coverImage', a."coverImage"
+               )
+             ) FILTER (WHERE a.id IS NOT NULL), 
+             '[]'
+           ) as articles
+         FROM "Event" e
+         LEFT JOIN "_EventCategories" ec ON e.id = ec."A"
+         LEFT JOIN "Category" c ON ec."B" = c.id
+         LEFT JOIN "_EventPhotos" ep ON e.id = ep."A"
+         LEFT JOIN "Photo" p ON ep."B" = p.id
+         LEFT JOIN "_EventArticles" ea ON e.id = ea."A"
+         LEFT JOIN "Article" a ON ea."B" = a.id
+         WHERE e.id = $1
+         GROUP BY e.id, e.name, e.slug, e.description, e.date, e.location, e."coverImage", e.published, e.featured, e."authorId", e."createdAt", e."updatedAt"
          LIMIT 1`,
         [id]
       );
