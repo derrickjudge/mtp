@@ -1,9 +1,28 @@
+// Add immediate debugging at the very top
+console.log('🚀 [INIT] Articles page module is loading...');
+
 import React from 'react';
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { nativeDB } from '@/lib/db-native';
+
+console.log('🚀 [INIT] Basic imports successful');
+
+// Test database import immediately
+let nativeDB;
+try {
+  console.log('🚀 [INIT] Attempting to import nativeDB...');
+  const dbModule = await import('@/lib/db-native');
+  nativeDB = dbModule.nativeDB;
+  console.log('🚀 [INIT] nativeDB imported successfully:', typeof nativeDB);
+} catch (error) {
+  console.error('🚨 [INIT] CRITICAL: Failed to import nativeDB:', error);
+  throw error;
+}
+
+console.log('🚀 [INIT] About to import heroicons...');
 import { CalendarIcon, TagIcon } from '@heroicons/react/24/outline';
+console.log('🚀 [INIT] All imports completed successfully');
 
 export const metadata: Metadata = {
   title: 'Articles | MTP Collective',
@@ -49,7 +68,14 @@ async function getArticles(): Promise<Article[]> {
   console.log('🔍 [DEBUG] Starting getArticles() function');
   
   try {
-    console.log('🔍 [DEBUG] Attempting to fetch articles from nativeDB.findArticles()');
+    console.log('🔍 [DEBUG] Checking nativeDB availability:', typeof nativeDB);
+    
+    if (!nativeDB) {
+      console.error('🚨 [ERROR] nativeDB is not available!');
+      return [];
+    }
+    
+    console.log('🔍 [DEBUG] Attempting to call nativeDB.findArticles()');
     const articles = await nativeDB.findArticles({
       published: true,
       take: 50,
@@ -99,6 +125,13 @@ async function getCategories(): Promise<Category[]> {
   console.log('🔍 [DEBUG] Starting getCategories() function');
   
   try {
+    console.log('🔍 [DEBUG] Checking nativeDB availability for categories:', typeof nativeDB);
+    
+    if (!nativeDB) {
+      console.error('🚨 [ERROR] nativeDB is not available for categories!');
+      return [];
+    }
+    
     console.log('🔍 [DEBUG] Attempting to fetch categories from nativeDB.findCategories()');
     const categories = await nativeDB.findCategories();
     
@@ -123,6 +156,7 @@ export default async function ArticlesPage({
   console.log('🔍 [DEBUG] ArticlesPage component starting to render');
   console.log('🔍 [DEBUG] Search params:', searchParams);
   
+  // Wrap everything in try-catch to catch any runtime errors
   try {
     console.log('🔍 [DEBUG] Fetching articles and categories in parallel');
     const [articles, categories] = await Promise.all([
@@ -277,6 +311,7 @@ export default async function ArticlesPage({
     );
   } catch (error) {
     console.error('🚨 [ERROR] Critical error in ArticlesPage component:', error);
+    console.error('🚨 [ERROR] Error stack:', error.stack);
     
     // Return a fallback UI instead of crashing
     return (
@@ -299,6 +334,9 @@ export default async function ArticlesPage({
             </div>
             <div className="text-gray-400 text-sm">
               Error: {error instanceof Error ? error.message : 'Unknown error'}
+            </div>
+            <div className="text-gray-400 text-xs mt-2">
+              Check server logs for more details
             </div>
           </div>
         </div>
