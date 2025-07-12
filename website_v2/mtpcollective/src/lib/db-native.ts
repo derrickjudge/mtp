@@ -190,7 +190,7 @@ export class NativeDBService {
       await client.connect();
       
       let query = `
-        SELECT DISTINCT p.id, p.title, p.description, p.url, p.thumbnail, 
+        SELECT p.id, p.title, p.description, p.url, p.thumbnail, 
                p.published, p.featured, p.metadata, p."createdAt", p."updatedAt", p."authorId"
         FROM "Photo" p
         WHERE p.published = true
@@ -601,7 +601,7 @@ export class NativeDBService {
       await client.connect();
       
       let query = `
-        SELECT DISTINCT a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", 
+        SELECT a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", 
                a.published, a.featured, a."publishDate", a."createdAt", a."updatedAt", a."authorId"
         FROM "Article" a
         WHERE 1=1
@@ -917,7 +917,7 @@ export class NativeDBService {
       await client.connect();
       
       let query = `
-        SELECT DISTINCT e.id, e.name, e.slug, e.description, e.date, e.location, 
+        SELECT e.id, e.name, e.slug, e.description, e.date, e.location, 
                e."coverImage", e.published, e.featured, e."createdAt", e."updatedAt", e."authorId"
         FROM "Event" e
         WHERE 1=1
