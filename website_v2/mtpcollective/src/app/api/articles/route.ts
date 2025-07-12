@@ -9,12 +9,16 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const published = searchParams.get('published');
     const featured = searchParams.get('featured') === 'true';
+    const categoryId = searchParams.get('category') || undefined;
+    const tagId = searchParams.get('tag') || undefined;
     const take = searchParams.get('take') ? parseInt(searchParams.get('take')!) : undefined;
     const skip = searchParams.get('skip') ? parseInt(searchParams.get('skip')!) : undefined;
 
     const articles = await nativeDB.findArticles({
       published: published === 'true' ? true : published === 'false' ? false : undefined,
       featured,
+      categoryId,
+      tagId,
       take,
       skip,
     });
