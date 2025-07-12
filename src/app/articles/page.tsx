@@ -8,17 +8,10 @@ import Link from 'next/link';
 
 console.log('🚀 [INIT] Basic imports successful');
 
-// Test database import immediately
-let nativeDB;
-try {
-  console.log('🚀 [INIT] Attempting to import nativeDB...');
-  const dbModule = await import('@/lib/db-native');
-  nativeDB = dbModule.nativeDB;
-  console.log('🚀 [INIT] nativeDB imported successfully:', typeof nativeDB);
-} catch (error) {
-  console.error('🚨 [INIT] CRITICAL: Failed to import nativeDB:', error);
-  throw error;
-}
+// Import database with error handling
+console.log('🚀 [INIT] Attempting to import nativeDB...');
+import { nativeDB } from '@/lib/db-native';
+console.log('🚀 [INIT] nativeDB imported successfully:', typeof nativeDB);
 
 console.log('🚀 [INIT] About to import heroicons...');
 import { CalendarIcon, TagIcon } from '@heroicons/react/24/outline';
@@ -69,9 +62,15 @@ async function getArticles(): Promise<Article[]> {
   
   try {
     console.log('🔍 [DEBUG] Checking nativeDB availability:', typeof nativeDB);
+    console.log('🔍 [DEBUG] nativeDB methods:', Object.keys(nativeDB || {}));
     
     if (!nativeDB) {
       console.error('🚨 [ERROR] nativeDB is not available!');
+      return [];
+    }
+    
+    if (typeof nativeDB.findArticles !== 'function') {
+      console.error('🚨 [ERROR] nativeDB.findArticles is not a function!', typeof nativeDB.findArticles);
       return [];
     }
     
@@ -87,35 +86,15 @@ async function getArticles(): Promise<Article[]> {
       articleTitles: articles.map(a => a.title)
     });
     
-    // Try to get articles with their categories and tags (same as API)
-    try {
-      console.log('🔍 [DEBUG] Attempting to fetch relations for articles');
-      const articlesWithRelations = await Promise.all(
-        articles.map(async (article, index) => {
-          console.log(`🔍 [DEBUG] Fetching relations for article ${index + 1}/${articles.length}: ${article.title} (ID: ${article.id})`);
-          const articleWithRelations = await nativeDB.getArticleWithRelations(article.id);
-          console.log(`🔍 [DEBUG] Successfully fetched relations for article: ${article.title}`, {
-            categoriesCount: articleWithRelations.categories?.length || 0,
-            categories: articleWithRelations.categories?.map(c => c.name) || []
-          });
-          return articleWithRelations;
-        })
-      );
-      
-      console.log('🔍 [DEBUG] Successfully fetched all articles with relations:', {
-        count: articlesWithRelations.length,
-        articlesWithCategories: articlesWithRelations.filter(a => a.categories && a.categories.length > 0).length
-      });
-      
-      return articlesWithRelations;
-    } catch (relationError) {
-      console.error('🚨 [ERROR] Failed to fetch article relations:', relationError);
-      console.log('🔍 [DEBUG] Falling back to articles without categories');
-      // Fallback: return articles without categories to ensure page isn't blank
-      return articles;
-    }
+    // Skip relations for now to isolate the issue
+    console.log('🔍 [DEBUG] Returning articles without relations for debugging');
+    return articles;
+    
   } catch (error) {
     console.error('🚨 [ERROR] Critical error in getArticles():', error);
+    console.error('🚨 [ERROR] Error name:', error.name);
+    console.error('🚨 [ERROR] Error message:', error.message);
+    console.error('🚨 [ERROR] Error stack:', error.stack);
     console.log('🔍 [DEBUG] Returning empty array due to error');
     return [];
   }
@@ -132,6 +111,11 @@ async function getCategories(): Promise<Category[]> {
       return [];
     }
     
+    if (typeof nativeDB.findCategories !== 'function') {
+      console.error('🚨 [ERROR] nativeDB.findCategories is not a function!', typeof nativeDB.findCategories);
+      return [];
+    }
+    
     console.log('🔍 [DEBUG] Attempting to fetch categories from nativeDB.findCategories()');
     const categories = await nativeDB.findCategories();
     
@@ -143,6 +127,9 @@ async function getCategories(): Promise<Category[]> {
     return categories;
   } catch (error) {
     console.error('🚨 [ERROR] Error fetching categories:', error);
+    console.error('🚨 [ERROR] Error name:', error.name);
+    console.error('🚨 [ERROR] Error message:', error.message);
+    console.error('🚨 [ERROR] Error stack:', error.stack);
     console.log('🔍 [DEBUG] Returning empty array due to error');
     return [];
   }
@@ -155,6 +142,7 @@ export default async function ArticlesPage({
 }) {
   console.log('🔍 [DEBUG] ArticlesPage component starting to render');
   console.log('🔍 [DEBUG] Search params:', searchParams);
+  console.log('🔍 [DEBUG] Environment:', process.env.NODE_ENV);
   
   // Wrap everything in try-catch to catch any runtime errors
   try {
@@ -261,6 +249,7 @@ export default async function ArticlesPage({
             <p>Regular Articles: {regularArticles.length}</p>
             <p>Categories: {categories.length}</p>
             <p>Selected Category: {selectedCategory?.name || 'None'}</p>
+            <p>Environment: {process.env.NODE_ENV}</p>
           </div>
 
           {/* Featured Articles */}
@@ -311,6 +300,8 @@ export default async function ArticlesPage({
     );
   } catch (error) {
     console.error('🚨 [ERROR] Critical error in ArticlesPage component:', error);
+    console.error('🚨 [ERROR] Error name:', error.name);
+    console.error('🚨 [ERROR] Error message:', error.message);
     console.error('🚨 [ERROR] Error stack:', error.stack);
     
     // Return a fallback UI instead of crashing
