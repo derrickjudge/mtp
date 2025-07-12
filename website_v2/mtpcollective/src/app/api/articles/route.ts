@@ -52,13 +52,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { title, content, excerpt, published, featured, coverImage, categoryIds, tagIds, metaDescription } = await req.json();
+    const { 
+      title, 
+      content, 
+      excerpt, 
+      published, 
+      featured, 
+      coverImage, 
+      publishDate,
+      authorId,
+      categoryIds, 
+      tagIds, 
+      metaDescription 
+    } = await req.json();
 
     if (!title || !content) {
       return NextResponse.json(
         { message: 'Title and content are required' },
         { status: 400 }
       );
+    }
+
+    // Use provided authorId or default to current user
+    const finalAuthorId = authorId || session.user.id;
+
+    // Validate that the provided authorId exists if it's different from current user
+    if (authorId && authorId !== session.user.id) {
+      const author = await nativeDB.findUserById(authorId);
+      if (!author) {
+        return NextResponse.json(
+          { message: 'Invalid author selected' },
+          { status: 400 }
+        );
+      }
     }
 
     // Generate slug from title
@@ -83,8 +109,9 @@ export async function POST(req: NextRequest) {
       published: published ?? false,
       featured: featured ?? false,
       coverImage,
+      publishDate,
       metaDescription,
-      authorId: session.user.id,
+      authorId: finalAuthorId,
     });
 
     if (!article) {

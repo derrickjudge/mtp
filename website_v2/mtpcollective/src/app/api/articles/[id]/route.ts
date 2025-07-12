@@ -35,7 +35,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const { id } = params;
-    const { title, content, excerpt, published, featured, coverImage, categoryIds, tagIds } = await req.json();
+    const { 
+      title, 
+      content, 
+      excerpt, 
+      published, 
+      featured, 
+      coverImage, 
+      publishDate,
+      authorId,
+      categoryIds, 
+      tagIds 
+    } = await req.json();
 
     if (!title || !content) {
       return NextResponse.json(
@@ -51,6 +62,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         { message: 'Article not found' },
         { status: 404 }
       );
+    }
+
+    // Validate author if provided and different from existing
+    if (authorId && authorId !== existingArticle.authorId) {
+      const author = await nativeDB.findUserById(authorId);
+      if (!author) {
+        return NextResponse.json(
+          { message: 'Invalid author selected' },
+          { status: 400 }
+        );
+      }
     }
 
     // Generate slug from title if title changed
@@ -79,6 +101,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       published: published ?? false,
       featured: featured ?? false,
       coverImage,
+      publishDate,
+      authorId: authorId || existingArticle.authorId,
     });
 
     if (!updatedArticle) {

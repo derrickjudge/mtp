@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { DocumentTextIcon, PlusIcon, PencilIcon, TrashIcon, PhotoIcon, TagIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, PlusIcon, PencilIcon, TrashIcon, PhotoIcon, TagIcon, UserIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
 // TinyMCE Editor removed - using textarea instead
 import Image from 'next/image';
 
@@ -13,10 +13,12 @@ interface Article {
   content: string;
   excerpt?: string;
   coverImage?: string;
+  publishDate?: string;
   published: boolean;
   featured: boolean;
   createdAt: string;
   updatedAt: string;
+  authorId: string;
   categories?: Category[];
   tags?: Tag[];
 }
@@ -41,11 +43,19 @@ interface Photo {
   thumbnail?: string;
 }
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function AdminArticles() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -57,6 +67,8 @@ export default function AdminArticles() {
     content: '',
     excerpt: '',
     coverImage: '',
+    publishDate: '',
+    authorId: '',
     published: false,
     featured: false,
     categoryIds: [] as string[],
@@ -69,10 +81,11 @@ export default function AdminArticles() {
 
   const fetchData = async () => {
     try {
-      const [articlesRes, categoriesRes, photosRes] = await Promise.all([
+      const [articlesRes, categoriesRes, photosRes, usersRes] = await Promise.all([
         fetch('/api/articles'),
         fetch('/api/categories'),
-        fetch('/api/photos?take=50') // Get recent photos for selection
+        fetch('/api/photos?take=50'), // Get recent photos for selection
+        fetch('/api/users') // Get users for author selection
       ]);
 
       if (articlesRes.ok) {
@@ -88,6 +101,11 @@ export default function AdminArticles() {
       if (photosRes.ok) {
         const photosData = await photosRes.json();
         setPhotos(photosData.photos || []);
+      }
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        setUsers(usersData);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -145,6 +163,8 @@ export default function AdminArticles() {
         content: '', 
         excerpt: '', 
         coverImage: '',
+        publishDate: '',
+        authorId: '',
         published: false, 
         featured: false,
         categoryIds: [],
@@ -165,6 +185,8 @@ export default function AdminArticles() {
       content: article.content,
       excerpt: article.excerpt || '',
       coverImage: article.coverImage || '',
+      publishDate: article.publishDate ? article.publishDate.split('T')[0] : '',
+      authorId: article.authorId,
       published: article.published,
       featured: article.featured,
       categoryIds: article.categories?.map(c => c.id) || [],
@@ -202,6 +224,8 @@ export default function AdminArticles() {
       content: '', 
       excerpt: '', 
       coverImage: '',
+      publishDate: '',
+      authorId: '',
       published: false, 
       featured: false,
       categoryIds: [],
@@ -220,6 +244,7 @@ export default function AdminArticles() {
         body: JSON.stringify({ 
           ...article, 
           published: !article.published,
+          authorId: article.authorId,
           categoryIds: article.categories?.map(c => c.id) || [],
           tagIds: article.tags?.map(t => t.id) || [],
         }),
@@ -250,6 +275,16 @@ export default function AdminArticles() {
         ? prev.categoryIds.filter(id => id !== categoryId)
         : [...prev.categoryIds, categoryId]
     }));
+  };
+
+  const getAuthorName = (authorId: string) => {
+    const user = users.find(u => u.id === authorId);
+    return user ? user.name : 'Unknown Author';
+  };
+
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString();
   };
 
   if (isLoading) {
@@ -305,6 +340,47 @@ export default function AdminArticles() {
                 placeholder="Enter article title"
                 required
               />
+            </div>
+
+            {/* Author and Publish Date Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Author Selection */}
+              <div>
+                <label htmlFor="authorId" className="block text-sm font-medium text-gray-200 mb-2">
+                  <UserIcon className="w-4 h-4 inline mr-1" />
+                  Author
+                </label>
+                <select
+                  id="authorId"
+                  value={formData.authorId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, authorId: e.target.value }))}
+                  className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option value="">Select author...</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.role})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Leave empty to default to current user</p>
+              </div>
+
+              {/* Publish Date */}
+              <div>
+                <label htmlFor="publishDate" className="block text-sm font-medium text-gray-200 mb-2">
+                  <CalendarDaysIcon className="w-4 h-4 inline mr-1" />
+                  Article Date
+                </label>
+                <input
+                  type="date"
+                  id="publishDate"
+                  value={formData.publishDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, publishDate: e.target.value }))}
+                  className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">Can be in the past - controls article display order</p>
+              </div>
             </div>
 
             {/* Excerpt */}
@@ -398,7 +474,8 @@ export default function AdminArticles() {
               </p>
             </div>
 
-            {/* Publishing Options */}            <div className="flex items-center space-x-6">
+            {/* Publishing Options */}
+            <div className="flex space-x-6">
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -511,6 +588,21 @@ export default function AdminArticles() {
                     {article.excerpt && (
                       <p className="text-sm text-gray-300 mb-2">{article.excerpt}</p>
                     )}
+                    
+                    {/* Author and Date info */}
+                    <div className="flex items-center gap-4 text-xs text-gray-400 mb-2">
+                      <div className="flex items-center gap-1">
+                        <UserIcon className="w-3 h-3" />
+                        {getAuthorName(article.authorId)}
+                      </div>
+                      {article.publishDate && (
+                        <div className="flex items-center gap-1">
+                          <CalendarDaysIcon className="w-3 h-3" />
+                          Article Date: {formatDate(article.publishDate)}
+                        </div>
+                      )}
+                    </div>
+
                     {article.categories && article.categories.length > 0 && (
                       <div className="flex items-center gap-2 mb-2">
                         <TagIcon className="w-4 h-4 text-gray-500" />

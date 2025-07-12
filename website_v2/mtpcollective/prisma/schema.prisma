@@ -45,6 +45,7 @@ model Article {
   content     String
   excerpt     String?
   coverImage  String?
+  publishDate DateTime?
   categories  Category[]  @relation("ArticleCategories")
   tags        Tag[]       @relation("ArticleTags")
   events      Event[]     @relation("EventArticles")
