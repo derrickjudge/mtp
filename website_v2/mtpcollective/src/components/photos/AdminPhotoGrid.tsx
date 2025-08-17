@@ -144,16 +144,15 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div className="relative w-full h-[80vh] max-w-6xl">
+            <div className="w-full h-[80vh] max-w-6xl flex items-center justify-center">
               {!useRegularImg ? (
                 <Image
                   src={selectedPhoto.url}
                   alt={selectedPhoto.title}
-                  fill
-                  className="object-contain"
-                  sizes="(max-width: 1280px) 100vw, 1280px"
+                  width={1200}
+                  height={800}
+                  className="max-w-full max-h-full object-contain"
                   priority
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
                   onError={(e) => {
                     console.error('Next.js Image failed to load:', selectedPhoto.url);
                     console.error('Error details:', e);
@@ -171,7 +170,7 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
                 <img
                   src={selectedPhoto.url}
                   alt={selectedPhoto.title}
-                  className="w-full h-full object-contain"
+                  className="max-w-full max-h-full object-contain"
                   onError={(e) => {
                     console.error('Regular img also failed to load:', selectedPhoto.url);
                     console.error('Regular img error details:', e);
