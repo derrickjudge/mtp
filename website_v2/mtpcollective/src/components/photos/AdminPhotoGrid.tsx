@@ -144,7 +144,7 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div className="w-full h-[80vh] max-w-6xl flex items-center justify-center">
+            <div className="relative w-full h-[80vh] max-w-6xl flex items-center justify-center">
               {!useRegularImg ? (
                 <Image
                   src={selectedPhoto.url}
