@@ -19,6 +19,7 @@ async function fetchFeaturedPhotos(): Promise<Photo[]> {
   try {
     const photos = await nativeDB.findPhotos({
       featured: true,
+      published: true,
       take: 6,
     });
     return photos;
@@ -42,6 +43,7 @@ async function fetchPhotosByCategory(categoryId: string, take: number = 1): Prom
   try {
     const photos = await nativeDB.findPhotos({
       categoryId,
+      published: true,
       take,
     });
     return photos;

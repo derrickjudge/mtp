@@ -118,14 +118,12 @@ export default function AdminPhotos() {
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
-    // When filtering by category, keep the event filter
-    fetchPhotos();
+    // fetchPhotos will be called automatically via useEffect when selectedCategory changes
   };
 
   const handleEventChange = (eventId: string) => {
     setSelectedEvent(eventId);
-    // When filtering by event, keep the category filter
-    fetchPhotos();
+    // fetchPhotos will be called automatically via useEffect when selectedEvent changes
   };
 
   const clearFilters = () => {

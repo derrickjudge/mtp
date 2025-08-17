@@ -3,7 +3,7 @@ import { photoService } from '@/services/photoService';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// GET /api/photos?category=concert&tag=music&event=eventId&featured=true
+// GET /api/photos?category=concert&tag=music&event=eventId&featured=true&published=true
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -11,12 +11,14 @@ export async function GET(req: NextRequest) {
     const tagId = searchParams.get('tag') || undefined;
     const eventId = searchParams.get('event') || undefined;
     const featured = searchParams.get('featured') === 'true' ? true : undefined;
+    const publishedParam = searchParams.get('published');
+    const published = publishedParam ? publishedParam === 'true' : undefined;
     const takeParam = searchParams.get('take');
     const skipParam = searchParams.get('skip');
     const take = takeParam ? parseInt(takeParam) : undefined;
     const skip = skipParam ? parseInt(skipParam) : undefined;
 
-    const photos = await photoService.getPhotos({ categoryId, tagId, eventId, featured, take, skip });
+    const photos = await photoService.getPhotos({ categoryId, tagId, eventId, featured, published, take, skip });
     return NextResponse.json({ photos });
   } catch (error) {
     console.error('Error fetching photos:', error);
@@ -64,6 +66,7 @@ export async function POST(req: NextRequest) {
       description,
       categoryIds,
       tagIds: [], // We'll handle tags separately
+      eventIds: [], // No events for direct API uploads
       authorId: session.user.id,
       metadata: {
         originalName: file.name,

@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const categoryIds = formData.getAll('categoryIds') as string[];
+    const eventIds = formData.getAll('eventIds') as string[];
 
     if (!file || !title) {
       return NextResponse.json(
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
       description,
       categoryIds,
       tagIds: [], // We'll handle tags separately
+      eventIds,
       authorId: session.user.id,
       metadata: {
         originalName: file.name,

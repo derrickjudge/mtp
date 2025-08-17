@@ -182,6 +182,7 @@ export class NativeDBService {
     tagId?: string;
     eventId?: string;
     featured?: boolean;
+    published?: boolean;
   }): Promise<any[]> {
     // Ensure junction tables exist before querying
     await this.ensureJunctionTables();
@@ -194,11 +195,17 @@ export class NativeDBService {
         SELECT p.id, p.title, p.description, p.url, p.thumbnail, 
                p.published, p.featured, p.metadata, p."createdAt", p."updatedAt", p."authorId"
         FROM "Photo" p
-        WHERE p.published = true
+        WHERE 1=1
       `;
       
       const params: any[] = [];
       let paramIndex = 1;
+
+      if (options?.published !== undefined) {
+        query += ` AND p.published = $${paramIndex}`;
+        params.push(options.published);
+        paramIndex++;
+      }
 
       if (options?.categoryId) {
         query += ` AND EXISTS (

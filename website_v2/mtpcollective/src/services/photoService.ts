@@ -21,6 +21,7 @@ export interface UploadPhotoParams {
   description?: string;
   categoryIds: string[];
   tagIds: string[];
+  eventIds: string[];
   authorId: string;
   metadata?: Record<string, any>;
 }
@@ -67,6 +68,7 @@ export const photoService = {
     description,
     categoryIds,
     tagIds,
+    eventIds,
     authorId,
     metadata,
   }: UploadPhotoParams): Promise<PhotoWithRelations> {
@@ -117,13 +119,17 @@ export const photoService = {
       throw new Error('Failed to create photo record');
     }
 
-    // Link photo to categories and tags
+    // Link photo to categories, tags, and events
     if (categoryIds.length > 0) {
       await nativeDB.linkPhotoToCategories(photo.id, categoryIds);
     }
 
     if (tagIds.length > 0) {
       await nativeDB.linkPhotoToTags(photo.id, tagIds);
+    }
+
+    if (eventIds.length > 0) {
+      await nativeDB.linkPhotoToEvents(photo.id, eventIds);
     }
 
     // Get the photo with its relations
@@ -177,6 +183,7 @@ export const photoService = {
     tagId?: string;
     eventId?: string;
     featured?: boolean;
+    published?: boolean;
   }): Promise<PhotoWithRelations[]> {
     const photos = await nativeDB.findPhotos(options);
 

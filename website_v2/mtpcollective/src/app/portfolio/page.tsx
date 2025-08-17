@@ -34,6 +34,7 @@ async function fetchPhotosByCategory(categoryId: string): Promise<Photo[]> {
   try {
     const photos = await nativeDB.findPhotos({
       categoryId,
+      published: true,
     });
     return photos;
   } catch (error) {

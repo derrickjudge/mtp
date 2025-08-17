@@ -10,6 +10,15 @@ interface Category {
   name: string;
 }
 
+interface Event {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  date?: string;
+  location?: string;
+}
+
 interface PhotoUploadProps {
   onUploadComplete?: () => void;
 }
@@ -18,27 +27,37 @@ export function PhotoUpload({ onUploadComplete }: PhotoUploadProps) {
   const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [currentTag, setCurrentTag] = useState('');
 
-  // Fetch categories on component mount
+  // Fetch categories and events on component mount
   React.useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/categories');
-        if (!response.ok) {
-          throw new Error('Failed to fetch categories');
+        const [categoriesResponse, eventsResponse] = await Promise.all([
+          fetch('/api/categories'),
+          fetch('/api/events')
+        ]);
+
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json();
+          setCategories(categoriesData);
         }
-        const data = await response.json();
-        setCategories(data);
+
+        if (eventsResponse.ok) {
+          const eventsData = await eventsResponse.json();
+          setEvents(eventsData);
+        }
       } catch (error) {
-        console.error('Error fetching categories:', error);
-        toast.error('Failed to fetch categories');
+        console.error('Error fetching data:', error);
+        toast.error('Failed to fetch categories and events');
       }
     };
 
-    fetchCategories();
+    fetchData();
   }, []);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -61,6 +80,11 @@ export function PhotoUpload({ onUploadComplete }: PhotoUploadProps) {
       // Add selected categories
       selectedCategories.forEach(categoryId => {
         formData.append('categoryIds', categoryId);
+      });
+
+      // Add selected events  
+      selectedEvents.forEach(eventId => {
+        formData.append('eventIds', eventId);
       });
 
       // Add tags
@@ -92,7 +116,7 @@ export function PhotoUpload({ onUploadComplete }: PhotoUploadProps) {
     } finally {
       setIsUploading(false);
     }
-  }, [selectedCategories, tags, router, onUploadComplete]);
+  }, [selectedCategories, selectedEvents, tags, router, onUploadComplete]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -108,6 +132,14 @@ export function PhotoUpload({ onUploadComplete }: PhotoUploadProps) {
       prev.includes(categoryId)
         ? prev.filter(id => id !== categoryId)
         : [...prev, categoryId]
+    );
+  };
+
+  const handleEventChange = (eventId: string) => {
+    setSelectedEvents(prev => 
+      prev.includes(eventId)
+        ? prev.filter(id => id !== eventId)
+        : [...prev, eventId]
     );
   };
 
@@ -171,6 +203,31 @@ export function PhotoUpload({ onUploadComplete }: PhotoUploadProps) {
           </div>
           {categories.length === 0 && (
             <p className="text-gray-400 text-sm">No categories available. Create some categories first.</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-200 mb-2">
+            Events
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {events.map(event => (
+              <button
+                key={event.id}
+                onClick={() => handleEventChange(event.id)}
+                className={`px-3 py-1 rounded-full text-sm transition-colors
+                  ${selectedEvents.includes(event.id)
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                  }`}
+              >
+                {event.name}
+                {event.date && ` (${new Date(event.date).toLocaleDateString()})`}
+              </button>
+            ))}
+          </div>
+          {events.length === 0 && (
+            <p className="text-gray-400 text-sm">No events available. Create some events first.</p>
           )}
         </div>
 
