@@ -86,6 +86,30 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
               {photo.description && (
                 <p className="text-sm opacity-90 line-clamp-2">{photo.description}</p>
               )}
+              
+              {/* Categories */}
+              {photo.categories && photo.categories.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {photo.categories.map((category) => (
+                    <span key={category.id} className="bg-blue-600 text-white px-2 py-1 rounded-full text-xs">
+                      {category.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              {/* Events */}
+              {photo.events && photo.events.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {photo.events.map((event) => (
+                    <span key={event.id} className="bg-purple-600 text-white px-2 py-1 rounded-full text-xs">
+                      📅 {event.name}
+                      {event.date && ` (${new Date(event.date).toLocaleDateString()})`}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
               <div className="flex items-center space-x-2 mt-2">
                 {photo.featured && (
                   <span className="bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-medium">
@@ -130,13 +154,31 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
               {selectedPhoto.description && (
                 <p className="text-lg opacity-90">{selectedPhoto.description}</p>
               )}
-              <div className="flex items-center space-x-2 mt-2">
-                {selectedPhoto.categories?.map((category) => (
-                  <span key={category.id} className="bg-blue-600 text-white px-2 py-1 rounded-full text-sm">
-                    {category.name}
-                  </span>
-                ))}
-              </div>
+              
+              {/* Categories */}
+              {selectedPhoto.categories && selectedPhoto.categories.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <span className="text-sm font-medium text-gray-300">Categories:</span>
+                  {selectedPhoto.categories.map((category) => (
+                    <span key={category.id} className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm">
+                      {category.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              {/* Events */}
+              {selectedPhoto.events && selectedPhoto.events.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <span className="text-sm font-medium text-gray-300">Events:</span>
+                  {selectedPhoto.events.map((event) => (
+                    <span key={event.id} className="bg-purple-600 text-white px-3 py-1 rounded-full text-sm">
+                      📅 {event.name}
+                      {event.date && ` (${new Date(event.date).toLocaleDateString()})`}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

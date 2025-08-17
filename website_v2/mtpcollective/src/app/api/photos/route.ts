@@ -3,19 +3,20 @@ import { photoService } from '@/services/photoService';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// GET /api/photos?category=concert&tag=music&featured=true
+// GET /api/photos?category=concert&tag=music&event=eventId&featured=true
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const categoryId = searchParams.get('category') || undefined;
     const tagId = searchParams.get('tag') || undefined;
+    const eventId = searchParams.get('event') || undefined;
     const featured = searchParams.get('featured') === 'true' ? true : undefined;
     const takeParam = searchParams.get('take');
     const skipParam = searchParams.get('skip');
     const take = takeParam ? parseInt(takeParam) : undefined;
     const skip = skipParam ? parseInt(skipParam) : undefined;
 
-    const photos = await photoService.getPhotos({ categoryId, tagId, featured, take, skip });
+    const photos = await photoService.getPhotos({ categoryId, tagId, eventId, featured, take, skip });
     return NextResponse.json({ photos });
   } catch (error) {
     console.error('Error fetching photos:', error);

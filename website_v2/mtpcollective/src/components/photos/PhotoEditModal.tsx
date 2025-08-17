@@ -13,6 +13,15 @@ interface Tag {
   name: string;
 }
 
+interface Event {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  date?: string;
+  location?: string;
+}
+
 interface PhotoEditModalProps {
   photo: Photo;
   onClose: () => void;
@@ -30,17 +39,22 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
     photo.tags?.map(t => t.id) || []
   );
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>(
+    photo.events?.map(e => e.id) || []
+  );
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [categoriesResponse, tagsResponse] = await Promise.all([
+        const [categoriesResponse, tagsResponse, eventsResponse] = await Promise.all([
           fetch('/api/categories'),
-          fetch('/api/tags')
+          fetch('/api/tags'),
+          fetch('/api/events')
         ]);
 
         if (categoriesResponse.ok) {
@@ -51,6 +65,11 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
         if (tagsResponse.ok) {
           const tagsData = await tagsResponse.json();
           setTags(tagsData);
+        }
+
+        if (eventsResponse.ok) {
+          const eventsData = await eventsResponse.json();
+          setEvents(eventsData);
         }
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -82,6 +101,7 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
           featured,
           categoryIds: selectedCategoryIds,
           tagIds: selectedTagIds,
+          eventIds: selectedEventIds,
         }),
       });
 
@@ -111,6 +131,14 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
       prev.includes(tagId)
         ? prev.filter(id => id !== tagId)
         : [...prev, tagId]
+    );
+  };
+
+  const handleEventToggle = (eventId: string) => {
+    setSelectedEventIds(prev =>
+      prev.includes(eventId)
+        ? prev.filter(id => id !== eventId)
+        : [...prev, eventId]
     );
   };
 
@@ -205,6 +233,45 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
                   </label>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Events */}
+          {events.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-200 mb-2">
+                Events
+              </label>
+              <div className="max-h-48 overflow-y-auto border border-gray-600 rounded-md p-3 bg-gray-700">
+                <div className="space-y-2">
+                  {events.map((event) => (
+                    <label key={event.id} className="flex items-start space-x-2 text-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={selectedEventIds.includes(event.id)}
+                        onChange={() => handleEventToggle(event.id)}
+                        className="rounded border-gray-600 bg-gray-600 text-purple-500 focus:ring-purple-500 mt-1"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium">{event.name}</div>
+                        {event.date && (
+                          <div className="text-sm text-gray-400">
+                            📅 {new Date(event.date).toLocaleDateString()}
+                          </div>
+                        )}
+                        {event.location && (
+                          <div className="text-sm text-gray-400">
+                            📍 {event.location}
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                Select events this photo belongs to. You can select multiple events.
+              </p>
             </div>
           )}
 

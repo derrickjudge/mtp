@@ -28,7 +28,17 @@ export interface UploadPhotoParams {
 export type PhotoWithRelations = Photo & {
   categories: Category[];
   tags: Tag[];
+  events: Event[];
 };
+
+interface Event {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  date?: string;
+  location?: string;
+}
 
 // Helper function to convert native DB result to Photo type
 const convertNativeToPhoto = (nativePhoto: any): PhotoWithRelations => ({
@@ -45,6 +55,7 @@ const convertNativeToPhoto = (nativePhoto: any): PhotoWithRelations => ({
   authorId: nativePhoto.authorId,
   categories: nativePhoto.categories ? (Array.isArray(nativePhoto.categories) ? nativePhoto.categories : JSON.parse(nativePhoto.categories)) : [],
   tags: nativePhoto.tags ? (Array.isArray(nativePhoto.tags) ? nativePhoto.tags : JSON.parse(nativePhoto.tags)) : [],
+  events: nativePhoto.events ? (Array.isArray(nativePhoto.events) ? nativePhoto.events : JSON.parse(nativePhoto.events)) : [],
 });
 
 export const photoService = {
@@ -164,6 +175,7 @@ export const photoService = {
     skip?: number;
     categoryId?: string;
     tagId?: string;
+    eventId?: string;
     featured?: boolean;
   }): Promise<PhotoWithRelations[]> {
     const photos = await nativeDB.findPhotos(options);
@@ -189,6 +201,7 @@ export const photoService = {
     description?: string;
     categoryIds: string[];
     tagIds: string[];
+    eventIds: string[];
     published?: boolean;
     featured?: boolean;
   }): Promise<PhotoWithRelations> {
@@ -220,6 +233,12 @@ export const photoService = {
     await nativeDB.clearPhotoTags(id);
     if (data.tagIds.length > 0) {
       await nativeDB.linkPhotoToTags(id, data.tagIds);
+    }
+
+    // Update event relationships
+    await nativeDB.clearPhotoEvents(id);
+    if (data.eventIds.length > 0) {
+      await nativeDB.linkPhotoToEvents(id, data.eventIds);
     }
 
     // Get the updated photo with relations

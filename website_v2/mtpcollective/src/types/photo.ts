@@ -11,6 +11,15 @@ export interface Tag {
   slug: string;
 }
 
+export interface Event {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  date?: string;
+  location?: string;
+}
+
 export interface Photo {
   id: string;
   title: string;
@@ -25,4 +34,5 @@ export interface Photo {
   authorId: string;
   categories: Category[];
   tags: Tag[];
+  events: Event[];
 } 

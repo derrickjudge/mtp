@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const { id } = params;
-    const { title, description, categoryIds, tagIds, published, featured } = await req.json();
+    const { title, description, categoryIds, tagIds, eventIds, published, featured } = await req.json();
 
     if (!title) {
       return NextResponse.json(
@@ -47,6 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       description,
       categoryIds: categoryIds || [],
       tagIds: tagIds || [],
+      eventIds: eventIds || [],
       published: published ?? true,
       featured: featured ?? false,
     });

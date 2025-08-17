@@ -12,10 +12,21 @@ interface Category {
   name: string;
 }
 
+interface Event {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  date?: string;
+  location?: string;
+}
+
 export default function AdminPhotos() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedEvent, setSelectedEvent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadMode, setUploadMode] = useState<'single' | 'bulk'>('single');
@@ -33,9 +44,35 @@ export default function AdminPhotos() {
     }
   }, []);
 
+  const fetchEvents = useCallback(async () => {
+    try {
+      const response = await fetch('/api/events');
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
+      }
+      const data = await response.json();
+      setEvents(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch events');
+    }
+  }, []);
+
   const fetchPhotos = useCallback(async () => {
     try {
-      const url = selectedCategory ? `/api/photos?category=${selectedCategory}` : '/api/photos';
+      let url = '/api/photos';
+      const params = new URLSearchParams();
+      
+      if (selectedCategory) {
+        params.append('category', selectedCategory);
+      }
+      if (selectedEvent) {
+        params.append('event', selectedEvent);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch photos');
       const data = await response.json();
@@ -45,12 +82,13 @@ export default function AdminPhotos() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedEvent]);
 
   useEffect(() => {
     fetchCategories();
+    fetchEvents();
     fetchPhotos();
-  }, [fetchCategories, fetchPhotos]);
+  }, [fetchCategories, fetchEvents, fetchPhotos]);
 
   const handleUploadComplete = async () => {
     try {
@@ -80,7 +118,19 @@ export default function AdminPhotos() {
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
+    // When filtering by category, keep the event filter
     fetchPhotos();
+  };
+
+  const handleEventChange = (eventId: string) => {
+    setSelectedEvent(eventId);
+    // When filtering by event, keep the category filter
+    fetchPhotos();
+  };
+
+  const clearFilters = () => {
+    setSelectedCategory('');
+    setSelectedEvent('');
   };
 
   if (isLoading) {
@@ -171,8 +221,9 @@ export default function AdminPhotos() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-100">Your Photos</h2>
           <div className="flex items-center space-x-4">
+            {/* Category Filter */}
             <label htmlFor="category" className="text-sm font-medium text-gray-200">
-              Filter by Category:
+              Category:
             </label>
             <select
               id="category"
@@ -187,8 +238,56 @@ export default function AdminPhotos() {
                 </option>
               ))}
             </select>
+
+            {/* Event Filter */}
+            <label htmlFor="event" className="text-sm font-medium text-gray-200">
+              Event:
+            </label>
+            <select
+              id="event"
+              value={selectedEvent}
+              onChange={(e) => handleEventChange(e.target.value)}
+              className="rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            >
+              <option value="">All events</option>
+              {events.map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.name}
+                  {event.date && ` (${new Date(event.date).toLocaleDateString()})`}
+                </option>
+              ))}
+            </select>
+
+            {/* Clear Filters Button */}
+            {(selectedCategory || selectedEvent) && (
+              <button
+                onClick={clearFilters}
+                className="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-500 transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Active Filters Display */}
+        {(selectedCategory || selectedEvent) && (
+          <div className="mb-4 p-3 bg-gray-700 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-gray-300">
+              <span>Active filters:</span>
+              {selectedCategory && (
+                <span className="px-2 py-1 bg-blue-600/20 text-blue-300 rounded-full">
+                  Category: {categories.find(c => c.id === selectedCategory)?.name}
+                </span>
+              )}
+              {selectedEvent && (
+                <span className="px-2 py-1 bg-purple-600/20 text-purple-300 rounded-full">
+                  Event: {events.find(e => e.id === selectedEvent)?.name}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {photos.length > 0 ? (
           <AdminPhotoGrid 

@@ -180,6 +180,7 @@ export class NativeDBService {
     skip?: number;
     categoryId?: string;
     tagId?: string;
+    eventId?: string;
     featured?: boolean;
   }): Promise<any[]> {
     // Ensure junction tables exist before querying
@@ -205,6 +206,15 @@ export class NativeDBService {
           WHERE cp."B" = p.id AND cp."A" = $${paramIndex}
         )`;
         params.push(options.categoryId);
+        paramIndex++;
+      }
+
+      if (options?.eventId) {
+        query += ` AND EXISTS (
+          SELECT 1 FROM "_EventPhotos" ep 
+          WHERE ep."B" = p.id AND ep."A" = $${paramIndex}
+        )`;
+        params.push(options.eventId);
         paramIndex++;
       }
 
@@ -519,6 +529,41 @@ export class NativeDBService {
     }
   }
 
+  async linkPhotoToEvents(photoId: string, eventIds: string[]): Promise<void> {
+    if (eventIds.length === 0) return;
+    
+    // Ensure junction tables exist before linking
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Insert multiple event-photo relationships
+      const values = eventIds.map((eventId, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
+      const params = eventIds.flatMap(eventId => [eventId, photoId]);
+      
+      const query = `INSERT INTO "_EventPhotos" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`;
+      await client.query(query, params);
+    } finally {
+      await client.end();
+    }
+  }
+
+  async clearPhotoEvents(photoId: string): Promise<void> {
+    // Ensure junction tables exist before clearing
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      await client.query('DELETE FROM "_EventPhotos" WHERE "B" = $1', [photoId]);
+    } finally {
+      await client.end();
+    }
+  }
+
   async getPhotoWithRelations(id: string): Promise<any> {
     // Ensure junction tables exist before querying
     await this.ensureJunctionTables();
@@ -527,7 +572,7 @@ export class NativeDBService {
     try {
       await client.connect();
       
-      // Get photo with categories and tags
+      // Get photo with categories, tags, and events
       const result = await client.query(
         `SELECT 
            p.id, p.title, p.description, p.url, p.thumbnail, p.published, p.featured, 
@@ -552,12 +597,27 @@ export class NativeDBService {
                )
              ) FILTER (WHERE t.id IS NOT NULL), 
              '[]'
-           ) as tags
+           ) as tags,
+           COALESCE(
+             json_agg(
+               DISTINCT jsonb_build_object(
+                 'id', e.id, 
+                 'name', e.name, 
+                 'slug', e.slug,
+                 'description', e.description,
+                 'date', e.date,
+                 'location', e.location
+               )
+             ) FILTER (WHERE e.id IS NOT NULL), 
+             '[]'
+           ) as events
          FROM "Photo" p
          LEFT JOIN "_CategoryToPhoto" cp ON p.id = cp."B"
          LEFT JOIN "Category" c ON cp."A" = c.id
          LEFT JOIN "_PhotoToTag" pt ON p.id = pt."A"
          LEFT JOIN "Tag" t ON pt."B" = t.id
+         LEFT JOIN "_EventPhotos" ep ON p.id = ep."B"
+         LEFT JOIN "Event" e ON ep."A" = e.id
          WHERE p.id = $1
          GROUP BY p.id, p.title, p.description, p.url, p.thumbnail, p.published, p.featured, p.metadata, p."authorId", p."createdAt", p."updatedAt"
          LIMIT 1`,
