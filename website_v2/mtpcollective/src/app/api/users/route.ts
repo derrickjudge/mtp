@@ -3,6 +3,9 @@ import { nativeDB } from '@/lib/db-native';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // GET /api/users - Get all users for admin interface
 export async function GET(req: NextRequest) {
   try {

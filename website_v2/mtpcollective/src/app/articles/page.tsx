@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { CalendarIcon, TagIcon, FunnelIcon } from '@heroicons/react/24/outline';
 
 interface Article {
@@ -40,14 +41,6 @@ export default function ArticlesPage() {
   const [error, setError] = useState<string | null>(null);
   const [groupByCategory, setGroupByCategory] = useState(false);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    fetchArticles();
-  }, [selectedCategory]);
-
   const fetchCategories = async () => {
     try {
       const response = await fetch('/api/categories');
@@ -60,7 +53,7 @@ export default function ArticlesPage() {
     }
   };
 
-  const fetchArticles = async () => {
+  const fetchArticles = useCallback(async () => {
     try {
       setIsLoading(true);
       const url = selectedCategory 
@@ -80,7 +73,15 @@ export default function ArticlesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    fetchArticles();
+  }, [selectedCategory, fetchArticles]);
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -248,10 +249,12 @@ function ArticleCard({ article }: { article: Article }) {
     >
       {article.coverImage && (
         <div className="relative h-48 overflow-hidden">
-          <img
+          <Image
             src={article.coverImage}
             alt={article.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
           {article.featured && (
             <div className="absolute top-4 left-4">
