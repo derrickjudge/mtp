@@ -144,7 +144,7 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div className="relative aspect-[4/3] w-full">
+            <div className="relative w-full h-[80vh] max-w-6xl">
               {!useRegularImg ? (
                 <Image
                   src={selectedPhoto.url}
@@ -153,6 +153,7 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
                   className="object-contain"
                   sizes="(max-width: 1280px) 100vw, 1280px"
                   priority
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
                   onError={(e) => {
                     console.error('Next.js Image failed to load:', selectedPhoto.url);
                     console.error('Error details:', e);
@@ -182,7 +183,7 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
               )}
               
               {/* Debug and control overlay */}
-              <div className="absolute top-2 left-2 bg-black bg-opacity-90 text-white text-xs p-3 rounded max-w-md">
+              <div className="absolute top-2 left-2 bg-black bg-opacity-90 text-white text-xs p-3 rounded max-w-md z-20">
                 <p className="mb-1"><strong>URL:</strong> {selectedPhoto.url}</p>
                 <p className="mb-2"><strong>Method:</strong> {useRegularImg ? 'Regular <img>' : 'Next.js <Image>'}</p>
                 <div className="flex gap-2">
