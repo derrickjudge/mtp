@@ -10,6 +10,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.r2.dev',
       },
+      {
+        protocol: 'https',
+        hostname: 'pub-8473897a453e4a39824456dc238f2559.r2.dev',
+      },
     ],
   },
   // SECURITY FIX: Removed env section that was exposing secrets to client-side
