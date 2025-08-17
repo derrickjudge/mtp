@@ -15,6 +15,8 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [deletingPhoto, setDeletingPhoto] = useState<Photo | null>(null);
+  const [imageError, setImageError] = useState<boolean>(false);
+  const [imageLoading, setImageLoading] = useState<boolean>(false);
 
   const handleDelete = async (photo: Photo) => {
     try {
@@ -42,7 +44,11 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
             key={photo.id}
             className="relative group overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
           >
-            <div className="aspect-square relative cursor-pointer" onClick={() => setSelectedPhoto(photo)}>
+            <div className="aspect-square relative cursor-pointer" onClick={() => {
+              setSelectedPhoto(photo);
+              setImageError(false); // Reset error state when selecting new photo
+              setImageLoading(true); // Show loading state
+            }}>
               <Image
                 src={photo.thumbnail || photo.url}
                 alt={photo.title}
@@ -139,15 +145,64 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div className="relative aspect-[4/3] w-full">
-              <Image
-                src={selectedPhoto.url}
-                alt={selectedPhoto.title}
-                fill
-                className="object-contain"
-                sizes="(max-width: 1280px) 100vw, 1280px"
-                priority
-              />
+            
+            {/* Debug info */}
+            <div className="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 p-2 rounded z-10">
+              <p>URL: {selectedPhoto.url}</p>
+              <p>Title: {selectedPhoto.title}</p>
+            </div>
+            
+            <div className="relative w-full h-[80vh] max-w-6xl">
+              {/* Loading state */}
+              {imageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                  <div className="text-white text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                    <p>Loading image...</p>
+                  </div>
+                </div>
+              )}
+              
+              {!imageError ? (
+                <Image
+                  src={selectedPhoto.url}
+                  alt={selectedPhoto.title}
+                  fill
+                  className="object-contain"
+                  sizes="(max-width: 1280px) 100vw, 1280px"
+                  priority
+                  onError={(e) => {
+                    console.error('Next.js Image failed to load:', selectedPhoto.url, e);
+                    setImageError(true);
+                    setImageLoading(false);
+                  }}
+                  onLoad={() => {
+                    console.log('Next.js Image loaded successfully:', selectedPhoto.url);
+                    setImageLoading(false);
+                  }}
+                />
+              ) : (
+                <div className="relative w-full h-full">
+                  <img
+                    src={selectedPhoto.url}
+                    alt={selectedPhoto.title}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      console.error('Regular img also failed to load:', selectedPhoto.url, e);
+                      setImageLoading(false);
+                    }}
+                    onLoad={() => {
+                      console.log('Regular img loaded successfully:', selectedPhoto.url);
+                      setImageLoading(false);
+                    }}
+                  />
+                  {/* Fallback error message */}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-center">
+                    <p className="text-lg mb-2">⚠️ Image failed to load</p>
+                    <p className="text-sm opacity-75">Check URL in debug info above</p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black to-transparent text-white">
               <h2 className="text-2xl font-bold mb-2">{selectedPhoto.title}</h2>
