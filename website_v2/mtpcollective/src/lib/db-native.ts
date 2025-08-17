@@ -571,6 +571,41 @@ export class NativeDBService {
     }
   }
 
+  async linkArticleToEvents(articleId: string, eventIds: string[]): Promise<void> {
+    if (eventIds.length === 0) return;
+    
+    // Ensure junction tables exist before linking
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Insert multiple event-article relationships
+      const values = eventIds.map((eventId, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
+      const params = eventIds.flatMap(eventId => [eventId, articleId]);
+      
+      const query = `INSERT INTO "_EventArticles" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`;
+      await client.query(query, params);
+    } finally {
+      await client.end();
+    }
+  }
+
+  async clearArticleEvents(articleId: string): Promise<void> {
+    // Ensure junction tables exist before clearing
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      await client.query('DELETE FROM "_EventArticles" WHERE "B" = $1', [articleId]);
+    } finally {
+      await client.end();
+    }
+  }
+
   async getPhotoWithRelations(id: string): Promise<any> {
     // Ensure junction tables exist before querying
     await this.ensureJunctionTables();
@@ -925,11 +960,11 @@ export class NativeDBService {
     try {
       await client.connect();
       
-      // Get article with categories and tags
+      // Get article with categories, tags, and events
       const result = await client.query(
         `SELECT 
            a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", 
-           a.published, a.featured, a."authorId", a."createdAt", a."updatedAt",
+           a.published, a.featured, a."authorId", a."createdAt", a."updatedAt", a."publishDate",
            COALESCE(
              json_agg(
                DISTINCT jsonb_build_object(
@@ -950,14 +985,29 @@ export class NativeDBService {
                )
              ) FILTER (WHERE t.id IS NOT NULL), 
              '[]'
-           ) as tags
+           ) as tags,
+           COALESCE(
+             json_agg(
+               DISTINCT jsonb_build_object(
+                 'id', e.id, 
+                 'name', e.name, 
+                 'slug', e.slug, 
+                 'description', e.description,
+                 'date', e.date,
+                 'location', e.location
+               )
+             ) FILTER (WHERE e.id IS NOT NULL), 
+             '[]'
+           ) as events
          FROM "Article" a
          LEFT JOIN "_ArticleToCategory" ac ON a.id = ac."A"
          LEFT JOIN "Category" c ON ac."B" = c.id
          LEFT JOIN "_ArticleToTag" at ON a.id = at."A"
          LEFT JOIN "Tag" t ON at."B" = t.id
+         LEFT JOIN "_EventArticles" ea ON a.id = ea."B"
+         LEFT JOIN "Event" e ON ea."A" = e.id
          WHERE a.id = $1
-         GROUP BY a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", a.published, a.featured, a."authorId", a."createdAt", a."updatedAt"
+         GROUP BY a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", a.published, a.featured, a."authorId", a."createdAt", a."updatedAt", a."publishDate"
          LIMIT 1`,
         [id]
       );

@@ -21,6 +21,7 @@ interface Article {
   authorId: string;
   categories?: Category[];
   tags?: Tag[];
+  events?: Event[];
 }
 
 interface Category {
@@ -43,6 +44,15 @@ interface Photo {
   thumbnail?: string;
 }
 
+interface Event {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  date?: string;
+  location?: string;
+}
+
 interface User {
   id: string;
   name: string;
@@ -54,6 +64,7 @@ export default function AdminArticles() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,6 +84,7 @@ export default function AdminArticles() {
     featured: false,
     categoryIds: [] as string[],
     tagIds: [] as string[],
+    eventIds: [] as string[],
   });
 
   useEffect(() => {
@@ -81,9 +93,10 @@ export default function AdminArticles() {
 
   const fetchData = async () => {
     try {
-      const [articlesRes, categoriesRes, photosRes, usersRes] = await Promise.all([
+      const [articlesRes, categoriesRes, eventsRes, photosRes, usersRes] = await Promise.all([
         fetch('/api/articles'),
         fetch('/api/categories'),
+        fetch('/api/events'),
         fetch('/api/photos?take=50'), // Get recent photos for selection
         fetch('/api/users') // Get users for author selection
       ]);
@@ -96,6 +109,11 @@ export default function AdminArticles() {
       if (categoriesRes.ok) {
         const categoriesData = await categoriesRes.json();
         setCategories(categoriesData);
+      }
+
+      if (eventsRes.ok) {
+        const eventsData = await eventsRes.json();
+        setEvents(eventsData);
       }
 
       if (photosRes.ok) {
@@ -168,7 +186,8 @@ export default function AdminArticles() {
         published: false, 
         featured: false,
         categoryIds: [],
-        tagIds: []
+        tagIds: [],
+        eventIds: []
       });
       setShowForm(false);
     } catch (err) {
@@ -191,6 +210,7 @@ export default function AdminArticles() {
       featured: article.featured,
       categoryIds: article.categories?.map(c => c.id) || [],
       tagIds: article.tags?.map(t => t.id) || [],
+      eventIds: article.events?.map(e => e.id) || [],
     });
     setShowForm(true);
   };
@@ -229,7 +249,8 @@ export default function AdminArticles() {
       published: false, 
       featured: false,
       categoryIds: [],
-      tagIds: []
+      tagIds: [],
+      eventIds: []
     });
     setShowForm(false);
   };
@@ -247,6 +268,7 @@ export default function AdminArticles() {
           authorId: article.authorId,
           categoryIds: article.categories?.map(c => c.id) || [],
           tagIds: article.tags?.map(t => t.id) || [],
+          eventIds: article.events?.map(e => e.id) || [],
         }),
       });
 
@@ -274,6 +296,15 @@ export default function AdminArticles() {
       categoryIds: prev.categoryIds.includes(categoryId)
         ? prev.categoryIds.filter(id => id !== categoryId)
         : [...prev.categoryIds, categoryId]
+    }));
+  };
+
+  const handleEventToggle = (eventId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      eventIds: prev.eventIds.includes(eventId)
+        ? prev.eventIds.filter(id => id !== eventId)
+        : [...prev.eventIds, eventId]
     }));
   };
 
@@ -456,6 +487,32 @@ export default function AdminArticles() {
               </div>
             </div>
 
+            {/* Events */}
+            <div>
+              <label className="block text-sm font-medium text-gray-200 mb-2">
+                Events
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {events.map((event) => (
+                  <label key={event.id} className="flex items-center space-x-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={formData.eventIds.includes(event.id)}
+                      onChange={() => handleEventToggle(event.id)}
+                      className="rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="text-gray-300">
+                      {event.name}
+                      {event.date && ` (${new Date(event.date).toLocaleDateString()})`}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {events.length === 0 && (
+                <p className="text-gray-400 text-sm">No events available. Create some events first.</p>
+              )}
+            </div>
+
             {/* Rich Text Editor */}
             <div>
               <label className="block text-sm font-medium text-gray-200 mb-2">
@@ -610,6 +667,20 @@ export default function AdminArticles() {
                           {article.categories.map((category) => (
                             <span key={category.id} className="text-xs text-blue-300 bg-blue-600/20 px-2 py-1 rounded">
                               {category.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {article.events && article.events.length > 0 && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <CalendarDaysIcon className="w-4 h-4 text-gray-500" />
+                        <div className="flex gap-1">
+                          {article.events.map((event) => (
+                            <span key={event.id} className="text-xs text-purple-300 bg-purple-600/20 px-2 py-1 rounded">
+                              📅 {event.name}
+                              {event.date && ` (${new Date(event.date).toLocaleDateString()})`}
                             </span>
                           ))}
                         </div>

@@ -45,7 +45,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       publishDate,
       authorId,
       categoryIds, 
-      tagIds 
+      tagIds,
+      eventIds 
     } = await req.json();
 
     if (!title || !content) {
@@ -122,6 +123,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     await nativeDB.clearArticleTags(id);
     if (tagIds && tagIds.length > 0) {
       await nativeDB.linkArticleToTags(id, tagIds);
+    }
+
+    // Update event relationships
+    await nativeDB.clearArticleEvents(id);
+    if (eventIds && eventIds.length > 0) {
+      await nativeDB.linkArticleToEvents(id, eventIds);
     }
 
     // Get the updated article with relations

@@ -15,7 +15,6 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [deletingPhoto, setDeletingPhoto] = useState<Photo | null>(null);
-  const [useRegularImg, setUseRegularImg] = useState(false);
 
 
   const handleDelete = async (photo: Photo) => {
@@ -44,10 +43,7 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
             key={photo.id}
             className="relative group overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
           >
-            <div className="aspect-square relative cursor-pointer" onClick={() => {
-              setSelectedPhoto(photo);
-              setUseRegularImg(false); // Start with Next.js Image
-            }}>
+            <div className="aspect-square relative cursor-pointer" onClick={() => setSelectedPhoto(photo)}>
               <Image
                 src={photo.thumbnail || photo.url}
                 alt={photo.title}
@@ -145,61 +141,14 @@ export function AdminPhotoGrid({ photos, onPhotoUpdated, onPhotoDeleted }: Admin
               </svg>
             </button>
             <div className="relative w-full h-[80vh] max-w-6xl flex items-center justify-center">
-              {!useRegularImg ? (
-                <Image
-                  src={selectedPhoto.url}
-                  alt={selectedPhoto.title}
-                  width={1200}
-                  height={800}
-                  className="max-w-full max-h-full object-contain"
-                  priority
-                  onError={(e) => {
-                    console.error('Next.js Image failed to load:', selectedPhoto.url);
-                    console.error('Error details:', e);
-                    console.log('Automatically switching to regular img tag...');
-                    setUseRegularImg(true);
-                  }}
-                  onLoad={() => {
-                    console.log('Next.js Image loaded successfully:', selectedPhoto.url);
-                  }}
-                  onLoadingComplete={() => {
-                    console.log('Next.js Image loading complete:', selectedPhoto.url);
-                  }}
-                />
-              ) : (
-                <img
-                  src={selectedPhoto.url}
-                  alt={selectedPhoto.title}
-                  className="max-w-full max-h-full object-contain"
-                  onError={(e) => {
-                    console.error('Regular img also failed to load:', selectedPhoto.url);
-                    console.error('Regular img error details:', e);
-                  }}
-                  onLoad={() => {
-                    console.log('Regular img loaded successfully:', selectedPhoto.url);
-                  }}
-                />
-              )}
-              
-              {/* Debug and control overlay */}
-              <div className="absolute top-2 left-2 bg-black bg-opacity-90 text-white text-xs p-3 rounded max-w-md z-20">
-                <p className="mb-1"><strong>URL:</strong> {selectedPhoto.url}</p>
-                <p className="mb-2"><strong>Method:</strong> {useRegularImg ? 'Regular <img>' : 'Next.js <Image>'}</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setUseRegularImg(false)}
-                    className={`px-2 py-1 rounded text-xs ${!useRegularImg ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-500'}`}
-                  >
-                    Next.js Image
-                  </button>
-                  <button
-                    onClick={() => setUseRegularImg(true)}
-                    className={`px-2 py-1 rounded text-xs ${useRegularImg ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-500'}`}
-                  >
-                    Regular IMG
-                  </button>
-                </div>
-              </div>
+              <Image
+                src={selectedPhoto.url}
+                alt={selectedPhoto.title}
+                width={1200}
+                height={800}
+                className="max-w-full max-h-full object-contain"
+                priority
+              />
             </div>
             <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black to-transparent text-white">
               <h2 className="text-2xl font-bold mb-2">{selectedPhoto.title}</h2>

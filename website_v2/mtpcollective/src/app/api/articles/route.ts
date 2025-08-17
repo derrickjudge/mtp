@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
       authorId,
       categoryIds, 
       tagIds, 
+      eventIds,
       metaDescription 
     } = await req.json();
 
@@ -121,13 +122,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Link to categories and tags if provided
+    // Link to categories, tags, and events if provided
     if (categoryIds && categoryIds.length > 0) {
       await nativeDB.linkArticleToCategories(article.id, categoryIds);
     }
 
     if (tagIds && tagIds.length > 0) {
       await nativeDB.linkArticleToTags(article.id, tagIds);
+    }
+
+    if (eventIds && eventIds.length > 0) {
+      await nativeDB.linkArticleToEvents(article.id, eventIds);
     }
 
     // Get the article with its relations
