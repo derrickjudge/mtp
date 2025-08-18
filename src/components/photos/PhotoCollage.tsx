@@ -20,51 +20,54 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Determine grid span based on natural image proportions
+  // Determine grid span with dramatic variations (no metadata needed)
   const getGridSpan = () => {
-    let aspectRatio = 1; // Default square
+    // Create dramatic variation using photo ID for consistency
+    const hash = photo.id.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
     
-    // Use image metadata if available
+    // Use metadata if available (future enhancement)
+    let aspectRatio = 1;
     if (photo.metadata?.width && photo.metadata?.height) {
       aspectRatio = photo.metadata.width / photo.metadata.height;
-    } else {
-      // Fallback: create variation using photo ID for consistency
-      const hash = photo.id.split('').reduce((a, b) => {
-        a = ((a << 5) - a) + b.charCodeAt(0);
-        return a & a;
-      }, 0);
-      const variations = [0.7, 0.8, 1.0, 1.2, 1.5, 1.8]; // Portrait to landscape
-      aspectRatio = variations[Math.abs(hash) % variations.length];
     }
     
-    // Featured photos get prominent placement regardless of aspect ratio
+    // Featured photos get prominent placement
     if (photo.featured) {
-      if (aspectRatio > 1.3) {
-        return 'col-span-3 row-span-2'; // Large landscape featured
-      } else if (aspectRatio < 0.8) {
-        return 'col-span-2 row-span-4'; // Large portrait featured
-      } else {
-        return 'col-span-2 row-span-3'; // Large square featured
-      }
+      const featuredVariations = [
+        'col-span-3 row-span-3', // Large square hero
+        'col-span-3 row-span-2', // Large landscape hero  
+        'col-span-2 row-span-4', // Large portrait hero
+        'col-span-4 row-span-2', // Extra wide hero
+      ];
+      return featuredVariations[Math.abs(hash) % featuredVariations.length];
     }
     
-    // Natural sizing based on actual image proportions
-    if (aspectRatio > 2.0) {
+    // Create dramatic size variations for regular photos
+    const sizeIndex = Math.abs(hash) % 20; // 20 different size patterns
+    
+    if (sizeIndex < 2) {
       return 'col-span-3 row-span-1'; // Panoramic landscape
-    } else if (aspectRatio > 1.6) {
-      return 'col-span-2 row-span-1'; // Wide landscape
-    } else if (aspectRatio > 1.3) {
-      return 'col-span-2 row-span-2'; // Medium landscape
-    } else if (aspectRatio > 1.1) {
-      return 'col-span-1 row-span-1'; // Slightly wide
-    } else if (aspectRatio > 0.9) {
-      return 'col-span-1 row-span-2'; // Nearly square
-    } else if (aspectRatio > 0.6) {
-      return 'col-span-1 row-span-2'; // Medium portrait
-    } else if (aspectRatio > 0.4) {
-      return 'col-span-1 row-span-3'; // Tall portrait
-    } else {
+    } else if (sizeIndex < 4) {
       return 'col-span-1 row-span-4'; // Very tall portrait
+    } else if (sizeIndex < 6) {
+      return 'col-span-2 row-span-3'; // Large vertical rectangle
+    } else if (sizeIndex < 8) {
+      return 'col-span-3 row-span-2'; // Large horizontal rectangle
+    } else if (sizeIndex < 10) {
+      return 'col-span-2 row-span-2'; // Medium square
+    } else if (sizeIndex < 12) {
+      return 'col-span-1 row-span-3'; // Tall portrait
+    } else if (sizeIndex < 14) {
+      return 'col-span-2 row-span-1'; // Wide landscape
+    } else if (sizeIndex < 16) {
+      return 'col-span-1 row-span-2'; // Medium portrait
+    } else if (sizeIndex < 18) {
+      return 'col-span-1 row-span-1'; // Small square
+    } else {
+      return 'col-span-2 row-span-2'; // Medium square
     }
   };
 
@@ -82,7 +85,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
 
   if (!isVisible) {
     return (
-      <div className={`bg-gray-800 ${getGridSpan()}`} style={{ minHeight: '200px' }} />
+      <div className={`bg-gray-800 ${getGridSpan()}`} style={{ minHeight: '180px' }} />
     );
   }
 
@@ -96,7 +99,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
         hover:opacity-80
       `}
       onClick={handleClick}
-      style={{ minHeight: '200px' }}
+      style={{ minHeight: '180px' }}
     >
       {/* Loading placeholder */}
       {!imageLoaded && !imageError && (
@@ -217,15 +220,15 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
 
   return (
     <div className="w-full">
-      {/* Natural Masonry Grid */}
+      {/* Dynamic Masonry Grid */}
       <div 
         className="
-          grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5
-          gap-4
+          grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6
+          gap-3
           max-w-7xl mx-auto px-4
         "
         style={{
-          gridAutoRows: 'minmax(200px, auto)',
+          gridAutoRows: 'minmax(180px, auto)',
           gridAutoFlow: 'row dense', // Allow items to fill gaps
         }}
       >
