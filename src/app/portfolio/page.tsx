@@ -66,15 +66,18 @@ function PortfolioContent() {
       
       let url = '/api/photos?published=true';
       if (selectedCategory) {
-        url += `&categoryId=${selectedCategory}`;
+        url += `&category=${selectedCategory}`;
       }
       
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         
+        // Extract photos array from response
+        const photosArray = data.photos || [];
+        
         // Sort photos: featured first, then by creation date
-        const sortedPhotos = data.sort((a: Photo, b: Photo) => {
+        const sortedPhotos = photosArray.sort((a: Photo, b: Photo) => {
           if (a.featured && !b.featured) return -1;
           if (!a.featured && b.featured) return 1;
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
