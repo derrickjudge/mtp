@@ -76,6 +76,12 @@ export const photoService = {
     const uniqueFileName = `${Date.now()}-${fileName}`;
     const thumbnailFileName = `thumbnails/${uniqueFileName}`;
 
+    // Extract original image dimensions for proper aspect ratio
+    const imageInfo = await sharp(file).metadata();
+    const originalWidth = imageInfo.width || 1200;
+    const originalHeight = imageInfo.height || 800;
+    const aspectRatio = originalWidth / originalHeight;
+
     // Process image and create thumbnail
     const processedImage = await sharp(file)
       .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
@@ -112,7 +118,13 @@ export const photoService = {
       url: `${r2Config.publicUrl}/${uniqueFileName}`,
       thumbnail: `${r2Config.publicUrl}/${thumbnailFileName}`,
       authorId,
-      metadata,
+      metadata: {
+        ...metadata,
+        width: originalWidth,
+        height: originalHeight,
+        aspectRatio: aspectRatio,
+        originalDimensions: `${originalWidth}x${originalHeight}`,
+      },
     });
 
     if (!photo) {

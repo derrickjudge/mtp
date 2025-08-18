@@ -1,0 +1,57 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { nativeDB } from '@/lib/db-native';
+import { photoService } from '@/services/photoService';
+
+export async function DELETE(req: NextRequest) {
+  try {
+    // Check authentication and admin role
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { message: 'Unauthorized - Admin access required' },
+        { status: 401 }
+      );
+    }
+
+    console.log('🗑️ Starting bulk photo deletion...');
+
+    // Get all photos
+    const photos = await nativeDB.findPhotos({ published: false }); // Get all photos including unpublished
+    console.log(`📸 Found ${photos.length} photos to delete`);
+
+    let deletedCount = 0;
+    let errorCount = 0;
+
+    // Delete each photo (this will remove from both database and R2)
+    for (const photo of photos) {
+      try {
+        await photoService.deletePhoto(photo.id);
+        deletedCount++;
+        console.log(`✅ Deleted photo: ${photo.title} (${photo.id})`);
+      } catch (error) {
+        console.error(`❌ Failed to delete photo: ${photo.title} (${photo.id})`, error);
+        errorCount++;
+      }
+    }
+
+    console.log(`🎉 Bulk deletion complete: ${deletedCount} deleted, ${errorCount} errors`);
+
+    return NextResponse.json({
+      message: `Bulk deletion complete`,
+      results: {
+        totalFound: photos.length,
+        deleted: deletedCount,
+        errors: errorCount
+      }
+    });
+
+  } catch (error) {
+    console.error('Error during bulk photo deletion:', error);
+    return NextResponse.json(
+      { message: error instanceof Error ? error.message : 'Failed to delete photos' },
+      { status: 500 }
+    );
+  }
+}
