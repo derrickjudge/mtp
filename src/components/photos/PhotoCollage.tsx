@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { Photo } from '@/types/photo';
 
@@ -89,6 +89,8 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
           onLoad={handleImageLoad}
           onError={handleImageError}
           quality={85}
+          unoptimized={process.env.NODE_ENV === 'production'}
+          priority={false}
         />
       )}
 
@@ -153,23 +155,32 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
 }
 
 export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps) {
-  const [visiblePhotos, setVisiblePhotos] = useState(new Set<string>());
+  // Initialize with first 6 photos visible for immediate display
+  const [visiblePhotos, setVisiblePhotos] = useState(() => {
+    const initial = new Set<string>();
+    photos.slice(0, 6).forEach(photo => initial.add(photo.id));
+    return initial;
+  });
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Intersection observer callback for lazy loading
-  const observePhoto = useCallback((node: HTMLDivElement | null, photoId: string) => {
-    if (!node) return;
+  // Update visible photos when photos array changes (e.g., category filtering)
+  useEffect(() => {
+    const initial = new Set<string>();
+    photos.slice(0, 6).forEach(photo => initial.add(photo.id));
+    setVisiblePhotos(initial);
+  }, [photos]);
 
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
-
+  // Initialize intersection observer once
+  useEffect(() => {
     observerRef.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            setVisiblePhotos(prev => new Set(prev).add(photoId));
-            observerRef.current?.unobserve(entry.target);
+            const photoId = entry.target.getAttribute('data-photo-id');
+            if (photoId) {
+              setVisiblePhotos(prev => new Set(prev).add(photoId));
+              observerRef.current?.unobserve(entry.target);
+            }
           }
         });
       },
@@ -179,7 +190,17 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
       }
     );
 
-    observerRef.current.observe(node);
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, []);
+
+  // Ref callback for observing elements
+  const observePhoto = useCallback((node: HTMLDivElement | null, photoId: string) => {
+    if (node && observerRef.current) {
+      node.setAttribute('data-photo-id', photoId);
+      observerRef.current.observe(node);
+    }
   }, []);
 
   if (photos.length === 0) {
