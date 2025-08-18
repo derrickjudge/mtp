@@ -20,21 +20,52 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Determine grid span based on photo characteristics
+  // Determine grid span based on natural image proportions
   const getGridSpan = () => {
-    // Featured photos get larger spans
-    if (photo.featured) {
-      return 'row-span-3 col-span-2';
+    let aspectRatio = 1; // Default square
+    
+    // Use image metadata if available
+    if (photo.metadata?.width && photo.metadata?.height) {
+      aspectRatio = photo.metadata.width / photo.metadata.height;
+    } else {
+      // Fallback: create variation using photo ID for consistency
+      const hash = photo.id.split('').reduce((a, b) => {
+        a = ((a << 5) - a) + b.charCodeAt(0);
+        return a & a;
+      }, 0);
+      const variations = [0.7, 0.8, 1.0, 1.2, 1.5, 1.8]; // Portrait to landscape
+      aspectRatio = variations[Math.abs(hash) % variations.length];
     }
     
-    // Random variation for visual interest
-    const rand = Math.random();
-    if (rand < 0.25) {
-      return 'row-span-2'; // Tall photos
-    } else if (rand < 0.5) {
-      return 'col-span-2'; // Wide photos
+    // Featured photos get prominent placement regardless of aspect ratio
+    if (photo.featured) {
+      if (aspectRatio > 1.3) {
+        return 'col-span-3 row-span-2'; // Large landscape featured
+      } else if (aspectRatio < 0.8) {
+        return 'col-span-2 row-span-4'; // Large portrait featured
+      } else {
+        return 'col-span-2 row-span-3'; // Large square featured
+      }
     }
-    return ''; // Standard size
+    
+    // Natural sizing based on actual image proportions
+    if (aspectRatio > 2.0) {
+      return 'col-span-3 row-span-1'; // Panoramic landscape
+    } else if (aspectRatio > 1.6) {
+      return 'col-span-2 row-span-1'; // Wide landscape
+    } else if (aspectRatio > 1.3) {
+      return 'col-span-2 row-span-2'; // Medium landscape
+    } else if (aspectRatio > 1.1) {
+      return 'col-span-1 row-span-1'; // Slightly wide
+    } else if (aspectRatio > 0.9) {
+      return 'col-span-1 row-span-2'; // Nearly square
+    } else if (aspectRatio > 0.6) {
+      return 'col-span-1 row-span-2'; // Medium portrait
+    } else if (aspectRatio > 0.4) {
+      return 'col-span-1 row-span-3'; // Tall portrait
+    } else {
+      return 'col-span-1 row-span-4'; // Very tall portrait
+    }
   };
 
   const handleImageLoad = () => {
@@ -51,7 +82,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
 
   if (!isVisible) {
     return (
-      <div className={`bg-gray-800 ${getGridSpan()}`} style={{ minHeight: '300px' }} />
+      <div className={`bg-gray-800 ${getGridSpan()}`} style={{ minHeight: '200px' }} />
     );
   }
 
@@ -65,7 +96,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
         hover:opacity-80
       `}
       onClick={handleClick}
-      style={{ minHeight: '300px' }}
+      style={{ minHeight: '200px' }}
     >
       {/* Loading placeholder */}
       {!imageLoaded && !imageError && (
@@ -186,14 +217,15 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
 
   return (
     <div className="w-full">
-      {/* Steven Carlson Style Grid */}
+      {/* Natural Masonry Grid */}
       <div 
         className="
-          grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4
-          auto-rows-[300px] gap-6
+          grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5
+          gap-4
           max-w-7xl mx-auto px-4
         "
         style={{
+          gridAutoRows: 'minmax(200px, auto)',
           gridAutoFlow: 'row dense', // Allow items to fill gaps
         }}
       >
