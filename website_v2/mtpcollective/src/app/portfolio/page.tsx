@@ -4,6 +4,7 @@ import { imageUrls } from '@/utils/imageUrls';
 import { PhotoGallery } from '@/components/photos/PhotoGallery';
 import type { Photo } from '@/types/photo';
 import { nativeDB } from '@/lib/db-native';
+import Link from 'next/link';
 
 // Make this page dynamic to prevent Prisma initialization during build
 export const dynamic = 'force-dynamic';
@@ -43,17 +44,51 @@ async function fetchPhotosByCategory(categoryId: string): Promise<Photo[]> {
   }
 }
 
-export default async function PortfolioPage() {
+async function fetchAllPhotos(): Promise<Photo[]> {
+  try {
+    const photos = await nativeDB.findPhotos({
+      published: true,
+    });
+    return photos;
+  } catch (error) {
+    console.error('Error fetching all photos:', error);
+    return [];
+  }
+}
+
+interface PortfolioPageProps {
+  searchParams: { category?: string };
+}
+
+export default async function PortfolioPage({ searchParams }: PortfolioPageProps) {
   // Fetch all categories
   const categories = await fetchCategories();
+  const categorySlug = searchParams.category;
   
-  // Fetch photos for each category
-  const categoriesWithPhotos: CategoryWithPhotos[] = await Promise.all(
-    categories.map(async (category) => ({
-      ...category,
-      photos: await fetchPhotosByCategory(category.id),
-    }))
-  );
+  // Find the selected category if one is specified
+  const selectedCategory = categorySlug 
+    ? categories.find(cat => cat.slug === categorySlug)
+    : null;
+
+  let categoriesWithPhotos: CategoryWithPhotos[] = [];
+  let allPhotos: Photo[] = [];
+
+  if (selectedCategory) {
+    // Show only the selected category
+    const photos = await fetchPhotosByCategory(selectedCategory.id);
+    categoriesWithPhotos = [{
+      ...selectedCategory,
+      photos
+    }];
+  } else {
+    // Show all categories
+    categoriesWithPhotos = await Promise.all(
+      categories.map(async (category) => ({
+        ...category,
+        photos: await fetchPhotosByCategory(category.id),
+      }))
+    );
+  }
 
   // Filter out categories with no photos
   const categoriesWithContent = categoriesWithPhotos.filter(category => category.photos.length > 0);
@@ -74,12 +109,32 @@ export default async function PortfolioPage() {
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/30 flex items-center justify-center">
           <div className="text-center max-w-4xl mx-auto px-4">
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
-              Portfolio
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-200 font-light max-w-2xl mx-auto">
-              Explore our photography collections showcasing the art of capturing moments across different genres.
-            </p>
+            {selectedCategory ? (
+              <>
+                <nav className="text-sm text-gray-300 mb-4">
+                  <Link href="/portfolio" className="hover:text-white transition-colors">
+                    Portfolio
+                  </Link>
+                  <span className="mx-2">→</span>
+                  <span className="text-white">{selectedCategory.name}</span>
+                </nav>
+                <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
+                  {selectedCategory.name}
+                </h1>
+                <p className="text-xl md:text-2xl text-gray-200 font-light max-w-2xl mx-auto">
+                  {selectedCategory.description || `Showcasing our ${selectedCategory.name.toLowerCase()} photography collection`}
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
+                  Portfolio
+                </h1>
+                <p className="text-xl md:text-2xl text-gray-200 font-light max-w-2xl mx-auto">
+                  Explore our photography collections showcasing the art of capturing moments across different genres.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </section>
