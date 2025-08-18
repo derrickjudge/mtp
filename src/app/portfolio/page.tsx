@@ -3,8 +3,6 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Image } from '@/components/common/Image';
-import { imageUrls } from '@/utils/imageUrls';
 import PhotoCollage from '@/components/photos/PhotoCollage';
 import PhotoLightbox from '@/components/photos/PhotoLightbox';
 import type { Photo } from '@/types/photo';
@@ -134,62 +132,50 @@ function PortfolioContent() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Hero Section */}
-      <section className="relative w-full" style={{ height: '50vh' }}>
-        <div className="absolute inset-0">
-          <Image
-            src={imageUrls.portfolio}
-            alt="MTP Collective Portfolio"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover brightness-75"
-          />
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/30 flex items-center justify-center">
-          <div className="text-center max-w-4xl mx-auto px-4">
-            {selectedCategoryInfo ? (
-              <>
-                <nav className="text-sm text-gray-300 mb-4">
-                  <Link href="/portfolio" className="hover:text-white transition-colors">
-                    Portfolio
-                  </Link>
-                  <span className="mx-2">→</span>
-                  <span className="text-white">{selectedCategoryInfo.name}</span>
-                </nav>
-                <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
-                  {selectedCategoryInfo.name}
-                </h1>
-                <p className="text-xl md:text-2xl text-gray-200 font-light max-w-2xl mx-auto">
-                  {selectedCategoryInfo.description || `Showcasing our ${selectedCategoryInfo.name.toLowerCase()} photography collection`}
-                </p>
-              </>
-            ) : (
-              <>
-                <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
+      {/* Header Section - Clean & Minimal */}
+      <section className="py-16 bg-black">
+        <div className="max-w-7xl mx-auto px-4">
+          {selectedCategoryInfo ? (
+            <>
+              <nav className="text-sm text-gray-400 mb-6">
+                <Link href="/portfolio" className="hover:text-white transition-colors">
                   Portfolio
-                </h1>
-                <p className="text-xl md:text-2xl text-gray-200 font-light max-w-2xl mx-auto">
-                  Explore our photography collections showcasing the art of capturing moments across different genres.
-                </p>
-              </>
-            )}
-          </div>
+                </Link>
+                <span className="mx-2">→</span>
+                <span className="text-white">{selectedCategoryInfo.name}</span>
+              </nav>
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 text-left">
+                {selectedCategoryInfo.name}
+              </h1>
+              <p className="text-lg text-gray-300 max-w-3xl text-left">
+                {selectedCategoryInfo.description || `Showcasing our ${selectedCategoryInfo.name.toLowerCase()} photography collection`}
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 text-left">
+                Portfolio
+              </h1>
+              <p className="text-lg text-gray-300 max-w-3xl text-left">
+                Explore our photography collections showcasing the art of capturing moments across different genres.
+              </p>
+            </>
+          )}
         </div>
       </section>
 
       {/* Filter Section */}
       {categories.length > 0 && (
-        <section className="py-8 bg-gray-900 border-b border-gray-800">
+        <section className="py-6 bg-black border-b border-gray-800">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex flex-wrap gap-6 text-sm">
               <Link
                 href="/portfolio"
                 className={`
-                  px-4 py-2 rounded-full transition-all duration-300
+                  transition-all duration-300 uppercase tracking-wider
                   ${!selectedCategory 
-                    ? 'bg-white text-black font-medium' 
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
+                    ? 'text-white font-semibold border-b-2 border-white pb-1' 
+                    : 'text-gray-400 hover:text-white'
                   }
                 `}
               >
@@ -200,10 +186,10 @@ function PortfolioContent() {
                   key={category.id}
                   href={`/portfolio?category=${category.slug}`}
                   className={`
-                    px-4 py-2 rounded-full transition-all duration-300
+                    transition-all duration-300 uppercase tracking-wider
                     ${selectedCategory === category.id
-                      ? 'bg-white text-black font-medium'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
+                      ? 'text-white font-semibold border-b-2 border-white pb-1'
+                      : 'text-gray-400 hover:text-white'
                     }
                   `}
                 >
