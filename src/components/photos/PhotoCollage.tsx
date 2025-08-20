@@ -91,10 +91,12 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
   };
 
   const handleImageLoad = () => {
+    console.log(`✅ Image loaded successfully: ${photo.title}`);
     setImageLoaded(true);
   };
 
   const handleImageError = () => {
+    console.log(`❌ Image failed to load: ${photo.title} - ${photo.url}`);
     setImageError(true);
   };
 
@@ -102,9 +104,31 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
     onPhotoClick(photo);
   };
 
+  // DEBUG: Log PhotoItem render state
+  console.log(`🔍 PhotoItem ${photo.title}:`, {
+    isVisible,
+    imageLoaded,
+    imageError,
+    gridSpan: getGridSpan(),
+    photoUrl: photo.url
+  });
+
   if (!isVisible) {
     return (
-      <div className={`bg-gray-800 ${getGridSpan()}`} />
+      <div 
+        className={`bg-red-500 ${getGridSpan()}`}
+        style={{
+          border: '2px solid blue',
+          minHeight: '100px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          fontSize: '12px'
+        }}
+      >
+        NOT VISIBLE: {photo.title}
+      </div>
     );
   }
 
@@ -118,6 +142,10 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
         hover:opacity-80
       `}
       onClick={handleClick}
+      style={{
+        border: '3px solid green', // DEBUG: Make visible photos obvious
+        minHeight: '120px', // DEBUG: Force minimum height
+      }}
     >
       {/* Loading placeholder */}
       {!imageLoaded && !imageError && (
@@ -145,12 +173,25 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
         />
       )}
 
-      {/* Error fallback */}
+      {/* Error fallback - DEBUG VERSION */}
       {imageError && (
-        <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
-          <div className="text-gray-400 text-center">
-            <div className="text-4xl mb-2">📷</div>
-            <p className="text-sm">Image unavailable</p>
+        <div className="absolute inset-0 bg-red-600 flex items-center justify-center">
+          <div className="text-white text-center p-2">
+            <div className="text-4xl mb-2">❌</div>
+            <p className="text-xs font-bold">IMAGE ERROR</p>
+            <p className="text-xs">{photo.title}</p>
+            <p className="text-xs break-all">{photo.url}</p>
+          </div>
+        </div>
+      )}
+
+      {/* DEBUG: Show loading state */}
+      {!imageLoaded && !imageError && (
+        <div className="absolute inset-0 bg-purple-600 flex items-center justify-center text-white text-center">
+          <div>
+            <div className="text-2xl mb-2">🔄</div>
+            <p className="text-xs">LOADING</p>
+            <p className="text-xs">{photo.title}</p>
           </div>
         </div>
       )}
@@ -236,9 +277,25 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
     );
   }
 
+  // DEBUG: Add console logging
+  console.log('🔍 PhotoCollage render:', {
+    photosLength: photos.length,
+    visiblePhotosSize: visiblePhotos.size,
+    visiblePhotosArray: Array.from(visiblePhotos),
+    photosData: photos.map(p => ({ id: p.id, title: p.title, url: p.url }))
+  });
+
   return (
     <div className="w-full">
-      {/* Dynamic Masonry Grid */}
+      {/* DEBUG INFO */}
+      <div className="bg-yellow-300 text-black p-4 mb-4 text-sm">
+        <strong>🔍 DEBUG INFO:</strong><br/>
+        Photos Count: {photos.length}<br/>
+        Visible Photos: {visiblePhotos.size}<br/>
+        Photo IDs: {photos.map(p => p.title).join(', ')}
+      </div>
+
+      {/* Dynamic Masonry Grid - WITH DEBUG STYLING */}
       <div 
         className="
           grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6
@@ -248,6 +305,9 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
         style={{
           gridAutoRows: '150px', // Fixed row height for predictable spans
           gridAutoFlow: 'row dense', // Allow items to fill gaps
+          minHeight: '600px', // DEBUG: Force minimum height
+          border: '5px solid red', // DEBUG: Make container visible
+          backgroundColor: 'rgba(255, 255, 0, 0.1)', // DEBUG: Light yellow background
         }}
       >
         {photos.map((photo) => (
