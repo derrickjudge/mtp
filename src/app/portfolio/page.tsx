@@ -40,6 +40,9 @@ function PortfolioContent() {
       if (category) {
         setSelectedCategory(category.id);
       }
+    } else {
+      // No category parameter means "All Photos" is selected
+      setSelectedCategory('');
     }
   }, [searchParams, categories]);
 
@@ -196,23 +199,6 @@ function PortfolioContent() {
                   {category.name}
                 </Link>
               ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Photo Count and Sort Info */}
-      {!loading && photos.length > 0 && (
-        <section className="py-4 bg-black">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex justify-between items-center text-sm text-gray-400">
-              <span>
-                {photos.length} photo{photos.length !== 1 ? 's' : ''} 
-                {selectedCategoryInfo && ` in ${selectedCategoryInfo.name}`}
-              </span>
-              <span className="hidden md:block">
-                Featured photos are highlighted • Click any photo to view full size
-              </span>
             </div>
           </div>
         </section>
