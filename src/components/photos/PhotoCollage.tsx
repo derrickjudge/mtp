@@ -265,6 +265,55 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
     }
   }, []);
 
+  // Helper to get grid span for a photo
+  const getGridSpanForPhoto = (photo: Photo) => {
+    if (!photo.metadata?.aspectRatio) {
+      return 'col-span-1 row-span-1';
+    }
+    
+    const aspectRatio = photo.metadata.aspectRatio;
+    console.log(`📸 ${photo.title}: ${photo.metadata.width}x${photo.metadata.height} = ${aspectRatio.toFixed(2)} ratio`);
+    
+    // Create variation based on photo index for dramatic differences
+    const photoIndex = photos.findIndex(p => p.id === photo.id);
+    const variation = (photoIndex % 3) + 1; // 1, 2, or 3
+    
+    let result: string;
+    
+    if (aspectRatio > 1.4) {
+      // Wide photos - vary dramatically by index
+      result = variation === 1 ? 'col-span-1 row-span-1' : 
+               variation === 2 ? 'col-span-3 row-span-2' : 
+               'col-span-4 row-span-1';
+    } else if (aspectRatio < 0.9) {
+      // Tall photos - vary dramatically by index  
+      result = variation === 1 ? 'col-span-1 row-span-1' :
+               variation === 2 ? 'col-span-1 row-span-4' :
+               'col-span-2 row-span-3';
+    } else {
+      // Square-ish photos - vary dramatically by index
+      result = variation === 1 ? 'col-span-1 row-span-1' :
+               variation === 2 ? 'col-span-2 row-span-2' :
+               'col-span-3 row-span-3';
+    }
+    
+    console.log(`🎯 ${photo.title}: aspect=${aspectRatio.toFixed(2)} variation=${variation} → ${result}`);
+    return result;
+  };
+
+  // DEBUG: Helper functions to extract span numbers for inline styles
+  const getColSpan = (photo: Photo) => {
+    const gridSpan = getGridSpanForPhoto(photo);
+    const match = gridSpan.match(/col-span-(\d+)/);
+    return match ? parseInt(match[1]) : 1;
+  };
+
+  const getRowSpan = (photo: Photo) => {
+    const gridSpan = getGridSpanForPhoto(photo);
+    const match = gridSpan.match(/row-span-(\d+)/);
+    return match ? parseInt(match[1]) : 1;
+  };
+
   if (photos.length === 0) {
     return (
       <div className="text-center py-16">
@@ -314,6 +363,14 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
           <div
             key={photo.id}
             ref={(node) => observePhoto(node, photo.id)}
+            className={getGridSpanForPhoto(photo)}
+            style={{
+              // DEBUG: Force inline styles to bypass Tailwind issues
+              gridColumnEnd: `span ${getColSpan(photo)}`,
+              gridRowEnd: `span ${getRowSpan(photo)}`,
+              border: '2px solid orange',
+              minHeight: '120px',
+            }}
           >
             <PhotoItem
               photo={photo}
