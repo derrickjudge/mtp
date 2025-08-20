@@ -58,32 +58,32 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
       // Very wide panoramic (aspect > 2.0)
       result = 'col-span-4 row-span-1';
     } else if (aspectRatio > 1.6) {
-      // Wide landscape (aspect 1.6-2.0) 
-      result = variation === 0 ? 'col-span-3 row-span-1' : 'col-span-3 row-span-2';
+      // Wide landscape (aspect 1.6-2.0) - make very wide
+      result = variation === 0 ? 'col-span-4 row-span-1' : 'col-span-5 row-span-2';
     } else if (aspectRatio > 1.3) {
-      // Medium landscape (aspect 1.3-1.6)
-      result = variation === 0 ? 'col-span-2 row-span-1' : 'col-span-3 row-span-2';
+      // Medium landscape (aspect 1.3-1.6) - make wider
+      result = variation === 0 ? 'col-span-3 row-span-1' : 'col-span-4 row-span-2';
     } else if (aspectRatio > 1.1) {
-      // Slightly wide (aspect 1.1-1.3)
-      result = variation === 0 ? 'col-span-2 row-span-1' : 'col-span-2 row-span-2';
+      // Slightly wide (aspect 1.1-1.3) - make more obvious
+      result = variation === 0 ? 'col-span-3 row-span-1' : 'col-span-3 row-span-2';
     } else if (aspectRatio > 0.9) {
-      // Square or nearly square (aspect 0.9-1.1)
+      // Square or nearly square (aspect 0.9-1.1) - make differences more dramatic
       if (variation === 0) {
-        result = 'col-span-2 row-span-2'; // Large square
+        result = 'col-span-3 row-span-3'; // Large square - VERY obvious
       } else if (variation === 1) {
-        result = 'col-span-1 row-span-1'; // Small square
+        result = 'col-span-1 row-span-1'; // Small square - VERY obvious
       } else {
         result = 'col-span-2 row-span-2'; // Medium square
       }
     } else if (aspectRatio > 0.7) {
-      // Medium portrait (aspect 0.7-0.9)
-      result = variation === 0 ? 'col-span-1 row-span-2' : 'col-span-2 row-span-3';
+      // Medium portrait (aspect 0.7-0.9) - make taller
+      result = variation === 0 ? 'col-span-1 row-span-4' : 'col-span-2 row-span-5';
     } else if (aspectRatio > 0.5) {
-      // Tall portrait (aspect 0.5-0.7)
-      result = variation === 0 ? 'col-span-1 row-span-3' : 'col-span-2 row-span-4';
+      // Tall portrait (aspect 0.5-0.7) - make very tall
+      result = variation === 0 ? 'col-span-1 row-span-5' : 'col-span-2 row-span-6';
     } else {
-      // Very tall portrait (aspect < 0.5)
-      result = 'col-span-1 row-span-4';
+      // Very tall portrait (aspect < 0.5) - extremely tall
+      result = 'col-span-1 row-span-6';
     }
     
     console.log(`🎯 ${photo.title}: aspect=${aspectRatio.toFixed(2)} variation=${variation} → ${result}`);
@@ -104,7 +104,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
 
   if (!isVisible) {
     return (
-      <div className={`bg-gray-800 ${getGridSpan()}`} style={{ minHeight: '180px' }} />
+      <div className={`bg-gray-800 ${getGridSpan()}`} />
     );
   }
 
@@ -118,7 +118,6 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
         hover:opacity-80
       `}
       onClick={handleClick}
-      style={{ minHeight: '180px' }}
     >
       {/* Loading placeholder */}
       {!imageLoaded && !imageError && (
@@ -247,7 +246,7 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
           max-w-7xl mx-auto px-4
         "
         style={{
-          gridAutoRows: 'minmax(180px, auto)',
+          gridAutoRows: '150px', // Fixed row height for predictable spans
           gridAutoFlow: 'row dense', // Allow items to fill gaps
         }}
       >
