@@ -161,7 +161,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
           alt={photo.title}
           fill
           className={`
-            object-cover transition-all duration-700 ease-out
+            object-contain transition-all duration-700 ease-out
             ${imageLoaded ? 'opacity-100' : 'opacity-0'}
           `}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -352,7 +352,7 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
           max-w-7xl mx-auto px-4
         "
         style={{
-          gridAutoRows: '150px', // Fixed row height for predictable spans
+          gridAutoRows: '200px', // Increased row height for better aspect ratios
           gridAutoFlow: 'row dense', // Allow items to fill gaps
           minHeight: '600px', // DEBUG: Force minimum height
           border: '5px solid red', // DEBUG: Make container visible
