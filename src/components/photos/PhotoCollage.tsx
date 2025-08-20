@@ -86,17 +86,14 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
       result = 'col-span-1 row-span-4';
     }
     
-    console.log(`🎯 ${photo.title}: aspect=${aspectRatio.toFixed(2)} variation=${variation} → ${result}`);
     return result;
   };
 
   const handleImageLoad = () => {
-    console.log(`✅ Image loaded successfully: ${photo.title}`);
     setImageLoaded(true);
   };
 
   const handleImageError = () => {
-    console.log(`❌ Image failed to load: ${photo.title} - ${photo.url}`);
     setImageError(true);
   };
 
@@ -104,31 +101,9 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
     onPhotoClick(photo);
   };
 
-  // DEBUG: Log PhotoItem render state
-  console.log(`🔍 PhotoItem ${photo.title}:`, {
-    isVisible,
-    imageLoaded,
-    imageError,
-    gridSpan: getGridSpan(),
-    photoUrl: photo.url
-  });
-
   if (!isVisible) {
     return (
-      <div 
-        className={`bg-red-500 ${getGridSpan()}`}
-        style={{
-          border: '2px solid blue',
-          minHeight: '100px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontSize: '12px'
-        }}
-      >
-        NOT VISIBLE: {photo.title}
-      </div>
+      <div className={`bg-gray-800 ${getGridSpan()}`} />
     );
   }
 
@@ -140,14 +115,9 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
         ${getGridSpan()}
         ${imageLoaded ? 'opacity-100' : 'opacity-0'}
         hover:opacity-80
+        h-full w-full
       `}
       onClick={handleClick}
-      style={{
-        border: '3px solid green', // DEBUG: Make visible photos obvious
-        minHeight: '120px', // DEBUG: Force minimum height
-        height: '100%', // DEBUG: Fill the grid container completely
-        width: '100%', // DEBUG: Fill the grid container completely
-      }}
     >
       {/* Loading placeholder */}
       {!imageLoaded && !imageError && (
@@ -175,25 +145,12 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
         />
       )}
 
-      {/* Error fallback - DEBUG VERSION */}
+      {/* Error fallback */}
       {imageError && (
-        <div className="absolute inset-0 bg-red-600 flex items-center justify-center">
-          <div className="text-white text-center p-2">
-            <div className="text-4xl mb-2">❌</div>
-            <p className="text-xs font-bold">IMAGE ERROR</p>
-            <p className="text-xs">{photo.title}</p>
-            <p className="text-xs break-all">{photo.url}</p>
-          </div>
-        </div>
-      )}
-
-      {/* DEBUG: Show loading state */}
-      {!imageLoaded && !imageError && (
-        <div className="absolute inset-0 bg-purple-600 flex items-center justify-center text-white text-center">
-          <div>
-            <div className="text-2xl mb-2">🔄</div>
-            <p className="text-xs">LOADING</p>
-            <p className="text-xs">{photo.title}</p>
+        <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
+          <div className="text-gray-400 text-center">
+            <div className="text-4xl mb-2">📷</div>
+            <p className="text-sm">Image unavailable</p>
           </div>
         </div>
       )}
@@ -274,46 +231,27 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
     }
     
     const aspectRatio = photo.metadata.aspectRatio;
-    console.log(`📸 ${photo.title}: ${photo.metadata.width}x${photo.metadata.height} = ${aspectRatio.toFixed(2)} ratio`);
     
     // Create variation based on photo index for dramatic differences
     const photoIndex = photos.findIndex(p => p.id === photo.id);
     const variation = (photoIndex % 3) + 1; // 1, 2, or 3
     
-    let result: string;
-    
     if (aspectRatio > 1.4) {
       // Wide photos - vary dramatically by index
-      result = variation === 1 ? 'col-span-1 row-span-1' : 
-               variation === 2 ? 'col-span-3 row-span-2' : 
-               'col-span-4 row-span-1';
+      return variation === 1 ? 'col-span-1 row-span-1' : 
+             variation === 2 ? 'col-span-3 row-span-2' : 
+             'col-span-4 row-span-1';
     } else if (aspectRatio < 0.9) {
       // Tall photos - vary dramatically by index  
-      result = variation === 1 ? 'col-span-1 row-span-1' :
-               variation === 2 ? 'col-span-1 row-span-4' :
-               'col-span-2 row-span-3';
+      return variation === 1 ? 'col-span-1 row-span-1' :
+             variation === 2 ? 'col-span-1 row-span-4' :
+             'col-span-2 row-span-3';
     } else {
       // Square-ish photos - vary dramatically by index
-      result = variation === 1 ? 'col-span-1 row-span-1' :
-               variation === 2 ? 'col-span-2 row-span-2' :
-               'col-span-3 row-span-3';
+      return variation === 1 ? 'col-span-1 row-span-1' :
+             variation === 2 ? 'col-span-2 row-span-2' :
+             'col-span-3 row-span-3';
     }
-    
-    console.log(`🎯 ${photo.title}: aspect=${aspectRatio.toFixed(2)} variation=${variation} → ${result}`);
-    return result;
-  };
-
-  // DEBUG: Helper functions to extract span numbers for inline styles
-  const getColSpan = (photo: Photo) => {
-    const gridSpan = getGridSpanForPhoto(photo);
-    const match = gridSpan.match(/col-span-(\d+)/);
-    return match ? parseInt(match[1]) : 1;
-  };
-
-  const getRowSpan = (photo: Photo) => {
-    const gridSpan = getGridSpanForPhoto(photo);
-    const match = gridSpan.match(/row-span-(\d+)/);
-    return match ? parseInt(match[1]) : 1;
   };
 
   if (photos.length === 0) {
@@ -328,25 +266,9 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
     );
   }
 
-  // DEBUG: Add console logging
-  console.log('🔍 PhotoCollage render:', {
-    photosLength: photos.length,
-    visiblePhotosSize: visiblePhotos.size,
-    visiblePhotosArray: Array.from(visiblePhotos),
-    photosData: photos.map(p => ({ id: p.id, title: p.title, url: p.url }))
-  });
-
   return (
     <div className="w-full">
-      {/* DEBUG INFO */}
-      <div className="bg-yellow-300 text-black p-4 mb-4 text-sm">
-        <strong>🔍 DEBUG INFO:</strong><br/>
-        Photos Count: {photos.length}<br/>
-        Visible Photos: {visiblePhotos.size}<br/>
-        Photo IDs: {photos.map(p => p.title).join(', ')}
-      </div>
-
-      {/* Dynamic Masonry Grid - WITH DEBUG STYLING */}
+      {/* Dynamic Masonry Grid */}
       <div 
         className="
           grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6
@@ -354,11 +276,8 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
           max-w-7xl mx-auto px-4
         "
         style={{
-          gridAutoRows: '200px', // Increased row height for better aspect ratios
-          gridAutoFlow: 'row dense', // Allow items to fill gaps
-          minHeight: '600px', // DEBUG: Force minimum height
-          border: '5px solid red', // DEBUG: Make container visible
-          backgroundColor: 'rgba(255, 255, 0, 0.1)', // DEBUG: Light yellow background
+          gridAutoRows: '200px',
+          gridAutoFlow: 'row dense',
         }}
       >
         {photos.map((photo) => (
@@ -366,13 +285,6 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
             key={photo.id}
             ref={(node) => observePhoto(node, photo.id)}
             className={getGridSpanForPhoto(photo)}
-            style={{
-              // DEBUG: Force inline styles to bypass Tailwind issues
-              gridColumnEnd: `span ${getColSpan(photo)}`,
-              gridRowEnd: `span ${getRowSpan(photo)}`,
-              border: '2px solid orange',
-              minHeight: '120px',
-            }}
           >
             <PhotoItem
               photo={photo}
