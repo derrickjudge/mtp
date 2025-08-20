@@ -145,6 +145,8 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
       style={{
         border: '3px solid green', // DEBUG: Make visible photos obvious
         minHeight: '120px', // DEBUG: Force minimum height
+        height: '100%', // DEBUG: Fill the grid container completely
+        width: '100%', // DEBUG: Fill the grid container completely
       }}
     >
       {/* Loading placeholder */}
