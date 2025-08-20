@@ -26,6 +26,9 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
     let aspectRatio = 1; // Default square
     if (photo.metadata?.width && photo.metadata?.height) {
       aspectRatio = photo.metadata.width / photo.metadata.height;
+      console.log(`📸 ${photo.title}: ${photo.metadata.width}x${photo.metadata.height} = ${aspectRatio.toFixed(2)} ratio`);
+    } else {
+      console.log(`⚠️ ${photo.title}: No metadata available, using default square`);
     }
     
     // Add some variation using hash for photos with similar aspect ratios
@@ -37,47 +40,54 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
     
     // Featured photos get prominent placement based on their natural aspect ratio
     if (photo.featured) {
+      let result;
       if (aspectRatio > 1.5) {
-        return 'col-span-4 row-span-2'; // Large landscape hero
+        result = 'col-span-4 row-span-2'; // Large landscape hero
       } else if (aspectRatio < 0.7) {
-        return 'col-span-2 row-span-4'; // Large portrait hero  
+        result = 'col-span-2 row-span-4'; // Large portrait hero  
       } else {
-        return 'col-span-3 row-span-3'; // Large square hero
+        result = 'col-span-3 row-span-3'; // Large square hero
       }
+      console.log(`⭐ FEATURED ${photo.title}: aspect=${aspectRatio.toFixed(2)} → ${result}`);
+      return result;
     }
     
     // Size based on ACTUAL image proportions - this creates natural mosaic variations
+    let result;
     if (aspectRatio > 2.0) {
       // Very wide panoramic (aspect > 2.0)
-      return 'col-span-4 row-span-1';
+      result = 'col-span-4 row-span-1';
     } else if (aspectRatio > 1.6) {
       // Wide landscape (aspect 1.6-2.0) 
-      return variation === 0 ? 'col-span-3 row-span-1' : 'col-span-3 row-span-2';
+      result = variation === 0 ? 'col-span-3 row-span-1' : 'col-span-3 row-span-2';
     } else if (aspectRatio > 1.3) {
       // Medium landscape (aspect 1.3-1.6)
-      return variation === 0 ? 'col-span-2 row-span-1' : 'col-span-3 row-span-2';
+      result = variation === 0 ? 'col-span-2 row-span-1' : 'col-span-3 row-span-2';
     } else if (aspectRatio > 1.1) {
       // Slightly wide (aspect 1.1-1.3)
-      return variation === 0 ? 'col-span-2 row-span-1' : 'col-span-2 row-span-2';
+      result = variation === 0 ? 'col-span-2 row-span-1' : 'col-span-2 row-span-2';
     } else if (aspectRatio > 0.9) {
       // Square or nearly square (aspect 0.9-1.1)
       if (variation === 0) {
-        return 'col-span-2 row-span-2'; // Large square
+        result = 'col-span-2 row-span-2'; // Large square
       } else if (variation === 1) {
-        return 'col-span-1 row-span-1'; // Small square
+        result = 'col-span-1 row-span-1'; // Small square
       } else {
-        return 'col-span-2 row-span-2'; // Medium square
+        result = 'col-span-2 row-span-2'; // Medium square
       }
     } else if (aspectRatio > 0.7) {
       // Medium portrait (aspect 0.7-0.9)
-      return variation === 0 ? 'col-span-1 row-span-2' : 'col-span-2 row-span-3';
+      result = variation === 0 ? 'col-span-1 row-span-2' : 'col-span-2 row-span-3';
     } else if (aspectRatio > 0.5) {
       // Tall portrait (aspect 0.5-0.7)
-      return variation === 0 ? 'col-span-1 row-span-3' : 'col-span-2 row-span-4';
+      result = variation === 0 ? 'col-span-1 row-span-3' : 'col-span-2 row-span-4';
     } else {
       // Very tall portrait (aspect < 0.5)
-      return 'col-span-1 row-span-4';
+      result = 'col-span-1 row-span-4';
     }
+    
+    console.log(`🎯 ${photo.title}: aspect=${aspectRatio.toFixed(2)} variation=${variation} → ${result}`);
+    return result;
   };
 
   const handleImageLoad = () => {
