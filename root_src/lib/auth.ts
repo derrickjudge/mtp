@@ -79,6 +79,13 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
+      // TEMPORARY FIX: Disable database query to prevent SSR failures
+      // Return previous token without database validation
+      console.log('🔍 [JWT] Returning existing token without database query');
+      return token;
+
+      // COMMENTED OUT: This database query was causing SSR failures
+      /*
       // Return previous token if the access token has not expired yet
       if (token.email) {
         try {
@@ -100,6 +107,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       return token;
+      */
     },
   },
 }; 
