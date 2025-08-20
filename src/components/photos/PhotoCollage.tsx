@@ -133,7 +133,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
           alt={photo.title}
           fill
           className={`
-            object-contain transition-all duration-700 ease-out
+            object-cover transition-all duration-700 ease-out
             ${imageLoaded ? 'opacity-100' : 'opacity-0'}
           `}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -224,33 +224,47 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
     }
   }, []);
 
-  // Helper to get grid span for a photo
+  // Helper to get grid span for a photo based on aspect ratio
   const getGridSpanForPhoto = (photo: Photo) => {
     if (!photo.metadata?.aspectRatio) {
       return 'col-span-1 row-span-1';
     }
     
     const aspectRatio = photo.metadata.aspectRatio;
-    
-    // Create variation based on photo index for dramatic differences
     const photoIndex = photos.findIndex(p => p.id === photo.id);
-    const variation = (photoIndex % 3) + 1; // 1, 2, or 3
+    const variation = photoIndex % 4; // 0, 1, 2, 3 for more variety
     
-    if (aspectRatio > 1.4) {
-      // Wide photos - vary dramatically by index
-      return variation === 1 ? 'col-span-1 row-span-1' : 
-             variation === 2 ? 'col-span-3 row-span-2' : 
-             'col-span-4 row-span-1';
-    } else if (aspectRatio < 0.9) {
-      // Tall photos - vary dramatically by index  
-      return variation === 1 ? 'col-span-1 row-span-1' :
-             variation === 2 ? 'col-span-1 row-span-4' :
-             'col-span-2 row-span-3';
-    } else {
-      // Square-ish photos - vary dramatically by index
-      return variation === 1 ? 'col-span-1 row-span-1' :
+    // Make grid containers match aspect ratios better to minimize grey space
+    if (aspectRatio > 1.8) {
+      // Very wide photos (panoramic)
+      return variation === 0 ? 'col-span-3 row-span-1' : 
+             variation === 1 ? 'col-span-4 row-span-1' : 
+             variation === 2 ? 'col-span-2 row-span-1' :
+             'col-span-3 row-span-2';
+    } else if (aspectRatio > 1.3) {
+      // Wide photos
+      return variation === 0 ? 'col-span-2 row-span-1' : 
+             variation === 1 ? 'col-span-3 row-span-2' : 
              variation === 2 ? 'col-span-2 row-span-2' :
-             'col-span-3 row-span-3';
+             'col-span-3 row-span-1';
+    } else if (aspectRatio < 0.6) {
+      // Very tall photos
+      return variation === 0 ? 'col-span-1 row-span-3' : 
+             variation === 1 ? 'col-span-1 row-span-4' : 
+             variation === 2 ? 'col-span-2 row-span-4' :
+             'col-span-1 row-span-3';
+    } else if (aspectRatio < 0.9) {
+      // Tall photos
+      return variation === 0 ? 'col-span-1 row-span-2' : 
+             variation === 1 ? 'col-span-1 row-span-3' : 
+             variation === 2 ? 'col-span-2 row-span-3' :
+             'col-span-1 row-span-2';
+    } else {
+      // Square-ish photos
+      return variation === 0 ? 'col-span-1 row-span-1' : 
+             variation === 1 ? 'col-span-2 row-span-2' : 
+             variation === 2 ? 'col-span-1 row-span-1' :
+             'col-span-2 row-span-2';
     }
   };
 
@@ -276,7 +290,7 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
           max-w-7xl mx-auto px-4
         "
         style={{
-          gridAutoRows: '200px',
+          gridAutoRows: '180px',
           gridAutoFlow: 'row dense',
         }}
       >
