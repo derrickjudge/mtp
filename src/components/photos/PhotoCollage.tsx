@@ -20,54 +20,63 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Determine grid span with dramatic variations (no metadata needed)
+  // Determine grid span based on ACTUAL image aspect ratios for true mosaic layout
   const getGridSpan = () => {
-    // Create dramatic variation using photo ID for consistency
-    const hash = photo.id.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    // Use metadata if available (future enhancement)
-    let aspectRatio = 1;
+    // Extract actual aspect ratio from metadata
+    let aspectRatio = 1; // Default square
     if (photo.metadata?.width && photo.metadata?.height) {
       aspectRatio = photo.metadata.width / photo.metadata.height;
     }
     
-    // Featured photos get prominent placement
+    // Add some variation using hash for photos with similar aspect ratios
+    const hash = photo.id.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    const variation = Math.abs(hash) % 3; // 0, 1, or 2 for size variations
+    
+    // Featured photos get prominent placement based on their natural aspect ratio
     if (photo.featured) {
-      const featuredVariations = [
-        'col-span-3 row-span-3', // Large square hero
-        'col-span-3 row-span-2', // Large landscape hero  
-        'col-span-2 row-span-4', // Large portrait hero
-        'col-span-4 row-span-2', // Extra wide hero
-      ];
-      return featuredVariations[Math.abs(hash) % featuredVariations.length];
+      if (aspectRatio > 1.5) {
+        return 'col-span-4 row-span-2'; // Large landscape hero
+      } else if (aspectRatio < 0.7) {
+        return 'col-span-2 row-span-4'; // Large portrait hero  
+      } else {
+        return 'col-span-3 row-span-3'; // Large square hero
+      }
     }
     
-    // Create dramatic size variations for regular photos
-    const sizeIndex = Math.abs(hash) % 20; // 20 different size patterns
-    
-    if (sizeIndex < 2) {
-      return 'col-span-3 row-span-1'; // Panoramic landscape
-    } else if (sizeIndex < 4) {
-      return 'col-span-1 row-span-4'; // Very tall portrait
-    } else if (sizeIndex < 6) {
-      return 'col-span-2 row-span-3'; // Large vertical rectangle
-    } else if (sizeIndex < 8) {
-      return 'col-span-3 row-span-2'; // Large horizontal rectangle
-    } else if (sizeIndex < 10) {
-      return 'col-span-2 row-span-2'; // Medium square
-    } else if (sizeIndex < 12) {
-      return 'col-span-1 row-span-3'; // Tall portrait
-    } else if (sizeIndex < 14) {
-      return 'col-span-2 row-span-1'; // Wide landscape
-    } else if (sizeIndex < 16) {
-      return 'col-span-1 row-span-2'; // Medium portrait
-    } else if (sizeIndex < 18) {
-      return 'col-span-1 row-span-1'; // Small square
+    // Size based on ACTUAL image proportions - this creates natural mosaic variations
+    if (aspectRatio > 2.0) {
+      // Very wide panoramic (aspect > 2.0)
+      return 'col-span-4 row-span-1';
+    } else if (aspectRatio > 1.6) {
+      // Wide landscape (aspect 1.6-2.0) 
+      return variation === 0 ? 'col-span-3 row-span-1' : 'col-span-3 row-span-2';
+    } else if (aspectRatio > 1.3) {
+      // Medium landscape (aspect 1.3-1.6)
+      return variation === 0 ? 'col-span-2 row-span-1' : 'col-span-3 row-span-2';
+    } else if (aspectRatio > 1.1) {
+      // Slightly wide (aspect 1.1-1.3)
+      return variation === 0 ? 'col-span-2 row-span-1' : 'col-span-2 row-span-2';
+    } else if (aspectRatio > 0.9) {
+      // Square or nearly square (aspect 0.9-1.1)
+      if (variation === 0) {
+        return 'col-span-2 row-span-2'; // Large square
+      } else if (variation === 1) {
+        return 'col-span-1 row-span-1'; // Small square
+      } else {
+        return 'col-span-2 row-span-2'; // Medium square
+      }
+    } else if (aspectRatio > 0.7) {
+      // Medium portrait (aspect 0.7-0.9)
+      return variation === 0 ? 'col-span-1 row-span-2' : 'col-span-2 row-span-3';
+    } else if (aspectRatio > 0.5) {
+      // Tall portrait (aspect 0.5-0.7)
+      return variation === 0 ? 'col-span-1 row-span-3' : 'col-span-2 row-span-4';
     } else {
-      return 'col-span-2 row-span-2'; // Medium square
+      // Very tall portrait (aspect < 0.5)
+      return 'col-span-1 row-span-4';
     }
   };
 
