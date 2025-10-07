@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import PortfolioPage from '@/app/portfolio/page';
 
 // Mock the Image component
@@ -20,37 +20,44 @@ jest.mock('@/components/common/GalleryGrid', () => ({
 }));
 
 describe('PortfolioPage', () => {
-  it('renders the hero section', () => {
+  beforeEach(() => {
+    // Mock fetch for categories and photos
+    jest.spyOn(global, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/categories')) {
+        return {
+          ok: true,
+          json: async () => [],
+        } as any;
+      }
+      if (url.includes('/api/photos')) {
+        return {
+          ok: true,
+          json: async () => ({ photos: [] }),
+        } as any;
+      }
+      return { ok: true, json: async () => ({}) } as any;
+    });
+  });
+
+  afterEach(() => {
+    (global.fetch as jest.Mock).mockRestore();
+  });
+
+  it('renders the hero and loading states, then empty state', async () => {
     render(<PortfolioPage />);
+
     expect(screen.getByText('Portfolio')).toBeInTheDocument();
-    expect(screen.getByText('Explore our photography collections')).toBeInTheDocument();
-    expect(screen.getByAltText('MTP Collective Portfolio')).toBeInTheDocument();
-  });
+    expect(
+      screen.getByText(/Explore our photography collections/i)
+    ).toBeInTheDocument();
 
-  it('renders the concert photography section', () => {
-    render(<PortfolioPage />);
-    expect(screen.getByText('Concert Photography')).toBeInTheDocument();
-    expect(screen.getByText(/Capturing the energy and emotion of live performances/i)).toBeInTheDocument();
-    expect(screen.getByText('Live Performance')).toBeInTheDocument();
-    expect(screen.getByText('Stage Presence')).toBeInTheDocument();
-    expect(screen.getByText('Crowd Energy')).toBeInTheDocument();
-  });
+    // Loading indicator first
+    expect(screen.getByText('Loading photos...')).toBeInTheDocument();
 
-  it('renders the automotive photography section', () => {
-    render(<PortfolioPage />);
-    expect(screen.getByText('Automotive Photography')).toBeInTheDocument();
-    expect(screen.getByText(/Showcasing the beauty and power of automotive design/i)).toBeInTheDocument();
-    expect(screen.getByText('Classic Beauty')).toBeInTheDocument();
-    expect(screen.getByText('Modern Lines')).toBeInTheDocument();
-    expect(screen.getByText('Speed and Grace')).toBeInTheDocument();
+    // Then empty state once fetch resolves
+    await waitFor(() => {
+      expect(screen.getByText(/No Photos Available/i)).toBeInTheDocument();
+    });
   });
-
-  it('renders the nature photography section', () => {
-    render(<PortfolioPage />);
-    expect(screen.getByText('Nature Photography')).toBeInTheDocument();
-    expect(screen.getByText(/Exploring the beauty and wonder of the natural world/i)).toBeInTheDocument();
-    expect(screen.getByText('Mountain Majesty')).toBeInTheDocument();
-    expect(screen.getByText('Forest Serenity')).toBeInTheDocument();
-    expect(screen.getByText('Ocean Wonders')).toBeInTheDocument();
-  });
-}); 
+});

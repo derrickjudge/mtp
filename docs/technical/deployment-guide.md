@@ -30,6 +30,8 @@ Set up all the required environment variables as defined in the `docs/env-exampl
 - `R2_ENDPOINT`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
+- `NEXTAUTH_SECRET`
+- `ADMIN_IP_ALLOWLIST` (optional; comma-separated list or empty)
 
 ### 3. Configure Build Settings
 

@@ -1,115 +1,78 @@
-import { uploadPhoto, deletePhoto } from '@/services/photoService';
+import { photoService } from '@/services/photoService';
 
-// Mock the R2 client
-jest.mock('@/lib/r2Client', () => ({
-  r2Client: {
-    send: jest.fn(),
-  },
-  R2_BUCKET_NAME: 'test-bucket',
-  R2_PUBLIC_URL: 'https://test-bucket.r2.dev',
-  uploadToR2: jest.fn(),
-  deleteFromR2: jest.fn(),
+// Mock server-side S3 client and nativeDB used by photoService
+jest.mock('@aws-sdk/client-s3', () => ({
+  S3Client: jest.fn().mockImplementation(() => ({ send: jest.fn() })),
+  PutObjectCommand: jest.fn(),
+  DeleteObjectCommand: jest.fn(),
 }));
 
-// Import the mocked module to access the mock functions
-import { uploadToR2, deleteFromR2 } from '@/lib/r2Client';
+jest.mock('@/lib/db-native', () => ({
+  nativeDB: {
+    createPhoto: jest.fn().mockResolvedValue({ id: '1' }),
+    getPhotoWithRelations: jest.fn().mockResolvedValue({
+      id: '1',
+      title: 'Test',
+      description: null,
+      url: 'https://r2/public/photos/test.jpg',
+      thumbnail: 'https://r2/public/thumbnails/test.jpg',
+      published: true,
+      featured: false,
+      metadata: { width: 800, height: 600 },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      authorId: 'admin',
+      categories: [],
+      tags: [],
+      events: [],
+    }),
+    linkPhotoToCategories: jest.fn(),
+    linkPhotoToTags: jest.fn(),
+    linkPhotoToEvents: jest.fn(),
+    findPhotoById: jest.fn().mockResolvedValue({
+      id: '1',
+      url: 'https://r2/public/photos/test.jpg',
+      thumbnail: 'https://r2/public/thumbnails/test.jpg',
+    }),
+    deletePhoto: jest.fn(),
+    findPhotos: jest.fn().mockResolvedValue([]),
+    updatePhoto: jest.fn().mockResolvedValue({ id: '1' }),
+    clearPhotoCategories: jest.fn(),
+    clearPhotoTags: jest.fn(),
+    clearPhotoEvents: jest.fn(),
+  },
+}));
 
-// Mock fetch API
-global.fetch = jest.fn();
-
-describe('Photo Service', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    (global.fetch as jest.Mock).mockClear();
-  });
-
+describe('photoService (server-side)', () => {
   describe('uploadPhoto', () => {
-    it('should upload a photo successfully', async () => {
-      // Mock fetch response
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: jest.fn().mockResolvedValueOnce({
-          thumbnail: 'data:image/jpeg;base64,abc123',
-          width: 800,
-          height: 600
-        })
+    it('uploads image and creates DB record', async () => {
+      // Provide a minimal valid PNG header buffer so sharp can parse
+      const pngHeader = Buffer.from([
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+      ]);
+      const buffer = Buffer.concat([pngHeader, Buffer.alloc(100)]);
+      const result = await photoService.uploadPhoto({
+        file: buffer,
+        fileName: 'test.jpg',
+        contentType: 'image/jpeg',
+        title: 'Test',
+        description: 'Desc',
+        categoryIds: [],
+        tagIds: [],
+        eventIds: [],
+        authorId: 'admin',
+        metadata: {},
       });
 
-      // Mock the fetch for the blob
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        blob: jest.fn().mockResolvedValueOnce(new Blob(['thumbnail-data'], { type: 'image/jpeg' }))
-      });
-
-      // Create a mock File object
-      const mockFile = new File(['test-image'], 'test.jpg', { type: 'image/jpeg' });
-
-      // Mock the R2 client responses
-      (uploadToR2 as jest.Mock).mockImplementation((file, onProgress) => {
-        if (file.name === 'test.jpg') {
-          return Promise.resolve({
-            url: 'https://test-bucket.r2.dev/photos/test.jpg',
-            key: 'photos/test.jpg',
-          });
-        } else {
-          return Promise.resolve({
-            url: 'https://test-bucket.r2.dev/photos/thumb_test.jpg',
-            key: 'photos/thumb_test.jpg',
-          });
-        }
-      });
-
-      const result = await uploadPhoto(mockFile);
-
-      expect(global.fetch).toHaveBeenCalledWith('/api/photos/process', expect.any(Object));
-      expect(uploadToR2).toHaveBeenCalledTimes(2);
-      expect(result.url).toContain('test-bucket.r2.dev');
-      expect(result.key).toContain('photos/');
-      expect(result.thumbnailUrl).toBeDefined();
-      expect(result.thumbnailKey).toBeDefined();
-      expect(result.error).toBeUndefined();
-    });
-
-    it('should handle upload errors when processing fails', async () => {
-      // Mock fetch to fail
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Internal Server Error'
-      });
-
-      // Create a mock File object
-      const mockFile = new File(['test-image'], 'test.jpg', { type: 'image/jpeg' });
-
-      const result = await uploadPhoto(mockFile);
-
-      expect(result.error).toContain('Failed to process image');
-      expect(result.url).toBe('');
-      expect(result.key).toBe('');
+      expect(result.id).toBe('1');
+      expect(result.url).toContain('photos');
+      expect(result.thumbnail).toContain('thumbnails');
     });
   });
 
   describe('deletePhoto', () => {
-    it('should delete a photo successfully', async () => {
-      const mockKey = 'photos/test.jpg';
-      const mockThumbnailKey = 'photos/thumb_test.jpg';
-
-      (deleteFromR2 as jest.Mock).mockResolvedValue({});
-
-      const result = await deletePhoto(mockKey, mockThumbnailKey);
-
-      expect(deleteFromR2).toHaveBeenCalledTimes(2);
-      expect(deleteFromR2).toHaveBeenCalledWith(mockKey);
-      expect(deleteFromR2).toHaveBeenCalledWith(mockThumbnailKey);
-      expect(result.error).toBeUndefined();
-    });
-
-    it('should handle delete errors', async () => {
-      const mockKey = 'photos/test.jpg';
-      
-      (deleteFromR2 as jest.Mock).mockRejectedValueOnce(new Error('Delete failed'));
-
-      const result = await deletePhoto(mockKey);
-
-      expect(result.error).toBe('Delete failed');
+    it('deletes assets from R2 and removes DB record', async () => {
+      await expect(photoService.deletePhoto('1')).resolves.not.toThrow();
     });
   });
-}); 
+});

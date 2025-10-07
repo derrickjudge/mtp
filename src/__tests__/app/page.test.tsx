@@ -40,8 +40,13 @@ jest.mock('@/components/common/Image', () => ({
 }));
 
 describe('HomePage', () => {
-  it('renders the hero section', () => {
-    render(<HomePage />);
+  it('renders the hero section', async () => {
+    // Mock DB to return no data for deterministic UI
+    const { nativeDB } = require('@/lib/db-native');
+    nativeDB.findPhotos.mockResolvedValueOnce([]); // featured
+    nativeDB.findCategories.mockResolvedValueOnce([]); // categories
+    const ui = await HomePage();
+    render(ui as unknown as React.ReactElement);
     expect(screen.getByRole('main')).toBeInTheDocument();
     // Use getAllByText to handle multiple instances
     expect(screen.getAllByText(/MTP Collective/i)[0]).toBeInTheDocument();
@@ -49,24 +54,36 @@ describe('HomePage', () => {
     expect(screen.getByText(/Capturing moments through a unique lens/i)).toBeInTheDocument();
   });
 
-  it('renders the featured photos section', () => {
-    render(<HomePage />);
+  it('renders the featured photos section', async () => {
+    const { nativeDB } = require('@/lib/db-native');
+    nativeDB.findPhotos.mockResolvedValueOnce([]);
+    nativeDB.findCategories.mockResolvedValueOnce([]);
+    const ui = await HomePage();
+    render(ui as unknown as React.ReactElement);
     expect(screen.getByText('Featured Photos')).toBeInTheDocument();
     const featuredSection = screen.getByText('Featured Photos').closest('section');
     expect(featuredSection).toBeInTheDocument();
   });
 
-  it('renders the specialties section', () => {
-    render(<HomePage />);
+  it('renders the specialties section empty state when no categories/photos', async () => {
+    const { nativeDB } = require('@/lib/db-native');
+    nativeDB.findPhotos.mockResolvedValueOnce([]); // featured
+    nativeDB.findCategories.mockResolvedValueOnce([]); // categories
+    const ui = await HomePage();
+    render(ui as unknown as React.ReactElement);
     expect(screen.getByText('Our Specialties')).toBeInTheDocument();
-    // Update to match actual text in the component
-    expect(screen.getByText('concert')).toBeInTheDocument();
-    expect(screen.getByText('automotive')).toBeInTheDocument();
-    expect(screen.getByText('nature')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Our photography specialties are being curated/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText('View Portfolio')).toBeInTheDocument();
   });
 
-  it('renders the about section', () => {
-    render(<HomePage />);
+  it('renders the about section', async () => {
+    const { nativeDB } = require('@/lib/db-native');
+    nativeDB.findPhotos.mockResolvedValueOnce([]);
+    nativeDB.findCategories.mockResolvedValueOnce([]);
+    const ui = await HomePage();
+    render(ui as unknown as React.ReactElement);
     // Update to match actual text in the component
     expect(screen.getByText('About MTP Collective')).toBeInTheDocument();
     expect(screen.getByText(/We are a collective of passionate photographers/i)).toBeInTheDocument();
@@ -74,8 +91,12 @@ describe('HomePage', () => {
     expect(screen.getByText(/Our mission is to create timeless images/i)).toBeInTheDocument();
   });
 
-  it('applies correct styling classes', () => {
-    render(<HomePage />);
+  it('applies correct styling classes', async () => {
+    const { nativeDB } = require('@/lib/db-native');
+    nativeDB.findPhotos.mockResolvedValueOnce([]);
+    nativeDB.findCategories.mockResolvedValueOnce([]);
+    const ui = await HomePage();
+    render(ui as unknown as React.ReactElement);
     
     // Check main container
     const mainContainer = screen.getByRole('main');
