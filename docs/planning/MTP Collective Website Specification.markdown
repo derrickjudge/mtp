@@ -1,33 +1,32 @@
-# Detailed Website Specification for MTP Collective Photography
+# Detailed Website Specification for MTP Collective Photography — v2 (October 2025)
 
 ## Introduction
-This specification outlines the plan for building a custom website for MTP Collective or Monkey Take Photo, a photography business focused on concerts, cars, and nature. The site will reflect the edgy, youthful style of a male photographer in his early 20s, allow photo uploads and categorization, and ensure a seamless experience on desktop and mobile devices. Built from scratch without platforms like WordPress, the site will leverage modern web technologies and AI-assisted coding to meet your technical preferences.
+This specification updates the plan to focus the brand and IA on Sports, Music, and Street photography with Events as curated sets. The site reflects an edgy but professional aesthetic (dark UI with a pop accent), prioritizes speed, infinite scroll, and clean contact paths.
 
 ## Requirements
 
 ### Functional Requirements
-- **Photo Management:**
-  - Upload photos with metadata (title, description, category, tags).
-  - Categorize photos by themes (Concerts, Cars, Nature) or specific events.
-  - Search or filter photos by category, event, or tags.
-- **Gallery Display:**
-  - Grid-based gallery with thumbnails for each category.
-  - Lightbox or modal for viewing full-size images with descriptions.
-  - Responsive layout adapting to different screen sizes.
-- **User Interface:**
-  - Admin interface for photo uploads and management, secured with authentication.
-  - Public-facing gallery with intuitive navigation and filtering options.
-- **Additional Features (Optional):**
-  - Blog section for sharing shoot stories or tips.
-  - Shop for selling prints, integrated with payment gateways like Stripe.
-  - Client area for private galleries, if needed.
+- **Portfolio:**
+  - Categories limited to Sports, Music, Street.
+  - Infinite-scroll, masonry-like grid preserving image aspect ratios (no forced crops).
+  - Lightbox for detail view; search/filter by category and tags.
+- **Events:**
+  - Event detail page: brief writeup + curated photo set.
+  - Manual ordering of photos per event (`position`), and `is_top_selection` to prioritize.
+- **Admin:**
+  - Bulk uploads; auto-categorization by folder name.
+  - Quick-apply tag presets (e.g., athletics, D1, night game).
+  - CRUD for photos, categories (Sports/Music/Street), tags, events; drag-and-drop event ordering.
+- **Privacy/UX:**
+  - Disable right-click downloads; keep EXIF but never display publicly.
+- **Articles:** Disabled for now to focus on photography and events.
 
 ### Non-Functional Requirements
-- **Performance:** Fast-loading images using lazy loading and optimization techniques.
-- **Scalability:** Cloud storage for photos to handle growing collections.
-- **Security:** Secure admin access and HTTPS for data protection.
-- **SEO:** Optimized for search engines with meta tags and alt texts.
-- **Accessibility:** Basic accessibility features like keyboard navigation and alt texts.
+- **Performance:** sharp-based resizing, responsive `sizes`, lazy loading, intersection observers; high Lighthouse perf.
+- **Scalability:** Cloudflare R2 object storage; server-side uploads only.
+- **Security:** NextAuth JWT auth, API rate limiting, optional admin IP allowlist; HTTPS.
+- **SEO:** Route metadata, OpenGraph, JSON-LD (`ImageObject`, `Event`, `Article`), sitemap/robots; clean URLs.
+- **Accessibility:** Reasonable defaults and reduced-motion support.
 
 ### Design Requirements
 - **Aesthetic:** Edgy, youthful vibe with dark themes, vibrant accents, and bold typography.
@@ -37,98 +36,45 @@ This specification outlines the plan for building a custom website for MTP Colle
 ## Website Architecture
 
 ### Pages
-| Page        | Description                                                                 |
-|-------------|-----------------------------------------------------------------------------|
-| **Home**    | Hero section with a striking photo or slideshow, intro text, and category links. |
-| **Portfolio**| Subdivided into Concerts, Cars, Nature; grid of thumbnails with lightbox view. |
-| **About**   | Photographer’s bio, style, and behind-the-scenes photos.                     |
-| **Contact** | Contact form, email, phone, and social media links.                          |
-| **Blog**    | Optional; for sharing stories or updates (if desired).                       |
-| **Shop**    | Optional; for selling prints with payment integration (if desired).          |
+| Page         | Description                                                                 |
+|--------------|-----------------------------------------------------------------------------|
+| **Home**     | Hero; latest/featured strips per category; CTA to About/Contact.           |
+| **Portfolio**| Categories: Sports, Music, Street; infinite-scroll masonry grid + lightbox. |
+| **Events**   | List of events; detail pages with writeup and curated ordered set.          |
+| **About**    | Bio + “What I provide when shooting your event”; social links.              |
+| **Contact**  | Simple contact form; spam protection; social links.                         |
 
-### Relational Database Model (MySQL)
 
-#### Tables Structure
+### Data Model (PostgreSQL, native SQL at runtime)
 
-**photos**
-```sql
-CREATE TABLE photos (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  title VARCHAR(255) NOT NULL,
-  description TEXT,
-  category_id INT NOT NULL,
-  upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-  file_url VARCHAR(512) NOT NULL,
-  thumbnail_url VARCHAR(512) NOT NULL,
-  width INT DEFAULT 1200,
-  height INT DEFAULT 800,
-  FOREIGN KEY (category_id) REFERENCES categories(id)
-);
-```
+- Use existing tables (`Photo`, `Category`, `Tag`, `Event`, `User`) as in codebase.
+- Add join table enhancements for event ordering and top picks:
+  ```sql
+  -- EventPhotos join table extension
+  ALTER TABLE "_EventToPhoto" ADD COLUMN position INT DEFAULT 0; -- if custom join table exists, otherwise create one
+  ALTER TABLE "_EventToPhoto" ADD COLUMN is_top_selection BOOLEAN DEFAULT FALSE;
+  ```
 
-**categories**
-```sql
-CREATE TABLE categories (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(100) NOT NULL UNIQUE,
-  description TEXT NOT NULL
-);
-```
-
-**photo_tags** (Junction table for many-to-many relationship)
-```sql
-CREATE TABLE photo_tags (
-  photo_id INT NOT NULL,
-  tag_id INT NOT NULL,
-  PRIMARY KEY (photo_id, tag_id),
-  FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE,
-  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-);
-```
-
-**tags**
-```sql
-CREATE TABLE tags (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(50) NOT NULL UNIQUE
-);
-```
-
-**users** (if authentication is used)
-```sql
-CREATE TABLE users (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  username VARCHAR(50) NOT NULL UNIQUE,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
-  role ENUM('admin', 'editor', 'viewer') DEFAULT 'viewer',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
+- Tags: continue many-to-many with simple presets managed in admin.
 
 ## Technical Stack
 
 ### Frontend
-- **Framework:** React.js with Next.js for server-side rendering and SEO benefits ([Next.js](https://nextjs.org/)).
-- **Styling:** Tailwind CSS for rapid, responsive design ([Tailwind CSS](https://tailwindcss.com/)).
-- **Libraries:**
-  - React Photo Gallery for gallery grids.
-  - React Lightbox for full-size image views.
-  - React Dropzone for file uploads.
+- Next.js (App Router) + React
+- Tailwind CSS
+- Lightbox and masonry-like layout using CSS columns + IntersectionObserver
 
 ### Backend
-- **Framework:** Node.js with Express.js or Next.js API routes for simplicity.
-- **Database:** MongoDB for flexible, schema-less storage ([MongoDB](https://www.mongodb.com/)).
-- **Authentication:** JSON Web Tokens (JWT) for secure admin access.
+- Next.js API routes; NextAuth (JWT) with admin role
+- Native SQL via `nativeDB`
 
 ### Storage
-- **Cloud Storage:** AWS S3 for scalable photo storage ([AWS S3](https://aws.amazon.com/s3/)).
-- **Thumbnails:** Generate and store smaller images for faster loading.
+- Cloudflare R2 via AWS SDK S3-compatible client
+- Image processing with `sharp` for responsive sizes and thumbnails
 
 ### Deployment
-- **Hosting:** Vercel for Next.js apps or AWS for full control ([Vercel](https://vercel.com/)).
-- **CDN:** Cloudflare for faster asset delivery ([Cloudflare](https://www.cloudflare.com/)).
-- **Domain:** Purchase a custom domain and set up SSL for security.
+- Vercel; Cloudflare R2
+- Environment variables per env; sitemap/robots
 
 ## Design Guidelines
 - **Color Scheme:** Dark background (e.g., black or charcoal) with vibrant accents (e.g., neon red, electric blue) to reflect concert energy and nature’s vibrancy.
@@ -136,12 +82,12 @@ CREATE TABLE users (
 - **Layout:** Asymmetrical or dynamic layouts with subtle animations (e.g., hover effects, parallax scrolling).
 - **Imagery:** Use high-quality photos as hero images or backgrounds, optimized for web with tools like TinyPNG ([TinyPNG](https://tinypng.com/)).
 
-## Development Plan
+## Development Plan (Docs-focused excerpt)
 
 ### Phase 1: Planning
 - **Define Scope:** Confirm desired features (e.g., blog, shop) and design preferences.
 - **Wireframes:** Create mockups for each page using tools like Figma ([Figma](https://www.figma.com/)).
-- **Tech Setup:** Initialize project with Next.js, MongoDB, and AWS S3.
+- **Tech Setup:** Confirm R2 env, ensure native SQL consolidation, remove Prisma runtime.
 
 ### Phase 2: Frontend Development
 - Set up Next.js project and Tailwind CSS.
@@ -150,10 +96,9 @@ CREATE TABLE users (
 - Integrate with backend APIs for dynamic content.
 
 ### Phase 3: Backend Development
-- Develop API endpoints for photo upload, retrieval, and categorization.
-- Connect to MongoDB for data persistence.
-- Set up AWS S3 for photo storage and thumbnail generation.
-- Implement JWT-based authentication for admin interface.
+- Develop/confirm API endpoints for photos/events/tags/categories/users.
+- Ensure server-side-only R2 uploads; sharp processing; accept `tagIds`.
+- Add rate limiting utility; optional admin IP allowlist.
 
 ### Phase 4: Admin Interface
 - Create a protected admin page for photo management.
@@ -161,9 +106,7 @@ CREATE TABLE users (
 - Ensure secure access with login functionality.
 
 ### Phase 5: Optimization
-- Implement lazy loading for images using React libraries.
-- Optimize images with compression tools.
-- Use caching for static assets via CDN.
+- Lazy loading and responsive `sizes`; sharp variants; CDN via Vercel/Cloudflare.
 
 ### Phase 6: Testing
 - Test on multiple devices (desktop, tablet, mobile) and browsers (Chrome, Firefox, Safari).

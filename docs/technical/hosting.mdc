@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## Server and Hosting Management
 - Site is hosted on Vercel
-- Will use Supabase as a database which is already deployed through vercel
+- Database is PostgreSQL accessed via native client (`nativeDB`) — no Supabase Auth
 - Will use Cloudflare R2 for object storage and is provisioned
 - Be proactive about checking if the server is running locally before asking to test
 - Ensure there are not multiple versions of the server running locally
@@ -25,7 +25,7 @@ alwaysApply: false
 
 ## Database Access Patterns
 - **API Routes should use `photoService`** for all photo-related operations
-  - Handles file uploads to R2/S3 storage
+  - Handles file uploads to Cloudflare R2 storage
   - Processes images (resize, thumbnails) with Sharp
   - Manages photo-category and photo-tag relationships
   - Provides proper data transformation for API responses
