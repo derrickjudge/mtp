@@ -29,6 +29,8 @@ Photo uploads require Cloudflare R2 configuration. See the [R2 Setup Guide](./se
    - `R2_ENDPOINT`
    - `R2_ACCESS_KEY_ID`
    - `R2_SECRET_ACCESS_KEY`
+   - `NEXTAUTH_SECRET`
+   - `ADMIN_IP_ALLOWLIST` (optional)
 
 ### **3. Current Status**
 

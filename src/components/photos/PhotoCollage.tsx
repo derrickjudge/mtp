@@ -20,74 +20,9 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Determine grid span based on ACTUAL image aspect ratios for true mosaic layout
-  const getGridSpan = () => {
-    // Extract actual aspect ratio from metadata
-    let aspectRatio = 1; // Default square
-    if (photo.metadata?.width && photo.metadata?.height) {
-      aspectRatio = photo.metadata.width / photo.metadata.height;
-      console.log(`📸 ${photo.title}: ${photo.metadata.width}x${photo.metadata.height} = ${aspectRatio.toFixed(2)} ratio`);
-    } else {
-      console.log(`⚠️ ${photo.title}: No metadata available, using default square`);
-    }
-    
-    // Add some variation using hash for photos with similar aspect ratios
-    const hash = photo.id.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    const variation = Math.abs(hash) % 3; // 0, 1, or 2 for size variations
-    
-    // Featured photos get prominent placement based on their natural aspect ratio
-    if (photo.featured) {
-      let result;
-      if (aspectRatio > 1.5) {
-        result = 'col-span-3 row-span-2'; // Large landscape hero
-      } else if (aspectRatio < 0.7) {
-        result = 'col-span-2 row-span-3'; // Large portrait hero
-      } else {
-        result = 'col-span-2 row-span-2'; // Large square hero
-      }
-      console.log(`⭐ FEATURED ${photo.title}: aspect=${aspectRatio.toFixed(2)} → ${result}`);
-      return result;
-    }
-    
-    // Size based on ACTUAL image proportions - using ONLY standard Tailwind classes
-    let result;
-    if (aspectRatio > 2.0) {
-      // Very wide panoramic (aspect > 2.0)
-      result = 'col-span-3 row-span-1';
-    } else if (aspectRatio > 1.6) {
-      // Wide landscape (aspect 1.6-2.0)
-      result = variation === 0 ? 'col-span-3 row-span-1' : 'col-span-3 row-span-2';
-    } else if (aspectRatio > 1.3) {
-      // Medium landscape (aspect 1.3-1.6)
-      result = variation === 0 ? 'col-span-2 row-span-1' : 'col-span-3 row-span-2';
-    } else if (aspectRatio > 1.1) {
-      // Slightly wide (aspect 1.1-1.3)
-      result = variation === 0 ? 'col-span-2 row-span-1' : 'col-span-2 row-span-2';
-    } else if (aspectRatio > 0.9) {
-      // Square or nearly square (aspect 0.9-1.1) - dramatic but safe variations
-      if (variation === 0) {
-        result = 'col-span-2 row-span-2'; // Large square
-      } else if (variation === 1) {
-        result = 'col-span-1 row-span-1'; // Small square
-      } else {
-        result = 'col-span-2 row-span-2'; // Medium square
-      }
-    } else if (aspectRatio > 0.7) {
-      // Medium portrait (aspect 0.7-0.9)
-      result = variation === 0 ? 'col-span-1 row-span-3' : 'col-span-1 row-span-4';
-    } else if (aspectRatio > 0.5) {
-      // Tall portrait (aspect 0.5-0.7)
-      result = variation === 0 ? 'col-span-1 row-span-3' : 'col-span-1 row-span-4';
-    } else {
-      // Very tall portrait (aspect < 0.5)
-      result = 'col-span-1 row-span-4';
-    }
-    
-    return result;
-  };
+  // Compute intrinsic dimensions for Next/Image to preserve aspect ratio and avoid CLS
+  const intrinsicWidth = (photo.metadata?.width && Number.isFinite(photo.metadata.width)) ? photo.metadata.width : 1200;
+  const intrinsicHeight = (photo.metadata?.height && Number.isFinite(photo.metadata.height)) ? photo.metadata.height : 900;
 
   const handleImageLoad = () => {
     setImageLoaded(true);
@@ -103,26 +38,25 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
 
   if (!isVisible) {
     return (
-      <div className={`bg-gray-800 ${getGridSpan()}`} />
+      <div className="mb-4 sm:mb-6 lg:mb-8 break-inside-avoid inline-block w-full" />
     );
   }
 
   return (
     <div 
       className={`
-        relative group cursor-pointer overflow-hidden bg-gray-800
-        transition-all duration-500 ease-out
-        ${getGridSpan()}
+        relative group cursor-pointer overflow-hidden
+        transition-transform duration-300 ease-out
         ${imageLoaded ? 'opacity-100' : 'opacity-0'}
-        hover:opacity-80
-        h-full w-full
+        w-full inline-block align-top
+        mb-4 sm:mb-6 lg:mb-8 break-inside-avoid
       `}
       onClick={handleClick}
     >
       {/* Loading placeholder */}
       {!imageLoaded && !imageError && (
-        <div className="absolute inset-0 bg-gray-800 animate-pulse flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-gray-600 border-t-white rounded-full animate-spin" />
+        <div className="relative w-full">
+          <div className="w-8 h-8 border-4 border-gray-400 border-t-white rounded-full animate-spin mx-auto my-6" />
         </div>
       )}
 
@@ -131,12 +65,14 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
         <Image
           src={photo.url}
           alt={photo.title}
-          fill
+          width={intrinsicWidth}
+          height={intrinsicHeight}
           className={`
-            object-cover transition-all duration-700 ease-out
+            block w-full h-auto object-cover
             ${imageLoaded ? 'opacity-100' : 'opacity-0'}
+            group-hover:scale-[1.01]
           `}
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 33vw, 25vw"
           onLoad={handleImageLoad}
           onError={handleImageError}
           quality={85}
@@ -155,9 +91,9 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
         </div>
       )}
 
-      {/* Minimal Overlay - Steven Carlson Style */}
-      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <div className="absolute bottom-0 left-0 right-0 p-6">
+      {/* Overlay */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="px-4 pt-10 pb-3">
           <h3 className="text-white font-semibold text-xl mb-2 uppercase tracking-wider">{photo.title}</h3>
           {photo.description && (
             <p className="text-gray-300 text-sm">{photo.description}</p>
@@ -225,48 +161,8 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
   }, []);
 
   // Helper to get grid span for a photo based on aspect ratio
-  const getGridSpanForPhoto = (photo: Photo) => {
-    if (!photo.metadata?.aspectRatio) {
-      return 'col-span-1 row-span-1';
-    }
-    
-    const aspectRatio = photo.metadata.aspectRatio;
-    const photoIndex = photos.findIndex(p => p.id === photo.id);
-    const variation = photoIndex % 4; // 0, 1, 2, 3 for more variety
-    
-    // Make grid containers match aspect ratios better to minimize grey space
-    if (aspectRatio > 1.8) {
-      // Very wide photos (panoramic)
-      return variation === 0 ? 'col-span-3 row-span-1' : 
-             variation === 1 ? 'col-span-4 row-span-1' : 
-             variation === 2 ? 'col-span-2 row-span-1' :
-             'col-span-3 row-span-2';
-    } else if (aspectRatio > 1.3) {
-      // Wide photos
-      return variation === 0 ? 'col-span-2 row-span-1' : 
-             variation === 1 ? 'col-span-3 row-span-2' : 
-             variation === 2 ? 'col-span-2 row-span-2' :
-             'col-span-3 row-span-1';
-    } else if (aspectRatio < 0.6) {
-      // Very tall photos
-      return variation === 0 ? 'col-span-1 row-span-3' : 
-             variation === 1 ? 'col-span-1 row-span-4' : 
-             variation === 2 ? 'col-span-2 row-span-4' :
-             'col-span-1 row-span-3';
-    } else if (aspectRatio < 0.9) {
-      // Tall photos
-      return variation === 0 ? 'col-span-1 row-span-2' : 
-             variation === 1 ? 'col-span-1 row-span-3' : 
-             variation === 2 ? 'col-span-2 row-span-3' :
-             'col-span-1 row-span-2';
-    } else {
-      // Square-ish photos
-      return variation === 0 ? 'col-span-1 row-span-1' : 
-             variation === 1 ? 'col-span-2 row-span-2' : 
-             variation === 2 ? 'col-span-1 row-span-1' :
-             'col-span-2 row-span-2';
-    }
-  };
+  // Grid span no longer needed for masonry columns; keeping function stub for API stability
+  const getGridSpanForPhoto = (_photo: Photo) => '';
 
   if (photos.length === 0) {
     return (
@@ -282,24 +178,16 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
 
   return (
     <div className="w-full">
-      {/* Dynamic Masonry Grid */}
+      {/* Masonry Columns: equal column widths, variable heights */}
       <div 
         className="
-          grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6
-          gap-3
-          max-w-7xl mx-auto px-4
+          max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8
+          columns-1 sm:columns-2 md:columns-3 2xl:columns-4
+          [column-gap:0.5rem] sm:[column-gap:0.75rem] md:[column-gap:2px] 2xl:[column-gap:1rem] [column-fill:_balance]
         "
-        style={{
-          gridAutoRows: '180px',
-          gridAutoFlow: 'row dense',
-        }}
       >
         {photos.map((photo) => (
-          <div
-            key={photo.id}
-            ref={(node) => observePhoto(node, photo.id)}
-            className={getGridSpanForPhoto(photo)}
-          >
+          <div key={photo.id} ref={(node) => observePhoto(node, photo.id)}>
             <PhotoItem
               photo={photo}
               onPhotoClick={onPhotoClick}

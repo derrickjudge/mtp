@@ -106,6 +106,9 @@ R2_PUBLIC_URL=https://your-bucket-name.account-id.r2.dev
 R2_ENDPOINT=https://account-id.r2.cloudflarestorage.com
 R2_ACCESS_KEY_ID=your_r2_access_key_id
 R2_SECRET_ACCESS_KEY=your_r2_secret_access_key
+
+# Security (optional)
+ADMIN_IP_ALLOWLIST=
 ```
 
 ## 🛡️ Security Best Practices

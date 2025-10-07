@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Navigation from '@/components/layout/Navigation';
 
 describe('Navigation', () => {
@@ -8,16 +8,18 @@ describe('Navigation', () => {
     expect(screen.getByText('MTP COLLECTIVE')).toBeInTheDocument();
   });
 
-  it('renders all navigation links in desktop view', () => {
+  it('renders all navigation links in desktop view', async () => {
     render(<Navigation />);
     const desktopNav = screen.getByRole('navigation').querySelector('.hidden.md\\:flex');
     
     expect(desktopNav).toBeInTheDocument();
-    expect(desktopNav).toHaveTextContent('Home');
-    expect(desktopNav).toHaveTextContent('Portfolio');
-    expect(desktopNav).toHaveTextContent('Articles');
-    expect(desktopNav).toHaveTextContent('About Us');
-    expect(desktopNav).toHaveTextContent('Contact');
+    // Home link is the logo text; Desktop menu shows About, Portfolio, Articles, Events, Contact
+    await waitFor(() => {
+      expect(desktopNav).toHaveTextContent('Portfolio');
+      expect(desktopNav).toHaveTextContent('Articles');
+      expect(desktopNav).toHaveTextContent('About Us');
+      expect(desktopNav).toHaveTextContent('Contact');
+    });
   });
 
   it('toggles mobile menu when button is clicked', () => {
