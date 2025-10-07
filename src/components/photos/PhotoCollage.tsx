@@ -44,7 +44,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
       if (aspectRatio > 1.5) {
         result = 'col-span-3 row-span-2'; // Large landscape hero
       } else if (aspectRatio < 0.7) {
-        result = 'col-span-2 row-span-3'; // Large portrait hero  
+        result = 'col-span-2 row-span-3'; // Large portrait hero
       } else {
         result = 'col-span-2 row-span-2'; // Large square hero
       }

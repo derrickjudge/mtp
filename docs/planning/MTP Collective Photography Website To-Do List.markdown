@@ -1,89 +1,63 @@
-# To-Do List for MTP Collective Photography Website
+# To-Do List for MTP Collective Photography Website — v2 (October 2025)
 
 ## Introduction
-This to-do list outlines all tasks required to build a custom photography website for MTP Collective (or Monkey Take Photo), showcasing your concert, car, and nature photography. The list is designed for a single developer, aligning with the 10-day development plan and Product Requirements Document (PRD). It ensures the website is responsive, edgy, and built from scratch using modern web technologies (React, Node.js, MySQL, AWS S3) with AI-assisted coding. Tasks are organized by phase, with dependencies considered to streamline development.
+This to-do list updates priorities to reflect the Sports/Music/Street focus, Events curation with ordering/top selections, server-side R2 uploads, rate limiting, and SEO.
 
 ## To-Do List
 
-### Phase 1: Project Setup (Day 1)
-- [ ] Initialize a Next.js project with TypeScript support.
-- [ ] Install and configure Tailwind CSS for styling.
-- [ ] Set up a Git repository and make the initial commit.
-- [ ] Set up MySQL database on your preferred hosting (local, AWS RDS, or PlanetScale).
-- [ ] Create SQL schemas for photos, categories, tags, photo_tags junction table, and users with proper relationships and foreign key constraints.
-- [ ] Install dependencies (mysql2, prisma/sequelize/typeorm, aws-sdk, sharp).
-- [ ] Verify AWS account setup for S3 integration.
-- [ ] Write a README with project setup instructions.
+### Foundation
+- [ ] Consolidate data layer on native SQL (`nativeDB`); remove Prisma from runtime if unused.
+- [ ] Confirm Cloudflare R2 envs in dev/test/prod; document in `docs/technical/setup-r2.md`.
+- [ ] Decide and enforce server-side uploads only; remove any client-direct upload paths.
+- [ ] Add API rate limiting utility; wire into all API routes; add admin IP allowlist (optional).
 
-### Phase 2: Backend Development (Day 2)
-- [ ] Create API routes for photo CRUD operations (Create, Read, Update, Delete) using Next.js API routes.
-- [ ] Implement photo upload functionality to AWS S3 with automatic thumbnail generation using sharp.
-- [ ] Store photo metadata (title, description, category, tags) in MySQL database upon upload.
-- [ ] Test API endpoints using Postman to ensure correct responses.
-- [ ] Add basic error handling for API routes (e.g., invalid file types, missing fields).
-- [ ] Document API endpoints in the README.
+### Backend and Data Model
+- [ ] Upload API accepts `tagIds`; server-side sharp processing; thumbnails + metadata (width/height/aspect).
+- [ ] Add `position` and `is_top_selection` to event-photo join; write SQL migration.
+- [ ] Bulk upload endpoint: support directory uploads, auto-categorize by folder, apply tag presets.
+- [ ] Ensure categories are fixed to Sports, Music, Street in admin.
 
-### Phase 3: Authentication Implementation (Day 3)
-- [ ] Install dependencies for JWT authentication (jsonwebtoken, bcrypt).
-- [ ] Create API endpoints for user registration and login, storing hashed passwords in MySQL database.
-- [ ] Implement middleware to protect admin routes with JWT verification.
-- [ ] Test authentication endpoints to ensure secure access.
-- [ ] Add basic password validation (e.g., minimum length) to registration.
+### Auth and Security
+- [ ] Verify NextAuth JWT + middleware; enforce `ADMIN` role on `/admin/*`.
+- [ ] Implement global API rate limit; add IP allowlist check for admin.
+- [ ] Disable right-click downloads globally; audit for no secrets in client.
 
-### Phase 4: Admin Panel Interface (Day 4)
-- [ ] Create a login page with a form for username and password, styled with Tailwind CSS.
-- [ ] Build the admin dashboard with sections for photo upload, metadata editing, and deletion.
-- [ ] Integrate React Dropzone for drag-and-drop photo uploads.
-- [ ] Connect the dashboard to backend APIs for photo management.
-- [ ] Test admin panel functionality, ensuring uploads and edits reflect in MySQL database and S3.
-- [ ] Add basic input validation (e.g., required fields) to the upload form.
+### Admin UX
+- [ ] Bulk upload UI: folder-based auto-categorization and tag presets.
+- [ ] Event editor: drag-and-drop reorder photos; toggle top selections; save ordering.
+- [ ] Photo editor: category selection (Sports/Music/Street), tags, events.
 
-### Phase 5: Frontend Development - Static Pages (Day 5)
-- [ ] Design the Home page with a hero section (photo or slideshow), intro text, and category links.
-- [ ] Style the Home page with a dark theme, neon accents, and bold typography (e.g., Montserrat).
-- [ ] Create the About page with bio, photography style, and service details.
-- [ ] Ensure both pages are responsive using Tailwind CSS media queries.
-- [ ] Add meta tags and alt texts for SEO and accessibility on both pages.
-- [ ] Test page layouts on mobile and desktop devices.
+### Frontend — Pages
+- [ ] Home: hero, latest per category strips, CTA to About/Contact.
+- [ ] Portfolio: masonry-like column grid preserving aspect; infinite scroll; lightbox.
+- [ ] Events: list and detail pages; respect ordering and top selections.
+- [ ] About: add “What I provide when shooting your event”; social links.
+- [ ] Contact: simple form with spam protection; social links.
+ - [ ] Articles: keep disabled for now (omit nav/routes); remove legacy links.
 
-### Phase 6: Frontend Development - Portfolio Page (Day 6)
-- [ ] Install React Photo Gallery for a responsive thumbnail grid.
-- [ ] Create the Portfolio page with category filters (Concerts, Cars, Nature).
-- [ ] Integrate with backend APIs to fetch photos from MySQL database and S3.
-- [ ] Implement dynamic filtering to update the grid based on category selection.
-- [ ] Ensure the grid is responsive and adapts to different screen sizes.
-- [ ] Test API integration and filtering functionality.
+### Frontend — Components
+- [ ] Fix `PhotoCollage` initializer and helper; ensure lazy reveal and skeletons.
+- [ ] Add reusable GalleryGrid with `sizes`; contextmenu disable on images.
+- [ ] Lightbox slides with titles/descriptions; keyboard nav.
 
-### Phase 7: Frontend Development - Contact and Gallery Enhancements (Day 7)
-- [ ] Create the Contact page with a form (name, email, subject, message) styled with Tailwind CSS.
-- [ ] Set up form submission using an API endpoint or a library like emailjs.
-- [ ] Install React Lightbox for full-size image views with title and description.
-- [ ] Add a search bar or tag-based filtering to the Portfolio page.
-- [ ] Implement lazy loading for gallery images to improve performance.
-- [ ] Test form submission and lightbox functionality across devices.
+### SEO & Analytics
+- [ ] Add per-route metadata; OpenGraph; Twitter cards.
+- [ ] Add JSON-LD for Image and Event; add sitemap/robots.
+- [ ] Add analytics (Plausible or Vercel Analytics) and event tracking for CTAs.
 
-### Phase 8: Quality Assurance (Day 8)
-- [ ] Install Jest for unit testing and write tests for API endpoints (CRUD, authentication).
-- [ ] Write integration tests for frontend components to verify API interactions.
-- [ ] Perform manual testing of user flows (login, upload, gallery filtering, form submission).
-- [ ] Document any bugs or issues in a tracking sheet.
-- [ ] Fix critical bugs identified during testing.
+### QA
+- [ ] Unit tests for critical API routes (uploads, events ordering, rate limiting).
+- [ ] Component tests for gallery grid and lightbox interactions.
+- [ ] Manual flows: bulk upload, event ordering, category filters, contact form.
 
-### Phase 9: Cross-Platform Testing and Optimization (Day 9)
-- [ ] Test the website on multiple devices (desktop, tablet, mobile) and browsers (Chrome, Firefox, Safari).
-- [ ] Optimize images with TinyPNG or similar tools to reduce load times.
-- [ ] Verify page load times are under 3 seconds using browser developer tools.
-- [ ] Add keyboard navigation and ensure alt texts for images to improve accessibility.
-- [ ] Fix any remaining bugs or performance issues from testing.
+### Cross-Platform & Perf
+- [ ] Validate responsive behavior across devices; refine `sizes` and priorities.
+- [ ] Measure LCP/INP; ensure lazy loading thresholds are tuned.
 
-### Phase 10: Deployment and Launch (Day 10)
-- [ ] Set up a Vercel account and configure the project for deployment.
-- [ ] Purchase and configure a custom domain with SSL certification.
-- [ ] Enable Cloudflare CDN for faster asset delivery.
-- [ ] Deploy the application to production and verify all features.
-- [ ] Set up Google Analytics to track visitor metrics.
-- [ ] Perform a final manual test of the live site.
-- [ ] Announce the launch on social media platforms.
+### Deployment
+- [ ] Verify R2 envs; rotate keys if needed; test uploads in non-prod.
+- [ ] Deploy to Vercel; verify API rate limiting and admin access.
+- [ ] Final content pass; announce.
 
 ## Notes
 - **Task Management:** Use a tool like Trello, Notion, or a simple text file to track task completion.

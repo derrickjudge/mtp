@@ -1,3 +1,66 @@
+# Product Requirements Document (PRD) — v2 (October 2025)
+
+## Project: MTP Collective Photography Website
+
+Version: 2.0
+
+Author: MTP + Assistant
+
+## 1. Overview
+
+Build an edgy yet professional photography portfolio focused on Sports, Music, and Street, with Events as curated sets. The site is a resume-style showcase that emphasizes strong visuals, quick discovery, and clear contact options.
+
+## 2. Objectives
+- Professional presence with dark UI and a logo/accent pop color.
+- Fast and simple portfolio browsing; lazy-loaded, infinite-scroll grids that preserve aspect ratios.
+- Events composed of curated photo sets with manual ordering and “top selections”.
+- Efficient admin workflows: bulk upload, auto-categorization by folder, quick-apply tag presets.
+- Clear contact paths and social links (Instagram placeholder: https://www.instagram.com); Articles disabled for now.
+
+## 3. Information Architecture
+- Home: striking hero, latest/featured strips for Sports/Music/Street, CTA to About/Contact.
+- Portfolio: only images; categories = Sports, Music, Street; infinite scroll.
+- Events: list + detail pages; brief writeups; curated sets with ordering and top selections.
+- About: bio + “What I provide when shooting your event”; socials.
+- Contact: simple form; socials.
+- Articles: disabled for now (focus on photography and events).
+
+## 4. Content Model
+- Category: Sports, Music, Street.
+- Event: name, date, venue/location, description, cover image, published/featured.
+- Photo: title, description, url, thumbnail, published/featured, metadata (width/height/aspect), relations: categories, tags, events.
+- EventPhotos (join): eventId, photoId, position (manual ordering), is_top_selection (boolean).
+- Tags: free-form or presets (e.g., athletics, D1, night game).
+
+## 5. Functional Requirements
+- Portfolio grids preserve aspect ratios; masonry-like columns; lazy loading and infinite scroll.
+- Events respect manual ordering; top selections appear first.
+- Bulk upload: auto-categorize by folder name; quick-apply tag presets; accept `tagIds`.
+- Disable right-click downloads; retain EXIF metadata but do not display it publicly.
+- Contact form with validation and spam protection; social links in header/footer and About.
+
+## 6. Non-Functional Requirements
+- Performance: responsive images, sharp-based resizing/thumbnails, lazy load, intersection observer; high Lighthouse perf.
+- SEO: per-route metadata, OpenGraph, JSON-LD (Image, Event), sitemap, clean URLs.
+- Accessibility: maintain reasonable contrast and respect reduced motion.
+- Security: JWT auth, API rate limiting; admin IP allowlist available but disabled now (empty env); no secrets in client; HTTPS; disable right-click.
+- Environments: dev and non-prod test; R2 configured per environment; deploy on Vercel.
+
+## 7. Technical Direction
+- Framework: Next.js + React + Tailwind CSS.
+- Auth: NextAuth (JWT) with middleware; admin role required.
+- Storage: Cloudflare R2; server-side uploads only; process with sharp; no client-direct uploads.
+- Database: Native SQL (PostgreSQL via `nativeDB`); consolidate away from Prisma runtime; use SQL migrations.
+- Rate limiting: per-IP limits on all API routes.
+
+## 8. Success Metrics
+- Portfolio/event views, contact form submissions, scroll depth, outbound social clicks.
+- Performance timings (LCP/INP), SEO coverage, error rates on upload/admin flows.
+
+## 9. Out of Scope (Now)
+- Video, watermarking, live social embeds, e-commerce, bookings.
+
+---
 # Product Requirements Document (PRD)
 
 ## Project: MTP Collective Photography Website

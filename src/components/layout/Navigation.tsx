@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/utils/cn';
 
 interface Category {
   id: string;
@@ -16,6 +18,13 @@ export default function Navigation() {
   const [categories, setCategories] = useState<Category[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const portfolioRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+
+  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
+  const baseLink =
+    'text-gray-300 hover:text-white transition-colors rounded-md px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60';
+  const activeLink =
+    'text-white relative after:absolute after:inset-x-1 after:-bottom-1 after:h-0.5 after:bg-white/80';
 
   // Fetch categories for portfolio dropdown
   useEffect(() => {
@@ -64,13 +73,13 @@ export default function Navigation() {
 
   return (
     <nav className="flex items-center justify-between">
-      <Link href="/" className="text-xl font-bold tracking-wider">
+      <Link href="/" className="text-xl font-bold tracking-wider focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded-md px-1">
         MTP COLLECTIVE
       </Link>
       
       {/* Desktop menu */}
       <div className="hidden md:flex items-center space-x-8">
-        <Link href="/about" className="text-gray-300 hover:text-white transition-colors">
+        <Link href="/about" className={cn(baseLink, isActive('/about') && activeLink)} aria-current={isActive('/about') ? 'page' : undefined}>
           About Us
         </Link>
         
@@ -78,7 +87,9 @@ export default function Navigation() {
         <div className="relative" ref={portfolioRef}>
           <button
             onClick={togglePortfolioDropdown}
-            className="flex items-center text-gray-300 hover:text-white transition-colors"
+            className={cn(baseLink, 'flex items-center', isActive('/portfolio') && activeLink)}
+            aria-expanded={isPortfolioDropdownOpen}
+            aria-haspopup="menu"
           >
             Portfolio
             <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform ${isPortfolioDropdownOpen ? 'rotate-180' : ''}`} />
@@ -92,7 +103,7 @@ export default function Navigation() {
             >
               <Link
                 href="/portfolio"
-                className="block px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors border-b border-gray-700"
+                className="block px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors border-b border-gray-700 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                 onClick={() => setIsPortfolioDropdownOpen(false)}
               >
                 View All
@@ -101,7 +112,7 @@ export default function Navigation() {
                 <Link
                   key={category.id}
                   href={`/portfolio?category=${category.slug}`}
-                  className="block px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                  className="block px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                   onClick={() => setIsPortfolioDropdownOpen(false)}
                 >
                   {category.name}
@@ -111,20 +122,20 @@ export default function Navigation() {
           )}
         </div>
 
-        <Link href="/articles" className="text-gray-300 hover:text-white transition-colors">
+        <Link href="/articles" className={cn(baseLink, isActive('/articles') && activeLink)} aria-current={isActive('/articles') ? 'page' : undefined}>
           Articles
         </Link>
-        <Link href="/events" className="text-gray-300 hover:text-white transition-colors">
+        <Link href="/events" className={cn(baseLink, isActive('/events') && activeLink)} aria-current={isActive('/events') ? 'page' : undefined}>
           Events
         </Link>
-        <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">
+        <Link href="/contact" className={cn(baseLink, isActive('/contact') && activeLink)} aria-current={isActive('/contact') ? 'page' : undefined}>
           Contact
         </Link>
       </div>
 
       {/* Mobile menu button */}
       <button 
-        className="md:hidden text-gray-300 hover:text-white transition-colors"
+        className="md:hidden text-gray-300 hover:text-white transition-colors min-h-[44px] min-w-[44px] p-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         onClick={toggleMenu}
         aria-label="Toggle menu"
       >
@@ -152,7 +163,7 @@ export default function Navigation() {
         <div className="px-4 py-2 space-y-1">
           <Link 
             href="/about" 
-            className="block px-3 py-2 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md"
+            className="block px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             onClick={() => setIsMenuOpen(false)}
           >
             About Us
@@ -162,7 +173,7 @@ export default function Navigation() {
           <div className="space-y-1">
             <Link 
               href="/portfolio" 
-              className="block px-3 py-2 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md"
+              className="block px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               onClick={() => setIsMenuOpen(false)}
             >
               Portfolio - All
@@ -171,7 +182,7 @@ export default function Navigation() {
               <Link 
                 key={category.id}
                 href={`/portfolio?category=${category.slug}`} 
-                className="block px-6 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-900 rounded-md"
+                className="block px-6 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                 onClick={() => setIsMenuOpen(false)}
               >
                 {category.name}
@@ -181,21 +192,21 @@ export default function Navigation() {
           
           <Link 
             href="/articles" 
-            className="block px-3 py-2 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md"
+            className="block px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             onClick={() => setIsMenuOpen(false)}
           >
             Articles
           </Link>
           <Link 
             href="/events" 
-            className="block px-3 py-2 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md"
+            className="block px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             onClick={() => setIsMenuOpen(false)}
           >
             Events
           </Link>
           <Link 
             href="/contact" 
-            className="block px-3 py-2 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md"
+            className="block px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             onClick={() => setIsMenuOpen(false)}
           >
             Contact
