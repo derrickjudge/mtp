@@ -5,6 +5,7 @@ import Navigation from "@/components/layout/Navigation";
 import { AuthProvider } from "@/components/providers/SessionProvider";
 import Link from 'next/link';
 import { Toaster } from 'react-hot-toast';
+import DisableContextMenu from '@/components/common/DisableContextMenu';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,18 +24,8 @@ export default function RootLayout({
   // Excludes admin routes handled by middleware
   return (
     <html lang="en">
-      <body
-        className={`${inter.className} font-sans antialiased bg-black text-white min-h-screen flex flex-col`}
-        onContextMenu={(e) => {
-          const target = e.target as HTMLElement;
-          // Skip on admin pages
-          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) return;
-          // Block only for images
-          if (target && (target.tagName === 'IMG' || target.closest('img'))) {
-            e.preventDefault();
-          }
-        }}
-      >
+      <body className={`${inter.className} font-sans antialiased bg-black text-white min-h-screen flex flex-col`}>
+        <DisableContextMenu />
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
             <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80">

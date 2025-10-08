@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/tags
 export async function GET(req: NextRequest) {
   try {
