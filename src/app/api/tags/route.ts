@@ -13,7 +13,10 @@ export async function GET(req: NextRequest) {
     }
     // For now, return empty array since tags functionality isn't fully implemented
     // This prevents the PhotoEditModal from breaking when trying to fetch tags
-    return NextResponse.json([]);
+    const res = NextResponse.json([]);
+    res.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+    res.headers.set('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+    return res;
   } catch (error) {
     console.error('Error fetching tags:', error);
     return NextResponse.json(

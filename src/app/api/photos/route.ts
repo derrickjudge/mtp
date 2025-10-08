@@ -25,7 +25,10 @@ export async function GET(req: NextRequest) {
     const skip = skipParam ? parseInt(skipParam) : undefined;
 
     const photos = await photoService.getPhotos({ categoryId, tagId, eventId, featured, published, take, skip });
-    return NextResponse.json({ photos });
+    const res = NextResponse.json({ photos });
+    res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    res.headers.set('CDN-Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    return res;
   } catch (error) {
     console.error('Error fetching photos:', error);
     return NextResponse.json(

@@ -24,6 +24,10 @@ export default function RootLayout({
   // Excludes admin routes handled by middleware
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://pub-8473897a453e4a39824456dc238f2559.r2.dev" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="//pub-8473897a453e4a39824456dc238f2559.r2.dev" />
+      </head>
       <body className={`${inter.className} font-sans antialiased bg-black text-white min-h-screen flex flex-col`}>
         <DisableContextMenu />
         <AuthProvider>

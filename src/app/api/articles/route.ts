@@ -37,7 +37,10 @@ export async function GET(req: NextRequest) {
       })
     );
 
-    return NextResponse.json(articlesWithRelations);
+    const res = NextResponse.json(articlesWithRelations);
+    res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    res.headers.set('CDN-Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    return res;
   } catch (error) {
     console.error('Error fetching articles:', error);
     return NextResponse.json(

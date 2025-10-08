@@ -13,7 +13,10 @@ export async function GET(req: NextRequest) {
     }
     // Public endpoint - no authentication required for GET
     const categories = await nativeDB.findCategories();
-    return NextResponse.json(categories);
+    const res = NextResponse.json(categories);
+    res.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+    res.headers.set('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+    return res;
   } catch (error) {
     console.error('Error fetching categories:', error);
     return NextResponse.json(
