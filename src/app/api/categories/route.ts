@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { nativeDB } from '@/lib/db-native';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rl = rateLimit(`categories:GET:${ip}`, { tokens: 60, windowMs: 60_000 });
+    if (!rl.allowed) {
+      return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
+    }
     // Public endpoint - no authentication required for GET
     const categories = await nativeDB.findCategories();
     return NextResponse.json(categories);

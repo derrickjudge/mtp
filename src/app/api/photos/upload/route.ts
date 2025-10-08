@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rl = rateLimit(`photos:UPLOAD:${ip}`, { tokens: 200, windowMs: 15 * 60_000 });
+    if (!rl.allowed) {
+      return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
+    }
     // Check authentication
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -18,6 +24,7 @@ export async function POST(req: NextRequest) {
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const categoryIds = formData.getAll('categoryIds') as string[];
+    const tagIds = formData.getAll('tagIds') as string[];
     const eventIds = formData.getAll('eventIds') as string[];
 
     if (!file || !title) {
@@ -56,7 +63,7 @@ export async function POST(req: NextRequest) {
       title,
       description,
       categoryIds,
-      tagIds: [], // We'll handle tags separately
+      tagIds,
       eventIds,
       authorId: session.user.id,
       metadata: {
