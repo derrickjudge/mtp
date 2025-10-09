@@ -86,6 +86,10 @@ export class NativeDBService {
         )
       `);
 
+      // Migration: add ordering and top-selection columns if missing
+      await client.query(`ALTER TABLE "_EventPhotos" ADD COLUMN IF NOT EXISTS position INT NOT NULL DEFAULT 0`);
+      await client.query(`ALTER TABLE "_EventPhotos" ADD COLUMN IF NOT EXISTS is_top_selection BOOLEAN NOT NULL DEFAULT FALSE`);
+
       await client.query(`
         CREATE TABLE IF NOT EXISTS "_EventArticles" (
           "A" TEXT NOT NULL,
@@ -125,6 +129,24 @@ export class NativeDBService {
 
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_EventPhotos_B_index" ON "_EventPhotos"("B")
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_EventPhotos_A_position_index" ON "_EventPhotos"("A", position)
+      `);
+
+      // Ensure unique positions per event to prevent duplicate ordering indexes
+      await client.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint 
+            WHERE conname = '_EventPhotos_A_position_unique'
+          ) THEN
+            ALTER TABLE "_EventPhotos" ADD CONSTRAINT "_EventPhotos_A_position_unique" UNIQUE ("A", position);
+          END IF;
+        END
+        $$;
       `);
 
       await client.query(`
@@ -1245,14 +1267,55 @@ export class NativeDBService {
     const client = this.createClient();
     try {
       await client.connect();
-      
-      const values = photoIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
-      const params = photoIds.flatMap(photoId => [eventId, photoId]);
-      
+      // Determine starting position (append semantics)
+      const startPosRes = await client.query('SELECT COALESCE(MAX(position) + 1, 0) AS start FROM "_EventPhotos" WHERE "A" = $1', [eventId]);
+      let start = Number(startPosRes.rows[0]?.start ?? 0);
+      const values = photoIds.map((_, index) => `($1, $${index + 2}, $${index + 2 + photoIds.length}, FALSE)`).join(', ');
+      const params = [eventId, ...photoIds, ...photoIds.map((_, i) => start + i)];
       await client.query(
-        `INSERT INTO "_EventPhotos" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`,
+        `INSERT INTO "_EventPhotos" ("A", "B", position, is_top_selection) VALUES ${values} 
+         ON CONFLICT ("A","B") DO NOTHING`,
         params
       );
+    } finally {
+      await client.end();
+    }
+  }
+
+  async setEventPhotoCuration(eventId: string, orderedPhotoIds: string[], topPhotoIds: string[]): Promise<void> {
+    await this.ensureJunctionTables();
+    const client = this.createClient();
+    try {
+      await client.connect();
+      await client.query('BEGIN');
+      // Ensure rows exist for any new ids
+      if (orderedPhotoIds.length > 0) {
+        const placeholders = orderedPhotoIds.map((_, i) => `($1, $${i + 2})`).join(', ');
+        await client.query(
+          `INSERT INTO "_EventPhotos" ("A", "B") VALUES ${placeholders} ON CONFLICT ("A","B") DO NOTHING`,
+          [eventId, ...orderedPhotoIds]
+        );
+      }
+      // Update positions
+      for (let i = 0; i < orderedPhotoIds.length; i++) {
+        await client.query(
+          `UPDATE "_EventPhotos" SET position = $3 WHERE "A" = $1 AND "B" = $2`,
+          [eventId, orderedPhotoIds[i], i]
+        );
+      }
+      // Reset all to false, then set tops
+      await client.query(`UPDATE "_EventPhotos" SET is_top_selection = FALSE WHERE "A" = $1`, [eventId]);
+      if (topPhotoIds.length > 0) {
+        const setTopPlaceholders = topPhotoIds.map((_, i) => `$${i + 2}`).join(', ');
+        await client.query(
+          `UPDATE "_EventPhotos" SET is_top_selection = TRUE WHERE "A" = $1 AND "B" IN (${setTopPlaceholders})`,
+          [eventId, ...topPhotoIds]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
     } finally {
       await client.end();
     }
@@ -1326,7 +1389,14 @@ export class NativeDBService {
       await client.connect();
       
       const result = await client.query(
-        `SELECT 
+        `WITH ordered_photos AS (
+           SELECT p.id, p.title, p.url, p.thumbnail, ep.position, ep.is_top_selection
+           FROM "_EventPhotos" ep
+           JOIN "Photo" p ON p.id = ep."B"
+           WHERE ep."A" = $1
+           ORDER BY ep.position ASC, p."createdAt" DESC
+         )
+         SELECT 
            e.id, e.name, e.slug, e.description, e.date, e.location, e."coverImage", 
            e.published, e.featured, e."authorId", e."createdAt", e."updatedAt",
            COALESCE(
@@ -1343,12 +1413,14 @@ export class NativeDBService {
            COALESCE(
              json_agg(
                DISTINCT jsonb_build_object(
-                 'id', p.id, 
-                 'title', p.title, 
-                 'url', p.url, 
-                 'thumbnail', p.thumbnail
+                 'id', op.id, 
+                 'title', op.title, 
+                 'url', op.url, 
+                 'thumbnail', op.thumbnail,
+                 'position', op.position,
+                 'is_top_selection', op.is_top_selection
                )
-             ) FILTER (WHERE p.id IS NOT NULL), 
+             ) FILTER (WHERE op.id IS NOT NULL), 
              '[]'
            ) as photos,
            COALESCE(
@@ -1366,8 +1438,7 @@ export class NativeDBService {
          FROM "Event" e
          LEFT JOIN "_EventCategories" ec ON e.id = ec."A"
          LEFT JOIN "Category" c ON ec."B" = c.id
-         LEFT JOIN "_EventPhotos" ep ON e.id = ep."A"
-         LEFT JOIN "Photo" p ON ep."B" = p.id
+         LEFT JOIN ordered_photos op ON TRUE
          LEFT JOIN "_EventArticles" ea ON e.id = ea."A"
          LEFT JOIN "Article" a ON ea."B" = a.id
          WHERE e.id = $1
