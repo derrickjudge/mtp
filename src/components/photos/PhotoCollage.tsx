@@ -37,8 +37,13 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
   };
 
   if (!isVisible) {
+    const width = (photo.metadata?.width && Number.isFinite(photo.metadata.width)) ? photo.metadata.width : 1200;
+    const height = (photo.metadata?.height && Number.isFinite(photo.metadata.height)) ? photo.metadata.height : 900;
+    const paddingBottom = `${(height / width) * 100}%`;
     return (
-      <div className="mb-4 sm:mb-6 lg:mb-8 break-inside-avoid inline-block w-full" />
+      <div className="mb-4 sm:mb-6 lg:mb-8 break-inside-avoid inline-block w-full">
+        <div className="relative w-full bg-gray-900/40 rounded" style={{ paddingBottom }} />
+      </div>
     );
   }
 
@@ -76,7 +81,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
           onLoad={handleImageLoad}
           onError={handleImageError}
           quality={85}
-          unoptimized={process.env.NODE_ENV === 'production'}
+          unoptimized={false}
           priority={false}
         />
       )}
@@ -112,10 +117,10 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
 }
 
 export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps) {
-  // Initialize with first 6 photos visible for immediate display
+  // Initialize with first 12 photos visible for immediate display
   const [visiblePhotos, setVisiblePhotos] = useState(() => {
     const initial = new Set<string>();
-    photos.slice(0, 6).forEach(photo => initial.add(photo.id));
+    photos.slice(0, 12).forEach(photo => initial.add(photo.id));
     return initial;
   });
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -123,7 +128,7 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
   // Update visible photos when photos array changes (e.g., category filtering)
   useEffect(() => {
     const initial = new Set<string>();
-    photos.slice(0, 6).forEach(photo => initial.add(photo.id));
+    photos.slice(0, 12).forEach(photo => initial.add(photo.id));
     setVisiblePhotos(initial);
   }, [photos]);
 
@@ -154,11 +159,12 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
 
   // Ref callback for observing elements
   const observePhoto = useCallback((node: HTMLDivElement | null, photoId: string) => {
-    if (node && observerRef.current) {
-      node.setAttribute('data-photo-id', photoId);
-      observerRef.current.observe(node);
-    }
-  }, []);
+    if (!node || !observerRef.current) return;
+    // Skip observing if already visible
+    if (visiblePhotos.has(photoId)) return;
+    node.setAttribute('data-photo-id', photoId);
+    observerRef.current.observe(node);
+  }, [visiblePhotos]);
 
   // Helper to get grid span for a photo based on aspect ratio
   // Grid span no longer needed for masonry columns; keeping function stub for API stability
@@ -197,12 +203,7 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
         ))}
       </div>
 
-      {/* Loading indicator for more content */}
-      {photos.length === 0 && (
-        <div className="text-center py-8">
-          <div className="inline-block w-8 h-8 border-4 border-gray-600 border-t-white rounded-full animate-spin" />
-        </div>
-      )}
+      {/* No extra loader; photos reveal as they intersect */}
     </div>
   );
 }

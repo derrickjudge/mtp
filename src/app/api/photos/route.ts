@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { photoService } from '@/services/photoService';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
 // GET /api/photos?category=concert&tag=music&event=eventId&featured=true&published=true
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rl = rateLimit(`photos:GET:${ip}`, { tokens: 60, windowMs: 60_000 });
+    if (!rl.allowed) {
+      return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
+    }
     const { searchParams } = new URL(req.url);
     const categoryId = searchParams.get('category') || undefined;
     const tagId = searchParams.get('tag') || undefined;
@@ -19,7 +25,10 @@ export async function GET(req: NextRequest) {
     const skip = skipParam ? parseInt(skipParam) : undefined;
 
     const photos = await photoService.getPhotos({ categoryId, tagId, eventId, featured, published, take, skip });
-    return NextResponse.json({ photos });
+    const res = NextResponse.json({ photos });
+    res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    res.headers.set('CDN-Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    return res;
   } catch (error) {
     console.error('Error fetching photos:', error);
     return NextResponse.json(
@@ -32,6 +41,11 @@ export async function GET(req: NextRequest) {
 // POST /api/photos (multipart/form-data)
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rl = rateLimit(`photos:POST:${ip}`, { tokens: 200, windowMs: 15 * 60_000 });
+    if (!rl.allowed) {
+      return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
+    }
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json(
@@ -45,7 +59,7 @@ export async function POST(req: NextRequest) {
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const categoryIds = formData.getAll('categoryIds') as string[];
-    const tags = formData.getAll('tags') as string[];
+    const tagIds = formData.getAll('tagIds') as string[];
 
     if (!file || !title) {
       return NextResponse.json(
@@ -65,7 +79,7 @@ export async function POST(req: NextRequest) {
       title,
       description,
       categoryIds,
-      tagIds: [], // We'll handle tags separately
+      tagIds,
       eventIds: [], // No events for direct API uploads
       authorId: session.user.id,
       metadata: {

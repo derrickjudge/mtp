@@ -5,6 +5,7 @@ import Navigation from "@/components/layout/Navigation";
 import { AuthProvider } from "@/components/providers/SessionProvider";
 import Link from 'next/link';
 import { Toaster } from 'react-hot-toast';
+import DisableContextMenu from '@/components/common/DisableContextMenu';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,9 +20,16 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Disable right-click (context menu) on public pages for images
+  // Excludes admin routes handled by middleware
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://pub-8473897a453e4a39824456dc238f2559.r2.dev" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="//pub-8473897a453e4a39824456dc238f2559.r2.dev" />
+      </head>
       <body className={`${inter.className} font-sans antialiased bg-black text-white min-h-screen flex flex-col`}>
+        <DisableContextMenu />
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
             <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80">

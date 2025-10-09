@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nativeDB } from '@/lib/db-native';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
 // GET /api/articles - List all articles
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rl = rateLimit(`articles:GET:${ip}`, { tokens: 60, windowMs: 60_000 });
+    if (!rl.allowed) {
+      return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
+    }
     const { searchParams } = new URL(req.url);
     const published = searchParams.get('published');
     const featured = searchParams.get('featured') === 'true';
@@ -31,7 +37,10 @@ export async function GET(req: NextRequest) {
       })
     );
 
-    return NextResponse.json(articlesWithRelations);
+    const res = NextResponse.json(articlesWithRelations);
+    res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    res.headers.set('CDN-Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    return res;
   } catch (error) {
     console.error('Error fetching articles:', error);
     return NextResponse.json(
