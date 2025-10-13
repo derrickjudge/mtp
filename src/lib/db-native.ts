@@ -41,6 +41,9 @@ export class NativeDBService {
           CONSTRAINT "_CategoryToPhoto_B_fkey" FOREIGN KEY ("B") REFERENCES "Photo"("id") ON DELETE CASCADE ON UPDATE CASCADE
         )
       `);
+      // Migration for category-photo ordering and top selections
+      await client.query(`ALTER TABLE "_CategoryToPhoto" ADD COLUMN IF NOT EXISTS position INT NOT NULL DEFAULT 0`);
+      await client.query(`ALTER TABLE "_CategoryToPhoto" ADD COLUMN IF NOT EXISTS is_top_selection BOOLEAN NOT NULL DEFAULT FALSE`);
 
       // Create _PhotoToTag junction table if it doesn't exist
       await client.query(`
@@ -114,6 +117,20 @@ export class NativeDBService {
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_CategoryToPhoto_B_index" ON "_CategoryToPhoto"("B")
       `);
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_CategoryToPhoto_A_position_index" ON "_CategoryToPhoto"("A", position)
+      `);
+      await client.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = '_CategoryToPhoto_A_position_unique'
+          ) THEN
+            ALTER TABLE "_CategoryToPhoto" ADD CONSTRAINT "_CategoryToPhoto_A_position_unique" UNIQUE ("A", position);
+          END IF;
+        END
+        $$;
+      `);
       
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_PhotoToTag_B_index" ON "_PhotoToTag"("B")
@@ -156,6 +173,9 @@ export class NativeDBService {
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_EventCategories_B_index" ON "_EventCategories"("B")
       `);
+
+      // Global photo ordering for "All Photos" view
+      await client.query(`ALTER TABLE "Photo" ADD COLUMN IF NOT EXISTS position INT NOT NULL DEFAULT 0`);
 
     } catch (error) {
       console.warn('Error ensuring junction tables:', error);
@@ -251,7 +271,13 @@ export class NativeDBService {
         query += ` AND p.featured = true`;
       }
 
-      query += ` ORDER BY p."createdAt" DESC`;
+      if (options?.eventId) {
+        query += ` ORDER BY (SELECT ep.position FROM "_EventPhotos" ep WHERE ep."B" = p.id AND ep."A" = $${paramIndex - 1}) ASC NULLS LAST, p."createdAt" DESC`;
+      } else if (options?.categoryId) {
+        query += ` ORDER BY (SELECT cp.position FROM "_CategoryToPhoto" cp WHERE cp."B" = p.id AND cp."A" = $${paramIndex - 1}) ASC NULLS LAST, p."createdAt" DESC`;
+      } else {
+        query += ` ORDER BY p.position ASC, p."createdAt" DESC`;
+      }
 
       if (options?.take) {
         query += ` LIMIT $${paramIndex}`;

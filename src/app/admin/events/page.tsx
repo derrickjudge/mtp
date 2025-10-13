@@ -184,6 +184,39 @@ export default function AdminEvents() {
     setShowForm(true);
   };
 
+  const movePhoto = (index: number, direction: -1 | 1) => {
+    setFormData(prev => {
+      const next = [...prev.photoIds];
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= next.length) return prev;
+      const temp = next[index];
+      next[index] = next[newIndex];
+      next[newIndex] = temp;
+      return { ...prev, photoIds: next };
+    });
+  };
+
+  const [topPhotoIds, setTopPhotoIds] = useState<string[]>([]);
+
+  const toggleTop = (photoId: string) => {
+    setTopPhotoIds(prev => prev.includes(photoId) ? prev.filter(id => id !== photoId) : [...prev, photoId]);
+  };
+
+  const saveCuration = async () => {
+    if (!editingEvent) return;
+    try {
+      const res = await fetch(`/api/events/${editingEvent.id}/photos`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedPhotoIds: formData.photoIds, topPhotoIds }),
+      });
+      if (!res.ok) throw new Error('Failed to save ordering');
+      toast.success('Event photo ordering saved');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save ordering');
+    }
+  };
+
   const handleDelete = async (event: Event) => {
     if (!confirm(`Are you sure you want to delete "${event.name}"? This action cannot be undone.`)) {
       return;
@@ -318,6 +351,9 @@ export default function AdminEvents() {
           <h2 className="text-xl font-semibold mb-4 text-gray-100">
             {editingEvent ? 'Edit Event' : 'Create New Event'}
           </h2>
+          {editingEvent && (
+            <div className="mb-4 text-xs text-gray-400">Event ID: {editingEvent.id}</div>
+          )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name */}
@@ -445,22 +481,33 @@ export default function AdminEvents() {
               </label>
               <div className="flex items-center space-x-4">
                 {selectedPhotos.length > 0 && (
-                  <div className="flex space-x-2">
-                    {selectedPhotos.slice(0, 4).map((photo) => (
-                      <div key={photo.id} className="relative w-12 h-12 rounded-md overflow-hidden">
-                        <Image
-                          src={photo.thumbnail || photo.url}
-                          alt={photo.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    ))}
-                    {selectedPhotos.length > 4 && (
-                      <div className="flex items-center justify-center w-12 h-12 bg-gray-700 rounded-md text-xs text-gray-300">
-                        +{selectedPhotos.length - 4}
-                      </div>
-                    )}
+                  <div className="w-full">
+                    <div className="space-y-2">
+                      {formData.photoIds.map((id, idx) => {
+                        const ph = photos.find(p => p.id === id);
+                        if (!ph) return null;
+                        const isTop = topPhotoIds.includes(id);
+                        return (
+                          <div key={id} className="flex items-center gap-3 bg-gray-700 rounded p-2">
+                            <div className="relative w-12 h-12 rounded overflow-hidden">
+                              <Image src={ph.thumbnail || ph.url} alt={ph.title} fill className="object-cover" />
+                            </div>
+                            <div className="flex-1 text-sm text-gray-200 truncate">{ph.title}</div>
+                            <div className="flex items-center gap-2">
+                              <button type="button" onClick={() => movePhoto(idx, -1)} className="px-2 py-1 text-xs bg-gray-600 rounded text-white">Up</button>
+                              <button type="button" onClick={() => movePhoto(idx, 1)} className="px-2 py-1 text-xs bg-gray-600 rounded text-white">Down</button>
+                              <label className="flex items-center gap-1 text-xs text-gray-200">
+                                <input type="checkbox" checked={isTop} onChange={() => toggleTop(id)} className="rounded" />
+                                Top
+                              </label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button type="button" onClick={saveCuration} className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Ordering</button>
+                    </div>
                   </div>
                 )}
                 <button
