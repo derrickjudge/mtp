@@ -24,7 +24,13 @@ export async function GET(req: NextRequest) {
     const take = takeParam ? parseInt(takeParam) : undefined;
     const skip = skipParam ? parseInt(skipParam) : undefined;
 
-    const photos = await photoService.getPhotos({ categoryId, tagId, eventId, featured, published, take, skip });
+    let photos;
+    try {
+      photos = await photoService.getPhotos({ categoryId, tagId, eventId, featured, published, take, skip });
+    } catch (e) {
+      console.error('Error in photoService.getPhotos:', e);
+      return NextResponse.json({ message: 'Failed to fetch photos' }, { status: 500 });
+    }
     const res = NextResponse.json({ photos });
     res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
     res.headers.set('CDN-Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');

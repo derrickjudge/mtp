@@ -232,66 +232,73 @@ export class NativeDBService {
     const client = this.createClient();
     try {
       await client.connect();
-      
-      let query = `
-        SELECT p.id, p.title, p.description, p.url, p.thumbnail, 
-               p.published, p.featured, p.metadata, p."createdAt", p."updatedAt", p."authorId"
-        FROM "Photo" p
-        WHERE 1=1
-      `;
-      
-      const params: any[] = [];
-      let paramIndex = 1;
 
-      if (options?.published !== undefined) {
-        query += ` AND p.published = $${paramIndex}`;
-        params.push(options.published);
-        paramIndex++;
+      const buildQuery = (fallbackOrdering: boolean) => {
+        let q = `
+          SELECT p.id, p.title, p.description, p.url, p.thumbnail,
+                 p.published, p.featured, p.metadata, p."createdAt", p."updatedAt", p."authorId"
+          FROM "Photo" p
+          WHERE 1=1
+        `;
+        const ps: any[] = [];
+        let idx = 1;
+        if (options?.published !== undefined) {
+          q += ` AND p.published = $${idx}`;
+          ps.push(options.published);
+          idx++;
+        }
+        if (options?.categoryId) {
+          q += ` AND EXISTS (
+            SELECT 1 FROM "_CategoryToPhoto" cp 
+            WHERE cp."B" = p.id AND cp."A" = $${idx}
+          )`;
+          ps.push(options.categoryId);
+          idx++;
+        }
+        if (options?.eventId) {
+          q += ` AND EXISTS (
+            SELECT 1 FROM "_EventPhotos" ep 
+            WHERE ep."B" = p.id AND ep."A" = $${idx}
+          )`;
+          ps.push(options.eventId);
+          idx++;
+        }
+        if (options?.featured) {
+          q += ` AND p.featured = true`;
+        }
+        if (fallbackOrdering) {
+          q += ` ORDER BY p."createdAt" DESC`;
+        } else if (options?.eventId) {
+          q += ` ORDER BY (SELECT ep.position FROM "_EventPhotos" ep WHERE ep."B" = p.id AND ep."A" = $${idx - 1}) ASC NULLS LAST, p."createdAt" DESC`;
+        } else if (options?.categoryId) {
+          q += ` ORDER BY (SELECT cp.position FROM "_CategoryToPhoto" cp WHERE cp."B" = p.id AND cp."A" = $${idx - 1}) ASC NULLS LAST, p."createdAt" DESC`;
+        } else {
+          q += ` ORDER BY p.position ASC, p."createdAt" DESC`;
+        }
+        if (options?.take) {
+          q += ` LIMIT $${idx}`;
+          ps.push(options.take);
+          idx++;
+        }
+        if (options?.skip) {
+          q += ` OFFSET $${idx}`;
+          ps.push(options.skip);
+        }
+        return { q, ps };
+      };
+
+      // Try primary ordering (position-aware)
+      try {
+        const { q, ps } = buildQuery(false);
+        const result = await client.query(q, ps);
+        return result.rows;
+      } catch (err: any) {
+        console.warn('findPhotos primary query failed, retrying fallback ordering', err?.message);
+        // Retry with fallback ordering
+        const { q, ps } = buildQuery(true);
+        const result = await client.query(q, ps);
+        return result.rows;
       }
-
-      if (options?.categoryId) {
-        query += ` AND EXISTS (
-          SELECT 1 FROM "_CategoryToPhoto" cp 
-          WHERE cp."B" = p.id AND cp."A" = $${paramIndex}
-        )`;
-        params.push(options.categoryId);
-        paramIndex++;
-      }
-
-      if (options?.eventId) {
-        query += ` AND EXISTS (
-          SELECT 1 FROM "_EventPhotos" ep 
-          WHERE ep."B" = p.id AND ep."A" = $${paramIndex}
-        )`;
-        params.push(options.eventId);
-        paramIndex++;
-      }
-
-      if (options?.featured) {
-        query += ` AND p.featured = true`;
-      }
-
-      if (options?.eventId) {
-        query += ` ORDER BY (SELECT ep.position FROM "_EventPhotos" ep WHERE ep."B" = p.id AND ep."A" = $${paramIndex - 1}) ASC NULLS LAST, p."createdAt" DESC`;
-      } else if (options?.categoryId) {
-        query += ` ORDER BY (SELECT cp.position FROM "_CategoryToPhoto" cp WHERE cp."B" = p.id AND cp."A" = $${paramIndex - 1}) ASC NULLS LAST, p."createdAt" DESC`;
-      } else {
-        query += ` ORDER BY p.position ASC, p."createdAt" DESC`;
-      }
-
-      if (options?.take) {
-        query += ` LIMIT $${paramIndex}`;
-        params.push(options.take);
-        paramIndex++;
-      }
-
-      if (options?.skip) {
-        query += ` OFFSET $${paramIndex}`;
-        params.push(options.skip);
-      }
-
-      const result = await client.query(query, params);
-      return result.rows;
     } finally {
       await client.end();
     }
