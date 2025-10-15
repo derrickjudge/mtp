@@ -41,6 +41,9 @@ export class NativeDBService {
           CONSTRAINT "_CategoryToPhoto_B_fkey" FOREIGN KEY ("B") REFERENCES "Photo"("id") ON DELETE CASCADE ON UPDATE CASCADE
         )
       `);
+      // Migration for category-photo ordering and top selections
+      await client.query(`ALTER TABLE "_CategoryToPhoto" ADD COLUMN IF NOT EXISTS position INT NOT NULL DEFAULT 0`);
+      await client.query(`ALTER TABLE "_CategoryToPhoto" ADD COLUMN IF NOT EXISTS is_top_selection BOOLEAN NOT NULL DEFAULT FALSE`);
 
       // Create _PhotoToTag junction table if it doesn't exist
       await client.query(`
@@ -86,6 +89,10 @@ export class NativeDBService {
         )
       `);
 
+      // Migration: add ordering and top-selection columns if missing
+      await client.query(`ALTER TABLE "_EventPhotos" ADD COLUMN IF NOT EXISTS position INT NOT NULL DEFAULT 0`);
+      await client.query(`ALTER TABLE "_EventPhotos" ADD COLUMN IF NOT EXISTS is_top_selection BOOLEAN NOT NULL DEFAULT FALSE`);
+
       await client.query(`
         CREATE TABLE IF NOT EXISTS "_EventArticles" (
           "A" TEXT NOT NULL,
@@ -110,6 +117,20 @@ export class NativeDBService {
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_CategoryToPhoto_B_index" ON "_CategoryToPhoto"("B")
       `);
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_CategoryToPhoto_A_position_index" ON "_CategoryToPhoto"("A", position)
+      `);
+      await client.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = '_CategoryToPhoto_A_position_unique'
+          ) THEN
+            ALTER TABLE "_CategoryToPhoto" ADD CONSTRAINT "_CategoryToPhoto_A_position_unique" UNIQUE ("A", position);
+          END IF;
+        END
+        $$;
+      `);
       
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_PhotoToTag_B_index" ON "_PhotoToTag"("B")
@@ -128,12 +149,33 @@ export class NativeDBService {
       `);
 
       await client.query(`
+        CREATE INDEX IF NOT EXISTS "_EventPhotos_A_position_index" ON "_EventPhotos"("A", position)
+      `);
+
+      // Ensure unique positions per event to prevent duplicate ordering indexes
+      await client.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint 
+            WHERE conname = '_EventPhotos_A_position_unique'
+          ) THEN
+            ALTER TABLE "_EventPhotos" ADD CONSTRAINT "_EventPhotos_A_position_unique" UNIQUE ("A", position);
+          END IF;
+        END
+        $$;
+      `);
+
+      await client.query(`
         CREATE INDEX IF NOT EXISTS "_EventArticles_B_index" ON "_EventArticles"("B")
       `);
 
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_EventCategories_B_index" ON "_EventCategories"("B")
       `);
+
+      // Global photo ordering for "All Photos" view
+      await client.query(`ALTER TABLE "Photo" ADD COLUMN IF NOT EXISTS position INT NOT NULL DEFAULT 0`);
 
     } catch (error) {
       console.warn('Error ensuring junction tables:', error);
@@ -190,60 +232,91 @@ export class NativeDBService {
     const client = this.createClient();
     try {
       await client.connect();
-      
-      let query = `
-        SELECT p.id, p.title, p.description, p.url, p.thumbnail, 
-               p.published, p.featured, p.metadata, p."createdAt", p."updatedAt", p."authorId"
-        FROM "Photo" p
-        WHERE 1=1
-      `;
-      
-      const params: any[] = [];
-      let paramIndex = 1;
 
-      if (options?.published !== undefined) {
-        query += ` AND p.published = $${paramIndex}`;
-        params.push(options.published);
-        paramIndex++;
+      const buildQuery = (fallbackOrdering: boolean) => {
+        let q = `
+          SELECT p.id, p.title, p.description, p.url, p.thumbnail,
+                 p.published, p.featured, p.metadata, p."createdAt", p."updatedAt", p."authorId"
+          FROM "Photo" p
+          WHERE 1=1
+        `;
+        const ps: any[] = [];
+        let idx = 1;
+        if (options?.published !== undefined) {
+          q += ` AND p.published = $${idx}`;
+          ps.push(options.published);
+          idx++;
+        }
+        if (options?.categoryId) {
+          q += ` AND EXISTS (
+            SELECT 1 FROM "_CategoryToPhoto" cp 
+            WHERE cp."B" = p.id AND cp."A" = $${idx}
+          )`;
+          ps.push(options.categoryId);
+          idx++;
+        }
+        if (options?.eventId) {
+          q += ` AND EXISTS (
+            SELECT 1 FROM "_EventPhotos" ep 
+            WHERE ep."B" = p.id AND ep."A" = $${idx}
+          )`;
+          ps.push(options.eventId);
+          idx++;
+        }
+        if (options?.featured) {
+          q += ` AND p.featured = true`;
+        }
+        if (fallbackOrdering) {
+          q += ` ORDER BY p."createdAt" DESC`;
+        } else if (options?.eventId) {
+          q += ` ORDER BY (SELECT ep.position FROM "_EventPhotos" ep WHERE ep."B" = p.id AND ep."A" = $${idx - 1}) ASC NULLS LAST, p."createdAt" DESC`;
+        } else if (options?.categoryId) {
+          q += ` ORDER BY (SELECT cp.position FROM "_CategoryToPhoto" cp WHERE cp."B" = p.id AND cp."A" = $${idx - 1}) ASC NULLS LAST, p."createdAt" DESC`;
+        } else {
+          q += ` ORDER BY p.position ASC, p."createdAt" DESC`;
+        }
+        if (options?.take) {
+          q += ` LIMIT $${idx}`;
+          ps.push(options.take);
+          idx++;
+        }
+        if (options?.skip) {
+          q += ` OFFSET $${idx}`;
+          ps.push(options.skip);
+        }
+        return { q, ps };
+      };
+
+      // Try primary ordering (position-aware)
+      try {
+        const { q, ps } = buildQuery(false);
+        const result = await client.query(q, ps);
+        return result.rows;
+      } catch (err: any) {
+        console.warn('findPhotos primary query failed, retrying fallback ordering', err?.message);
+        // Retry with fallback ordering
+        const { q, ps } = buildQuery(true);
+        const result = await client.query(q, ps);
+        return result.rows;
       }
+    } finally {
+      await client.end();
+    }
+  }
 
-      if (options?.categoryId) {
-        query += ` AND EXISTS (
-          SELECT 1 FROM "_CategoryToPhoto" cp 
-          WHERE cp."B" = p.id AND cp."A" = $${paramIndex}
-        )`;
-        params.push(options.categoryId);
-        paramIndex++;
+  async setGlobalPhotoOrdering(orderedPhotoIds: string[]): Promise<void> {
+    if (!orderedPhotoIds || orderedPhotoIds.length === 0) return;
+    const client = this.createClient();
+    try {
+      await client.connect();
+      await client.query('BEGIN');
+      for (let i = 0; i < orderedPhotoIds.length; i++) {
+        await client.query('UPDATE "Photo" SET position = $2 WHERE id = $1', [orderedPhotoIds[i], i]);
       }
-
-      if (options?.eventId) {
-        query += ` AND EXISTS (
-          SELECT 1 FROM "_EventPhotos" ep 
-          WHERE ep."B" = p.id AND ep."A" = $${paramIndex}
-        )`;
-        params.push(options.eventId);
-        paramIndex++;
-      }
-
-      if (options?.featured) {
-        query += ` AND p.featured = true`;
-      }
-
-      query += ` ORDER BY p."createdAt" DESC`;
-
-      if (options?.take) {
-        query += ` LIMIT $${paramIndex}`;
-        params.push(options.take);
-        paramIndex++;
-      }
-
-      if (options?.skip) {
-        query += ` OFFSET $${paramIndex}`;
-        params.push(options.skip);
-      }
-
-      const result = await client.query(query, params);
-      return result.rows;
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
     } finally {
       await client.end();
     }
@@ -1245,14 +1318,55 @@ export class NativeDBService {
     const client = this.createClient();
     try {
       await client.connect();
-      
-      const values = photoIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
-      const params = photoIds.flatMap(photoId => [eventId, photoId]);
-      
+      // Determine starting position (append semantics)
+      const startPosRes = await client.query('SELECT COALESCE(MAX(position) + 1, 0) AS start FROM "_EventPhotos" WHERE "A" = $1', [eventId]);
+      let start = Number(startPosRes.rows[0]?.start ?? 0);
+      const values = photoIds.map((_, index) => `($1, $${index + 2}, $${index + 2 + photoIds.length}, FALSE)`).join(', ');
+      const params = [eventId, ...photoIds, ...photoIds.map((_, i) => start + i)];
       await client.query(
-        `INSERT INTO "_EventPhotos" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`,
+        `INSERT INTO "_EventPhotos" ("A", "B", position, is_top_selection) VALUES ${values} 
+         ON CONFLICT ("A","B") DO NOTHING`,
         params
       );
+    } finally {
+      await client.end();
+    }
+  }
+
+  async setEventPhotoCuration(eventId: string, orderedPhotoIds: string[], topPhotoIds: string[]): Promise<void> {
+    await this.ensureJunctionTables();
+    const client = this.createClient();
+    try {
+      await client.connect();
+      await client.query('BEGIN');
+      // Ensure rows exist for any new ids
+      if (orderedPhotoIds.length > 0) {
+        const placeholders = orderedPhotoIds.map((_, i) => `($1, $${i + 2})`).join(', ');
+        await client.query(
+          `INSERT INTO "_EventPhotos" ("A", "B") VALUES ${placeholders} ON CONFLICT ("A","B") DO NOTHING`,
+          [eventId, ...orderedPhotoIds]
+        );
+      }
+      // Update positions
+      for (let i = 0; i < orderedPhotoIds.length; i++) {
+        await client.query(
+          `UPDATE "_EventPhotos" SET position = $3 WHERE "A" = $1 AND "B" = $2`,
+          [eventId, orderedPhotoIds[i], i]
+        );
+      }
+      // Reset all to false, then set tops
+      await client.query(`UPDATE "_EventPhotos" SET is_top_selection = FALSE WHERE "A" = $1`, [eventId]);
+      if (topPhotoIds.length > 0) {
+        const setTopPlaceholders = topPhotoIds.map((_, i) => `$${i + 2}`).join(', ');
+        await client.query(
+          `UPDATE "_EventPhotos" SET is_top_selection = TRUE WHERE "A" = $1 AND "B" IN (${setTopPlaceholders})`,
+          [eventId, ...topPhotoIds]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
     } finally {
       await client.end();
     }
@@ -1326,7 +1440,14 @@ export class NativeDBService {
       await client.connect();
       
       const result = await client.query(
-        `SELECT 
+        `WITH ordered_photos AS (
+           SELECT p.id, p.title, p.url, p.thumbnail, ep.position, ep.is_top_selection
+           FROM "_EventPhotos" ep
+           JOIN "Photo" p ON p.id = ep."B"
+           WHERE ep."A" = $1
+           ORDER BY ep.position ASC, p."createdAt" DESC
+         )
+         SELECT 
            e.id, e.name, e.slug, e.description, e.date, e.location, e."coverImage", 
            e.published, e.featured, e."authorId", e."createdAt", e."updatedAt",
            COALESCE(
@@ -1343,12 +1464,14 @@ export class NativeDBService {
            COALESCE(
              json_agg(
                DISTINCT jsonb_build_object(
-                 'id', p.id, 
-                 'title', p.title, 
-                 'url', p.url, 
-                 'thumbnail', p.thumbnail
+                 'id', op.id, 
+                 'title', op.title, 
+                 'url', op.url, 
+                 'thumbnail', op.thumbnail,
+                 'position', op.position,
+                 'is_top_selection', op.is_top_selection
                )
-             ) FILTER (WHERE p.id IS NOT NULL), 
+             ) FILTER (WHERE op.id IS NOT NULL), 
              '[]'
            ) as photos,
            COALESCE(
@@ -1366,8 +1489,7 @@ export class NativeDBService {
          FROM "Event" e
          LEFT JOIN "_EventCategories" ec ON e.id = ec."A"
          LEFT JOIN "Category" c ON ec."B" = c.id
-         LEFT JOIN "_EventPhotos" ep ON e.id = ep."A"
-         LEFT JOIN "Photo" p ON ep."B" = p.id
+         LEFT JOIN ordered_photos op ON TRUE
          LEFT JOIN "_EventArticles" ea ON e.id = ea."A"
          LEFT JOIN "Article" a ON ea."B" = a.id
          WHERE e.id = $1

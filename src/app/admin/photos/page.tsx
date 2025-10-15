@@ -5,7 +5,9 @@ import { PhotoUpload } from '@/components/photos/PhotoUpload';
 import { BulkPhotoUpload } from '@/components/photos/BulkPhotoUpload';
 import { AdminPhotoGrid } from '@/components/photos/AdminPhotoGrid';
 import { Photo } from '@/types/photo';
-import { PhotoIcon, RectangleGroupIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, RectangleGroupIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
+import { toast } from 'react-hot-toast';
 
 interface Category {
   id: string;
@@ -129,6 +131,49 @@ export default function AdminPhotos() {
   const clearFilters = () => {
     setSelectedCategory('');
     setSelectedEvent('');
+  };
+
+  const moveAllPhoto = (index: number, direction: -1 | 1) => {
+    if (selectedCategory || selectedEvent) return; // only in All Photos view
+    setPhotos(prev => {
+      const next = [...prev];
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= next.length) return prev;
+      const tmp = next[index];
+      next[index] = next[newIndex];
+      next[newIndex] = tmp;
+      return next;
+    });
+  };
+
+  const moveAllPhotoToTop = (index: number) => {
+    if (selectedCategory || selectedEvent) return;
+    setPhotos(prev => {
+      if (index <= 0) return prev;
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.unshift(item);
+      return next;
+    });
+  };
+
+  const saveGlobalOrdering = async () => {
+    try {
+      if (selectedCategory || selectedEvent) {
+        toast.error('Global ordering only applies when viewing All Photos');
+        return;
+      }
+      const orderedPhotoIds = photos.map(p => p.id);
+      const res = await fetch('/api/photos/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedPhotoIds }),
+      });
+      if (!res.ok) throw new Error('Failed to save ordering');
+      toast.success('All Photos ordering saved');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save ordering');
+    }
   };
 
   if (isLoading) {
@@ -287,7 +332,35 @@ export default function AdminPhotos() {
           </div>
         )}
 
-        {photos.length > 0 ? (
+        {!selectedCategory && !selectedEvent && photos.length > 0 ? (
+          <div>
+            <div className="text-sm text-gray-300 mb-2">All Photos ordering (top to bottom). Use Up/Down, then Save.</div>
+            <div className="space-y-2">
+              {photos.map((p, idx) => (
+                <div key={p.id} className="flex items-center gap-3 bg-gray-700 rounded p-2">
+                  <div className="relative w-12 h-12 rounded overflow-hidden">
+                    <Image src={p.thumbnail || p.url} alt={p.title} fill className="object-cover" />
+                  </div>
+                  <div className="text-gray-200 text-sm flex-1 truncate">{p.title}</div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => moveAllPhoto(idx, -1)} className="p-1 bg-gray-600 rounded disabled:opacity-50" disabled={idx === 0}>
+                      <ArrowUpIcon className="w-4 h-4 text-white" />
+                    </button>
+                    <button onClick={() => moveAllPhoto(idx, 1)} className="p-1 bg-gray-600 rounded disabled:opacity-50" disabled={idx === photos.length - 1}>
+                      <ArrowDownIcon className="w-4 h-4 text-white" />
+                    </button>
+                    <button onClick={() => moveAllPhotoToTop(idx)} className="px-2 py-1 bg-gray-600 rounded text-xs text-white disabled:opacity-50" disabled={idx === 0}>
+                      Top
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="pt-3">
+              <button onClick={saveGlobalOrdering} className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Ordering</button>
+            </div>
+          </div>
+        ) : photos.length > 0 ? (
           <AdminPhotoGrid 
             photos={photos} 
             onPhotoUpdated={handlePhotoUpdated}
