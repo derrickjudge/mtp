@@ -32,8 +32,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Failed to fetch photos' }, { status: 500 });
     }
     const res = NextResponse.json({ photos });
-    res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
-    res.headers.set('CDN-Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    // For unfiltered "All Photos" listing, avoid caching to reflect ordering changes immediately
+    if (!categoryId && !eventId && !tagId) {
+      res.headers.set('Cache-Control', 'no-store');
+    } else {
+      res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+      res.headers.set('CDN-Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    }
     return res;
   } catch (error) {
     console.error('Error fetching photos:', error);

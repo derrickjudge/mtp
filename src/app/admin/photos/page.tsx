@@ -146,6 +146,17 @@ export default function AdminPhotos() {
     });
   };
 
+  const moveAllPhotoToTop = (index: number) => {
+    if (selectedCategory || selectedEvent) return;
+    setPhotos(prev => {
+      if (index <= 0) return prev;
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.unshift(item);
+      return next;
+    });
+  };
+
   const saveGlobalOrdering = async () => {
     try {
       if (selectedCategory || selectedEvent) {
@@ -337,6 +348,9 @@ export default function AdminPhotos() {
                     </button>
                     <button onClick={() => moveAllPhoto(idx, 1)} className="p-1 bg-gray-600 rounded disabled:opacity-50" disabled={idx === photos.length - 1}>
                       <ArrowDownIcon className="w-4 h-4 text-white" />
+                    </button>
+                    <button onClick={() => moveAllPhotoToTop(idx)} className="px-2 py-1 bg-gray-600 rounded text-xs text-white disabled:opacity-50" disabled={idx === 0}>
+                      Top
                     </button>
                   </div>
                 </div>
