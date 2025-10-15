@@ -11,9 +11,24 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     if (!rl.allowed) {
       return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
     }
-    // Reuse findPhotos filtered by category; already orders by category position
-    const photos = await nativeDB.findPhotos({ categoryId: params.id });
-    return NextResponse.json({ photos });
+    // Return curated ordering and top-selection flags for category
+    await nativeDB.ensureJunctionTables();
+    const clientFactory = (nativeDB as any).createClient.bind(nativeDB);
+    const client = clientFactory();
+    await client.connect();
+    try {
+      const result = await client.query(
+        `SELECT p.id, p.title, p.url, p.thumbnail, cp.position, cp.is_top_selection
+         FROM "_CategoryToPhoto" cp
+         JOIN "Photo" p ON p.id = cp."B"
+         WHERE cp."A" = $1
+         ORDER BY cp.position ASC, p."createdAt" DESC`,
+        [params.id]
+      );
+      return NextResponse.json({ photos: result.rows });
+    } finally {
+      await client.end();
+    }
   } catch (error) {
     console.error('Error fetching category photos:', error);
     return NextResponse.json({ message: 'Failed to fetch category photos' }, { status: 500 });

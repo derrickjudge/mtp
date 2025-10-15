@@ -143,7 +143,7 @@ function EventCard({ event, featured }: { event: Event; featured: boolean }) {
       {/* Event Content */}
       <div className="p-6">
         <h3 className="text-xl font-semibold mb-2 group-hover:text-purple-400 transition-colors">
-          {event.name}
+          <Link href={`/events/${event.slug}`}>{event.name}</Link>
         </h3>
         
         {event.description && (
