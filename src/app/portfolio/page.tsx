@@ -77,14 +77,8 @@ function PortfolioContent() {
         // Extract photos array from response
         const photosArray = data.photos || [];
         
-        // Sort photos: featured first, then by creation date
-        const sortedPhotos = photosArray.sort((a: Photo, b: Photo) => {
-          if (a.featured && !b.featured) return -1;
-          if (!a.featured && b.featured) return 1;
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        });
-        
-        setPhotos(sortedPhotos);
+        // Respect curated ordering from the API (already ordered by DB)
+        setPhotos(photosArray);
       } else {
         setError('Failed to load photos');
       }
