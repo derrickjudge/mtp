@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
-import { toast } from 'react-hot-toast';
 
 interface Category {
   id: string;
