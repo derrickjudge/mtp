@@ -304,6 +304,24 @@ export class NativeDBService {
     }
   }
 
+  async setGlobalPhotoOrdering(orderedPhotoIds: string[]): Promise<void> {
+    if (!orderedPhotoIds || orderedPhotoIds.length === 0) return;
+    const client = this.createClient();
+    try {
+      await client.connect();
+      await client.query('BEGIN');
+      for (let i = 0; i < orderedPhotoIds.length; i++) {
+        await client.query('UPDATE "Photo" SET position = $2 WHERE id = $1', [orderedPhotoIds[i], i]);
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      await client.end();
+    }
+  }
+
   async findCategories(): Promise<any[]> {
     const client = this.createClient();
     try {
