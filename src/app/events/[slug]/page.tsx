@@ -13,7 +13,7 @@ export default async function EventDetailPage({ params }: { params: Params }) {
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2">Event Not Found</h1>
-          <p className="text-gray-400 mb-6">We couldn't find this event.</p>
+          <p className="text-gray-400 mb-6">We couldn&apos;t find this event.</p>
           <Link href="/events" className="px-4 py-2 bg-white text-black rounded">Back to Events</Link>
         </div>
       </div>
