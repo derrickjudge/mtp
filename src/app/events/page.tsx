@@ -3,6 +3,16 @@ import { nativeDB } from '@/lib/db-native';
 import { CalendarIcon, MapPinIcon, PhotoIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import Image from 'next/image';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Events',
+  description: 'Browse our photography events, workshops, and exhibitions. Curated photo collections from sports games, concerts, and street photography sessions.',
+  openGraph: {
+    title: 'Events | MTP Collective',
+    description: 'Browse our photography events, workshops, and exhibitions.',
+  },
+};
 
 interface Event {
   id: string;

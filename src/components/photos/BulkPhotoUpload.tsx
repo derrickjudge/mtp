@@ -24,7 +24,22 @@ interface PreviewFile {
   preview: string;
   title: string;
   description: string;
+  folderPath?: string;
+  autoCategory?: string;
 }
+
+// Common tag presets for quick-apply
+const TAG_PRESETS = [
+  { label: 'D1', value: 'D1' },
+  { label: 'Athletics', value: 'athletics' },
+  { label: 'Night Game', value: 'night game' },
+  { label: 'Concert', value: 'concert' },
+  { label: 'Festival', value: 'festival' },
+  { label: 'Live Music', value: 'live music' },
+  { label: 'Automotive', value: 'automotive' },
+  { label: 'Street', value: 'street' },
+  { label: 'Portrait', value: 'portrait' },
+];
 
 interface BulkPhotoUploadProps {
   onUploadComplete?: () => void;
@@ -41,6 +56,8 @@ export function BulkPhotoUpload({ onUploadComplete }: BulkPhotoUploadProps) {
   const [currentTag, setCurrentTag] = useState('');
   const [files, setFiles] = useState<PreviewFile[]>([]);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [useAutoCategory, setUseAutoCategory] = useState(true);
+  const folderInputRef = React.useRef<HTMLInputElement>(null);
 
   // Fetch categories and events on component mount
   useEffect(() => {
@@ -69,16 +86,100 @@ export function BulkPhotoUpload({ onUploadComplete }: BulkPhotoUploadProps) {
     fetchData();
   }, []);
 
+  // Helper to find matching category from folder path
+  const findCategoryFromPath = useCallback((filePath: string): { categoryId: string; categoryName: string } | null => {
+    if (!filePath || categories.length === 0) return null;
+    
+    // Extract folder names from path (e.g., "Sports/Game1/photo.jpg" -> ["Sports", "Game1"])
+    const parts = filePath.split('/').filter(p => p && !p.includes('.'));
+    
+    // Try to match each folder part to a category (case-insensitive)
+    for (const folderName of parts) {
+      const matchedCategory = categories.find(
+        cat => cat.name.toLowerCase() === folderName.toLowerCase()
+      );
+      if (matchedCategory) {
+        return { categoryId: matchedCategory.id, categoryName: matchedCategory.name };
+      }
+    }
+    return null;
+  }, [categories]);
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles = acceptedFiles.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
-      title: file.name.split('.')[0],
-      description: ''
-    }));
+    const newFiles = acceptedFiles.map(file => {
+      // Try to get the relative path from the file (webkitRelativePath for folder uploads)
+      const relativePath = (file as any).webkitRelativePath || (file as any).path || '';
+      const folderMatch = useAutoCategory ? findCategoryFromPath(relativePath) : null;
+      
+      return {
+        file,
+        preview: URL.createObjectURL(file),
+        title: file.name.split('.')[0],
+        description: '',
+        folderPath: relativePath,
+        autoCategory: folderMatch?.categoryName,
+      };
+    });
+
+    // If auto-categorization found categories, auto-select them
+    if (useAutoCategory) {
+      const foundCategoryIds = new Set<string>();
+      newFiles.forEach(f => {
+        const match = findCategoryFromPath(f.folderPath || '');
+        if (match) foundCategoryIds.add(match.categoryId);
+      });
+      if (foundCategoryIds.size > 0) {
+        setSelectedCategories(prev => [...new Set([...prev, ...foundCategoryIds])]);
+      }
+    }
 
     setFiles(prev => [...prev, ...newFiles]);
-  }, []);
+  }, [useAutoCategory, findCategoryFromPath]);
+
+  // Handle folder input change (webkitdirectory)
+  const handleFolderSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    // Filter to only image files
+    const imageFiles = Array.from(selectedFiles).filter(file => 
+      file.type.startsWith('image/') || 
+      /\.(jpe?g|png|gif|webp)$/i.test(file.name)
+    );
+
+    const newFiles = imageFiles.map(file => {
+      const relativePath = (file as any).webkitRelativePath || '';
+      const folderMatch = useAutoCategory ? findCategoryFromPath(relativePath) : null;
+      
+      return {
+        file,
+        preview: URL.createObjectURL(file),
+        title: file.name.split('.')[0],
+        description: '',
+        folderPath: relativePath,
+        autoCategory: folderMatch?.categoryName,
+      };
+    });
+
+    // Auto-select detected categories
+    if (useAutoCategory) {
+      const foundCategoryIds = new Set<string>();
+      newFiles.forEach(f => {
+        const match = findCategoryFromPath(f.folderPath || '');
+        if (match) foundCategoryIds.add(match.categoryId);
+      });
+      if (foundCategoryIds.size > 0) {
+        setSelectedCategories(prev => [...new Set([...prev, ...foundCategoryIds])]);
+      }
+    }
+
+    setFiles(prev => [...prev, ...newFiles]);
+    
+    // Reset the input so same folder can be selected again
+    if (folderInputRef.current) {
+      folderInputRef.current.value = '';
+    }
+  }, [useAutoCategory, findCategoryFromPath]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -265,24 +366,73 @@ export function BulkPhotoUpload({ onUploadComplete }: BulkPhotoUploadProps) {
 
   return (
     <div className="space-y-6">
-      {/* Drop Zone */}
-      <div
-        {...getRootProps()}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-          ${isDragActive ? 'border-blue-500 bg-blue-900/20' : 'border-gray-600 hover:border-gray-500'}
-          ${isUploading ? 'opacity-50 cursor-not-allowed' : ''} bg-gray-800`}
-      >
-        <input {...getInputProps()} />
-        <PhotoIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        {isDragActive ? (
-          <p className="text-blue-400">Drop the images here...</p>
-        ) : (
-          <div>
-            <p className="text-gray-300">Drag and drop multiple images here, or click to select</p>
-            <p className="text-sm text-gray-400 mt-1">Supports: JPEG, PNG, GIF, WebP (Multiple files)</p>
-          </div>
-        )}
+      {/* Upload Options */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-gray-300">
+            <input
+              type="checkbox"
+              checked={useAutoCategory}
+              onChange={(e) => setUseAutoCategory(e.target.checked)}
+              className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
+            />
+            Auto-categorize by folder name
+          </label>
+        </div>
       </div>
+
+      {/* Upload Zones */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Files Drop Zone */}
+        <div
+          {...getRootProps()}
+          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
+            ${isDragActive ? 'border-blue-500 bg-blue-900/20' : 'border-gray-600 hover:border-gray-500'}
+            ${isUploading ? 'opacity-50 cursor-not-allowed' : ''} bg-gray-800`}
+        >
+          <input {...getInputProps()} />
+          <PhotoIcon className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+          {isDragActive ? (
+            <p className="text-blue-400">Drop the images here...</p>
+          ) : (
+            <div>
+              <p className="text-gray-300 font-medium">Drop Files or Click</p>
+              <p className="text-sm text-gray-400 mt-1">Select individual images</p>
+            </div>
+          )}
+        </div>
+
+        {/* Folder Upload Zone */}
+        <div
+          onClick={() => !isUploading && folderInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
+            border-purple-600/50 hover:border-purple-500 bg-purple-900/10
+            ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <input
+            ref={folderInputRef}
+            type="file"
+            // @ts-expect-error - webkitdirectory is not in the type definitions
+            webkitdirectory="true"
+            multiple
+            onChange={handleFolderSelect}
+            className="hidden"
+            accept="image/*"
+          />
+          <svg className="w-10 h-10 text-purple-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+          <p className="text-gray-300 font-medium">Select Folder</p>
+          <p className="text-sm text-purple-300 mt-1">Auto-categorize by folder name</p>
+        </div>
+      </div>
+
+      {useAutoCategory && (
+        <div className="text-sm text-gray-400 bg-gray-800 rounded-lg p-3 mt-2">
+          <strong className="text-gray-300">Tip:</strong> Name your folders after categories (e.g., &quot;Sports&quot;, &quot;Music&quot;, &quot;Street&quot;) 
+          and photos will be automatically assigned to matching categories.
+        </div>
+      )}
 
       {/* File Previews */}
       {files.length > 0 && (
@@ -330,6 +480,17 @@ export function BulkPhotoUpload({ onUploadComplete }: BulkPhotoUploadProps) {
                     placeholder="Photo description"
                     rows={2}
                   />
+                  {/* Show folder path and auto-detected category */}
+                  {fileData.folderPath && (
+                    <div className="text-xs text-gray-400 truncate" title={fileData.folderPath}>
+                      📁 {fileData.folderPath}
+                    </div>
+                  )}
+                  {fileData.autoCategory && (
+                    <div className="inline-block px-2 py-0.5 bg-purple-600/30 text-purple-300 rounded text-xs">
+                      Auto: {fileData.autoCategory}
+                    </div>
+                  )}
                 </div>
 
                 {/* Progress Bar */}
@@ -411,6 +572,33 @@ export function BulkPhotoUpload({ onUploadComplete }: BulkPhotoUploadProps) {
           <label className="block text-sm font-medium text-gray-200 mb-2">
             Tags (Applied to all photos)
           </label>
+          
+          {/* Tag Presets */}
+          <div className="mb-3">
+            <span className="text-xs text-gray-400 mb-1 block">Quick add presets:</span>
+            <div className="flex flex-wrap gap-1">
+              {TAG_PRESETS.map(preset => (
+                <button
+                  key={preset.value}
+                  onClick={() => {
+                    if (!tags.includes(preset.value)) {
+                      setTags(prev => [...prev, preset.value]);
+                    }
+                  }}
+                  disabled={tags.includes(preset.value)}
+                  className={`px-2 py-1 rounded text-xs transition-colors
+                    ${tags.includes(preset.value)
+                      ? 'bg-green-600/30 text-green-300 cursor-default'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                >
+                  + {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Selected Tags */}
           <div className="flex flex-wrap gap-2 mb-2">
             {tags.map(tag => (
               <span
@@ -432,7 +620,7 @@ export function BulkPhotoUpload({ onUploadComplete }: BulkPhotoUploadProps) {
             value={currentTag}
             onChange={(e) => setCurrentTag(e.target.value)}
             onKeyDown={handleTagKeyDown}
-            placeholder="Add a tag and press Enter"
+            placeholder="Add a custom tag and press Enter"
             className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>

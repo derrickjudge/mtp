@@ -122,9 +122,6 @@ export default function Navigation() {
           )}
         </div>
 
-        <Link href="/articles" className={cn(baseLink, isActive('/articles') && activeLink)} aria-current={isActive('/articles') ? 'page' : undefined}>
-          Articles
-        </Link>
         <Link href="/events" className={cn(baseLink, isActive('/events') && activeLink)} aria-current={isActive('/events') ? 'page' : undefined}>
           Events
         </Link>
@@ -190,13 +187,6 @@ export default function Navigation() {
             ))}
           </div>
           
-          <Link 
-            href="/articles" 
-            className="block px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Articles
-          </Link>
           <Link 
             href="/events" 
             className="block px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"

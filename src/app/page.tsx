@@ -3,10 +3,21 @@ import { imageUrls } from '@/utils/imageUrls';
 import Link from 'next/link';
 import type { Photo } from '@/types/photo';
 import { nativeDB } from '@/lib/db-native';
+import type { Metadata } from 'next';
 
 // Make this page dynamic
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: 'Sports, Music & Street Photography',
+  description: 'MTP Collective captures the energy of live sports, the rhythm of music, and the authenticity of street life. Professional photography portfolio showcasing concerts, athletics, and urban moments.',
+  keywords: ['sports photography', 'concert photography', 'street photography', 'music photography', 'event photography', 'MTP Collective', 'professional photographer'],
+  openGraph: {
+    title: 'MTP Collective | Sports, Music & Street Photography',
+    description: 'Capturing the energy of live sports, the rhythm of music, and the authenticity of street life.',
+  },
+};
 
 interface Category {
   id: string;

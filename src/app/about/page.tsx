@@ -2,6 +2,16 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { PhotoCard } from '@/components/common/PhotoCard';
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'About Us',
+  description: 'Meet the passionate photographers behind MTP Collective. We specialize in capturing the energy of sports, music, and street life through our unique lens.',
+  openGraph: {
+    title: 'About Us | MTP Collective',
+    description: 'Meet the passionate photographers behind MTP Collective.',
+  },
+};
 
 export default function AboutPage() {
   return (
