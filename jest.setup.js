@@ -63,6 +63,43 @@ if (typeof global.TextDecoder === 'undefined') {
   global.TextDecoder = TextDecoder;
 }
 
+// Polyfill Web API globals for Next.js API route testing
+if (typeof global.Request === 'undefined') {
+  global.Request = class Request {
+    constructor(url, options = {}) {
+      this.url = url;
+      this.method = options.method || 'GET';
+      this.headers = new Headers(options.headers);
+      this._body = options.body;
+    }
+    get body() { return this._body; }
+  };
+}
+if (typeof global.Response === 'undefined') {
+  global.Response = class Response {
+    constructor(body, options = {}) {
+      this._body = body;
+      this.status = options.status || 200;
+      this.headers = new Headers(options.headers);
+    }
+  };
+}
+if (typeof global.Headers === 'undefined') {
+  global.Headers = class Headers {
+    constructor(init = {}) {
+      this._headers = {};
+      if (init) {
+        Object.entries(init).forEach(([key, value]) => {
+          this._headers[key.toLowerCase()] = value;
+        });
+      }
+    }
+    get(key) { return this._headers[key.toLowerCase()] || null; }
+    set(key, value) { this._headers[key.toLowerCase()] = value; }
+    has(key) { return key.toLowerCase() in this._headers; }
+  };
+}
+
 // Mock sharp to avoid real image processing in tests
 jest.mock('sharp', () => {
   const mockInstance = {

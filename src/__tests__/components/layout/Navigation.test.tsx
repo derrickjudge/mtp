@@ -13,10 +13,10 @@ describe('Navigation', () => {
     const desktopNav = screen.getByRole('navigation').querySelector('.hidden.md\\:flex');
     
     expect(desktopNav).toBeInTheDocument();
-    // Home link is the logo text; Desktop menu shows About, Portfolio, Articles, Events, Contact
+    // Home link is the logo text; Desktop menu shows About, Portfolio, Events, Contact (Articles removed)
     await waitFor(() => {
       expect(desktopNav).toHaveTextContent('Portfolio');
-      expect(desktopNav).toHaveTextContent('Articles');
+      expect(desktopNav).toHaveTextContent('Events');
       expect(desktopNav).toHaveTextContent('About Us');
       expect(desktopNav).toHaveTextContent('Contact');
     });
