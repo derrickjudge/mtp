@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
+import { StarIcon } from '@heroicons/react/24/solid';
+import { StarIcon as StarIconOutline } from '@heroicons/react/24/outline';
 
 interface Category {
   id: string;
@@ -102,16 +104,54 @@ export default function AdminCategories() {
     });
   };
 
+  // Find the Signature Shots subcategory for a parent
+  const getSignatureShotsSubcategory = useCallback((parentId: string): Category | undefined => {
+    return categories.find(c => 
+      c.parentId === parentId && 
+      c.name.toLowerCase().includes('signature shots')
+    );
+  }, [categories]);
+
   const saveCuration = async (categoryId: string) => {
     try {
       const orderedPhotoIds = (categoryPhotos[categoryId] || []).map(p => p.id);
+      const signaturePhotoIds = topPhotoIds[categoryId] || [];
+      
+      // Save the curation for the main category
       const res = await fetch(`/api/categories/${categoryId}/photos`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderedPhotoIds, topPhotoIds: topPhotoIds[categoryId] || [] }),
+        body: JSON.stringify({ orderedPhotoIds, topPhotoIds: signaturePhotoIds }),
       });
       if (!res.ok) throw new Error('Failed to save ordering');
-      toast.success('Category photo ordering saved');
+      
+      // If this is a parent category with a Signature Shots subcategory,
+      // automatically link the signature photos to that subcategory
+      const category = categories.find(c => c.id === categoryId);
+      if (category && !category.parentId) {
+        const signatureShotsSubcat = getSignatureShotsSubcategory(categoryId);
+        if (signatureShotsSubcat && signaturePhotoIds.length > 0) {
+          // Link signature photos to the Signature Shots subcategory
+          const linkRes = await fetch(`/api/categories/${signatureShotsSubcat.id}/photos`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              orderedPhotoIds: signaturePhotoIds, 
+              topPhotoIds: signaturePhotoIds // All are "top" in signature shots
+            }),
+          });
+          if (linkRes.ok) {
+            toast.success(`${signaturePhotoIds.length} Signature Shots saved for ${category.name}`);
+          }
+        } else {
+          toast.success('Category photo ordering saved');
+        }
+      } else {
+        toast.success('Category photo ordering saved');
+      }
+      
+      // Refresh the data
+      await fetchCategories();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to save ordering');
     }
@@ -439,20 +479,125 @@ export default function AdminCategories() {
         </div>
       </div>
 
-      {/* Photo Curation Section (for categories with photos) */}
-      {categories.some(cat => (categoryPhotos[cat.id] || []).length > 0) && (
+      {/* Signature Shots Curation - Parent Categories Only */}
+      {parentCategories.some(cat => (categoryPhotos[cat.id] || []).length > 0) && (
         <div className="bg-gray-800 rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-100">Photo Curation by Category</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <StarIcon className="w-6 h-6 text-yellow-400" />
+            <h2 className="text-xl font-semibold text-gray-100">Signature Shots Curation</h2>
+          </div>
+          <p className="text-gray-400 text-sm mb-6">
+            Select your best photos as &quot;Signature Shots&quot; for each category. 
+            These will appear in the Signature Shots subcategory and showcase your finest work.
+          </p>
+          
           <div className="space-y-6">
-            {categories.filter(cat => (categoryPhotos[cat.id] || []).length > 0).map((category) => (
+            {parentCategories.filter(cat => (categoryPhotos[cat.id] || []).length > 0).map((category) => {
+              const signatureCount = (topPhotoIds[category.id] || []).length;
+              const signatureSubcat = getSignatureShotsSubcategory(category.id);
+              
+              return (
+                <div key={category.id} className="bg-gray-700 rounded-lg overflow-hidden">
+                  {/* Category Header */}
+                  <div className="p-4 bg-gray-700 border-b border-gray-600">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold text-white text-lg">{category.name}</h3>
+                        <span className="px-2 py-1 text-xs bg-yellow-600/30 text-yellow-300 rounded-full flex items-center gap-1">
+                          <StarIcon className="w-3 h-3" />
+                          {signatureCount} Signature Shot{signatureCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      {signatureSubcat && (
+                        <span className="text-xs text-gray-400">
+                          → Links to &quot;{signatureSubcat.name}&quot;
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-400 mt-1">
+                      {(categoryPhotos[category.id] || []).length} photos in this category
+                    </p>
+                  </div>
+                  
+                  {/* Photo Grid */}
+                  <div className="p-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                      {(categoryPhotos[category.id] || []).map((p) => {
+                        const isSignature = (topPhotoIds[category.id] || []).includes(p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => toggleTop(category.id, p.id)}
+                            className={`relative aspect-square rounded-lg overflow-hidden group transition-all ${
+                              isSignature 
+                                ? 'ring-2 ring-yellow-400 ring-offset-2 ring-offset-gray-700' 
+                                : 'hover:ring-2 hover:ring-gray-500'
+                            }`}
+                          >
+                            <Image 
+                              src={p.thumbnail || p.url} 
+                              alt={p.title} 
+                              fill 
+                              className="object-cover" 
+                            />
+                            {/* Signature Badge */}
+                            <div className={`absolute top-1 right-1 p-1 rounded-full transition-all ${
+                              isSignature 
+                                ? 'bg-yellow-400 text-gray-900' 
+                                : 'bg-gray-900/70 text-gray-400 opacity-0 group-hover:opacity-100'
+                            }`}>
+                              {isSignature ? (
+                                <StarIcon className="w-4 h-4" />
+                              ) : (
+                                <StarIconOutline className="w-4 h-4" />
+                              )}
+                            </div>
+                            {/* Title Overlay */}
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <p className="text-xs text-white truncate">{p.title}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Save Button */}
+                    <div className="mt-4 flex items-center justify-between">
+                      <p className="text-sm text-gray-400">
+                        Click photos to toggle Signature Shot status
+                      </p>
+                      <button 
+                        onClick={() => saveCuration(category.id)} 
+                        className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 flex items-center gap-2"
+                      >
+                        <StarIcon className="w-4 h-4" />
+                        Save Signature Shots
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* Subcategory Photo Curation */}
+      {categories.filter(cat => cat.parentId && (categoryPhotos[cat.id] || []).length > 0).length > 0 && (
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-100">Subcategory Photo Ordering</h2>
+          <p className="text-gray-400 text-sm mb-6">
+            Reorder photos within subcategories. Photos will display in this order on the portfolio page.
+          </p>
+          
+          <div className="space-y-6">
+            {categories.filter(cat => cat.parentId && (categoryPhotos[cat.id] || []).length > 0).map((category) => (
               <div key={category.id} className="bg-gray-700 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="font-medium text-white">{category.name}</h3>
-                  {category.parentId && (
-                    <span className="text-xs text-gray-400">
-                      (in {getParentName(category.parentId)})
-                    </span>
-                  )}
+                  <span className="text-xs text-gray-400">
+                    (in {getParentName(category.parentId)})
+                  </span>
                 </div>
                 <div className="space-y-2">
                   {(categoryPhotos[category.id] || []).map((p, idx) => (
@@ -476,15 +621,6 @@ export default function AdminCategories() {
                         >
                           ↓
                         </button>
-                        <label className="flex items-center gap-1 text-xs text-gray-200">
-                          <input 
-                            type="checkbox" 
-                            checked={(topPhotoIds[category.id] || []).includes(p.id)} 
-                            onChange={() => toggleTop(category.id, p.id)} 
-                            className="rounded border-gray-500 bg-gray-600" 
-                          />
-                          Top
-                        </label>
                       </div>
                     </div>
                   ))}
