@@ -1,11 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Photo } from '@/types/photo';
+import { StarIcon } from '@heroicons/react/24/solid';
 
 interface Category {
   id: string;
   name: string;
+  slug: string;
+  parentId?: string | null;
+  showInNav?: boolean;
+  children?: Category[];
 }
 
 interface Tag {
@@ -52,7 +57,7 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
     const fetchData = async () => {
       try {
         const [categoriesResponse, tagsResponse, eventsResponse] = await Promise.all([
-          fetch('/api/categories'),
+          fetch('/api/categories?hierarchy=true'),
           fetch('/api/tags'),
           fetch('/api/events')
         ]);
@@ -78,6 +83,23 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
 
     fetchData();
   }, []);
+
+  // Check if a category is a Signature Shots subcategory
+  const isSignatureShotsCategory = (category: Category): boolean => {
+    return category.name.toLowerCase().includes('signature shots');
+  };
+
+  // Get all subcategory IDs from the hierarchical data
+  const allCategories = useMemo(() => {
+    const result: Category[] = [];
+    categories.forEach(parent => {
+      result.push(parent);
+      if (parent.children) {
+        result.push(...parent.children);
+      }
+    });
+    return result;
+  }, [categories]);
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -194,24 +216,94 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
             />
           </div>
 
-          {/* Categories */}
+          {/* Categories - Hierarchical Display */}
           <div>
             <label className="block text-sm font-medium text-gray-200 mb-2">
-              Categories
+              Categories & Subcategories
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {categories.map((category) => (
-                <label key={category.id} className="flex items-center space-x-2 text-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={selectedCategoryIds.includes(category.id)}
-                    onChange={() => handleCategoryToggle(category.id)}
-                    className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
-                  />
-                  <span>{category.name}</span>
-                </label>
+            <p className="text-xs text-gray-400 mb-3">
+              Select categories for this photo. Click on &quot;Signature Shots&quot; to mark as a top selection for that category.
+            </p>
+            <div className="space-y-4 max-h-64 overflow-y-auto border border-gray-600 rounded-md p-3 bg-gray-700">
+              {categories.map((parent) => (
+                <div key={parent.id} className="space-y-2">
+                  {/* Parent Category */}
+                  <label className="flex items-center space-x-2 text-gray-100 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategoryIds.includes(parent.id)}
+                      onChange={() => handleCategoryToggle(parent.id)}
+                      className="rounded border-gray-500 bg-gray-600 text-blue-500 focus:ring-blue-500"
+                    />
+                    <span className="text-base">{parent.name}</span>
+                  </label>
+                  
+                  {/* Subcategories */}
+                  {parent.children && parent.children.length > 0 && (
+                    <div className="ml-6 space-y-1 border-l-2 border-gray-600 pl-3">
+                      {parent.children.map((sub) => {
+                        const isSignature = isSignatureShotsCategory(sub);
+                        return (
+                          <label 
+                            key={sub.id} 
+                            className={`flex items-center space-x-2 text-gray-200 ${
+                              isSignature ? 'bg-yellow-600/20 rounded px-2 py-1 -ml-2' : ''
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedCategoryIds.includes(sub.id)}
+                              onChange={() => handleCategoryToggle(sub.id)}
+                              className={`rounded border-gray-500 bg-gray-600 focus:ring-blue-500 ${
+                                isSignature ? 'text-yellow-500' : 'text-blue-500'
+                              }`}
+                            />
+                            {isSignature && (
+                              <StarIcon className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                            )}
+                            <span className={`text-sm ${isSignature ? 'text-yellow-300 font-medium' : ''}`}>
+                              {sub.name.replace(`${parent.name}: `, '')}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
+            
+            {/* Selected Categories Summary */}
+            {selectedCategoryIds.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="text-xs text-gray-400">Selected:</span>
+                {selectedCategoryIds.map(id => {
+                  const cat = allCategories.find(c => c.id === id);
+                  if (!cat) return null;
+                  const isSignature = isSignatureShotsCategory(cat);
+                  return (
+                    <span 
+                      key={id} 
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                        isSignature 
+                          ? 'bg-yellow-600/30 text-yellow-300' 
+                          : 'bg-blue-600/30 text-blue-300'
+                      }`}
+                    >
+                      {isSignature && <StarIcon className="w-3 h-3" />}
+                      {cat.name}
+                      <button
+                        type="button"
+                        onClick={() => handleCategoryToggle(id)}
+                        className="hover:text-white ml-1"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Tags */}
