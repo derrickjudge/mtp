@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/utils/cn';
 
@@ -10,11 +10,16 @@ interface Category {
   id: string;
   name: string;
   slug: string;
+  showInNav?: boolean;
+  parentId?: string | null;
+  children?: Category[];
 }
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPortfolioDropdownOpen, setIsPortfolioDropdownOpen] = useState(false);
+  const [expandedParent, setExpandedParent] = useState<string | null>(null);
+  const [mobileExpandedParent, setMobileExpandedParent] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const portfolioRef = useRef<HTMLDivElement>(null);
@@ -26,14 +31,21 @@ export default function Navigation() {
   const activeLink =
     'text-white relative after:absolute after:inset-x-1 after:-bottom-1 after:h-0.5 after:bg-white/80';
 
-  // Fetch categories for portfolio dropdown
+  // Fetch categories with hierarchy
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/categories');
+        const response = await fetch('/api/categories?hierarchy=true');
         if (response.ok) {
-          const data = await response.json();
-          setCategories(data);
+          const data: Category[] = await response.json();
+          // Filter to only show categories where showInNav is true
+          const filtered = data
+            .filter(cat => cat.showInNav !== false)
+            .map(parent => ({
+              ...parent,
+              children: (parent.children || []).filter(child => child.showInNav !== false)
+            }));
+          setCategories(filtered);
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -53,6 +65,7 @@ export default function Navigation() {
         !portfolioRef.current.contains(event.target as Node)
       ) {
         setIsPortfolioDropdownOpen(false);
+        setExpandedParent(null);
       }
     };
 
@@ -64,11 +77,26 @@ export default function Navigation() {
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
-    setIsPortfolioDropdownOpen(false); // Close dropdown when mobile menu toggles
+    setIsPortfolioDropdownOpen(false);
+    setMobileExpandedParent(null);
   };
 
   const togglePortfolioDropdown = () => {
     setIsPortfolioDropdownOpen(!isPortfolioDropdownOpen);
+    setExpandedParent(null);
+  };
+
+  const toggleMobileParent = (parentId: string) => {
+    setMobileExpandedParent(mobileExpandedParent === parentId ? null : parentId);
+  };
+
+  // Get display name (remove parent prefix from Signature Shots)
+  const getDisplayName = (name: string) => {
+    // Remove "Parent: " prefix for cleaner display
+    if (name.includes(': ')) {
+      return name.split(': ')[1];
+    }
+    return name;
   };
 
   return (
@@ -83,7 +111,7 @@ export default function Navigation() {
           About Us
         </Link>
         
-        {/* Portfolio with dropdown */}
+        {/* Portfolio with hierarchical dropdown */}
         <div className="relative" ref={portfolioRef}>
           <button
             onClick={togglePortfolioDropdown}
@@ -95,28 +123,57 @@ export default function Navigation() {
             <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform ${isPortfolioDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
           
-          {/* Portfolio dropdown */}
+          {/* Portfolio dropdown with hierarchy */}
           {isPortfolioDropdownOpen && (
             <div 
               ref={dropdownRef}
-              className="absolute top-full left-0 mt-2 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50"
+              className="absolute top-full left-0 mt-2 w-56 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50"
             >
               <Link
                 href="/portfolio"
-                className="block px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors border-b border-gray-700 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                className="block px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors border-b border-gray-700 rounded-t-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                 onClick={() => setIsPortfolioDropdownOpen(false)}
               >
                 View All
               </Link>
-              {categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/portfolio?category=${category.slug}`}
-                  className="block px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                  onClick={() => setIsPortfolioDropdownOpen(false)}
+              
+              {categories.map((parent) => (
+                <div 
+                  key={parent.id} 
+                  className="relative"
+                  onMouseEnter={() => setExpandedParent(parent.id)}
+                  onMouseLeave={() => setExpandedParent(null)}
                 >
-                  {category.name}
-                </Link>
+                  <Link
+                    href={`/portfolio?category=${parent.slug}`}
+                    className="flex items-center justify-between px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                    onClick={() => setIsPortfolioDropdownOpen(false)}
+                  >
+                    <span>{parent.name}</span>
+                    {parent.children && parent.children.length > 0 && (
+                      <ChevronRightIcon className="w-4 h-4" />
+                    )}
+                  </Link>
+                  
+                  {/* Subcategory flyout */}
+                  {expandedParent === parent.id && parent.children && parent.children.length > 0 && (
+                    <div className="absolute left-full top-0 ml-1 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50">
+                      {parent.children.map((child) => (
+                        <Link
+                          key={child.id}
+                          href={`/portfolio?category=${child.slug}`}
+                          className="block px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors first:rounded-t-lg last:rounded-b-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                          onClick={() => {
+                            setIsPortfolioDropdownOpen(false);
+                            setExpandedParent(null);
+                          }}
+                        >
+                          {getDisplayName(child.name)}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -155,7 +212,7 @@ export default function Navigation() {
       <div 
         className={`${
           isMenuOpen ? 'block' : 'hidden'
-        } md:hidden absolute top-full left-0 right-0 bg-black/95 backdrop-blur-md z-50`}
+        } md:hidden absolute top-full left-0 right-0 bg-black/95 backdrop-blur-md z-50 max-h-[80vh] overflow-y-auto`}
       >
         <div className="px-4 py-2 space-y-1">
           <Link 
@@ -166,7 +223,7 @@ export default function Navigation() {
             About Us
           </Link>
           
-          {/* Portfolio section with categories */}
+          {/* Portfolio section with hierarchical categories */}
           <div className="space-y-1">
             <Link 
               href="/portfolio" 
@@ -175,15 +232,47 @@ export default function Navigation() {
             >
               Portfolio - All
             </Link>
-            {categories.map((category) => (
-              <Link 
-                key={category.id}
-                href={`/portfolio?category=${category.slug}`} 
-                className="block px-6 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {category.name}
-              </Link>
+            
+            {categories.map((parent) => (
+              <div key={parent.id} className="space-y-1">
+                {/* Parent category with expand toggle */}
+                <div className="flex items-center">
+                  <Link 
+                    href={`/portfolio?category=${parent.slug}`}
+                    className="flex-1 px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {parent.name}
+                  </Link>
+                  {parent.children && parent.children.length > 0 && (
+                    <button
+                      onClick={() => toggleMobileParent(parent.id)}
+                      className="p-3 text-gray-400 hover:text-white"
+                      aria-label={`Expand ${parent.name} subcategories`}
+                    >
+                      <ChevronDownIcon 
+                        className={`w-5 h-5 transition-transform ${mobileExpandedParent === parent.id ? 'rotate-180' : ''}`} 
+                      />
+                    </button>
+                  )}
+                </div>
+                
+                {/* Subcategories */}
+                {mobileExpandedParent === parent.id && parent.children && parent.children.length > 0 && (
+                  <div className="pl-4 space-y-1 border-l-2 border-gray-700 ml-4">
+                    {parent.children.map((child) => (
+                      <Link 
+                        key={child.id}
+                        href={`/portfolio?category=${child.slug}`}
+                        className="block px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-900 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {getDisplayName(child.name)}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
           
@@ -205,4 +294,4 @@ export default function Navigation() {
       </div>
     </nav>
   );
-} 
+}

@@ -11,8 +11,23 @@ export async function GET(req: NextRequest) {
     if (!rl.allowed) {
       return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
     }
-    // Public endpoint - no authentication required for GET
-    const categories = await nativeDB.findCategories();
+    
+    const { searchParams } = new URL(req.url);
+    const hierarchy = searchParams.get('hierarchy') === 'true';
+    const parentId = searchParams.get('parentId');
+    
+    let categories;
+    if (hierarchy) {
+      // Return categories with nested children structure
+      categories = await nativeDB.findCategoriesHierarchy();
+    } else if (parentId !== null && parentId !== undefined) {
+      // Return subcategories of a specific parent (or root categories if parentId is empty string)
+      categories = await nativeDB.findCategoriesByParent(parentId === '' ? null : parentId);
+    } else {
+      // Return flat list of all categories
+      categories = await nativeDB.findCategories();
+    }
+    
     const res = NextResponse.json(categories);
     res.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
     res.headers.set('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
@@ -37,7 +52,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { name, description } = await req.json();
+    const { name, description, showInNav, parentId } = await req.json();
 
     if (!name) {
       return NextResponse.json(
@@ -59,7 +74,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const category = await nativeDB.createCategory(name, slug, description || '');
+    // If parentId is provided, verify it exists
+    if (parentId) {
+      const parentCategory = await nativeDB.findCategoryById(parentId);
+      if (!parentCategory) {
+        return NextResponse.json(
+          { message: 'Parent category not found' },
+          { status: 400 }
+        );
+      }
+      // Prevent nesting more than 2 levels deep
+      if (parentCategory.parentId) {
+        return NextResponse.json(
+          { message: 'Cannot create subcategory of a subcategory. Maximum 2 levels allowed.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const category = await nativeDB.createCategory({
+      name,
+      slug,
+      description: description || '',
+      showInNav: showInNav !== false, // default true
+      parentId: parentId || null
+    });
 
     if (!category) {
       return NextResponse.json(

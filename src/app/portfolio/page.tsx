@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import PhotoCollage from '@/components/photos/PhotoCollage';
@@ -14,14 +14,17 @@ interface Category {
   id: string;
   name: string;
   slug: string;
-  description: string;
+  description?: string;
+  parentId?: string | null;
+  children?: Category[];
 }
 
 // Component to handle search params
 function PortfolioContent() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [allCategories, setAllCategories] = useState<Category[]>([]); // Flat list
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -33,31 +36,56 @@ function PortfolioContent() {
 
   // Handle URL category parameter
   useEffect(() => {
-    const categorySlug = searchParams?.get('category');
-    if (categorySlug) {
-      // Find category by slug and set it
-      const category = categories.find(cat => cat.slug === categorySlug);
-      if (category) {
-        setSelectedCategory(category.id);
-      }
-    } else {
-      // No category parameter means "All Photos" is selected
-      setSelectedCategory('');
-    }
-  }, [searchParams, categories]);
+    const categorySlug = searchParams?.get('category') || '';
+    setSelectedCategorySlug(categorySlug);
+  }, [searchParams]);
 
-  // Fetch categories
+  // Fetch categories with hierarchy
   const fetchCategories = useCallback(async () => {
     try {
-      const response = await fetch('/api/categories');
+      // Fetch hierarchy for navigation
+      const response = await fetch('/api/categories?hierarchy=true');
       if (response.ok) {
-        const data = await response.json();
+        const data: Category[] = await response.json();
         setCategories(data);
+        
+        // Create flat list for lookups
+        const flat: Category[] = [];
+        data.forEach(parent => {
+          flat.push(parent);
+          if (parent.children) {
+            parent.children.forEach(child => flat.push(child));
+          }
+        });
+        setAllCategories(flat);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
   }, []);
+
+  // Find selected category info
+  const selectedCategory = useMemo(() => {
+    if (!selectedCategorySlug) return null;
+    return allCategories.find(cat => cat.slug === selectedCategorySlug) || null;
+  }, [selectedCategorySlug, allCategories]);
+
+  // Find parent category if selected is a subcategory
+  const parentCategory = useMemo(() => {
+    if (!selectedCategory?.parentId) return null;
+    return allCategories.find(cat => cat.id === selectedCategory.parentId) || null;
+  }, [selectedCategory, allCategories]);
+
+  // Get subcategories of selected parent (or parent of selected subcategory)
+  const activeParent = useMemo(() => {
+    if (!selectedCategory) return null;
+    if (selectedCategory.parentId) {
+      // Selected is a subcategory, find its parent
+      return categories.find(cat => cat.id === selectedCategory.parentId) || null;
+    }
+    // Selected is a parent
+    return categories.find(cat => cat.id === selectedCategory.id) || null;
+  }, [selectedCategory, categories]);
 
   // Fetch photos with optional category filter
   const fetchPhotos = useCallback(async () => {
@@ -67,17 +95,13 @@ function PortfolioContent() {
       
       let url = '/api/photos?published=true';
       if (selectedCategory) {
-        url += `&category=${selectedCategory}`;
+        url += `&category=${selectedCategory.id}`;
       }
       
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        
-        // Extract photos array from response
         const photosArray = data.photos || [];
-        
-        // Respect curated ordering from the API (already ordered by DB)
         setPhotos(photosArray);
       } else {
         setError('Failed to load photos');
@@ -96,13 +120,10 @@ function PortfolioContent() {
   }, [fetchCategories]);
 
   useEffect(() => {
-    fetchPhotos();
-  }, [fetchPhotos]);
-
-  // Get selected category info
-  const selectedCategoryInfo = selectedCategory 
-    ? categories.find(cat => cat.id === selectedCategory)
-    : null;
+    if (allCategories.length > 0 || !selectedCategorySlug) {
+      fetchPhotos();
+    }
+  }, [fetchPhotos, allCategories.length, selectedCategorySlug]);
 
   // Lightbox handlers
   const handlePhotoClick = (photo: Photo) => {
@@ -127,25 +148,62 @@ function PortfolioContent() {
     }
   };
 
+  // Get display name (remove parent prefix from Signature Shots)
+  const getDisplayName = (name: string) => {
+    if (name.includes(': ')) {
+      return name.split(': ')[1];
+    }
+    return name;
+  };
+
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header Section - Clean & Minimal */}
+      {/* Header Section */}
       <section className="py-16 bg-black">
         <div className="max-w-7xl mx-auto px-4">
-          {selectedCategoryInfo ? (
-            <>
-              <nav className="text-sm text-gray-400 mb-6">
-                <Link href="/portfolio" className="hover:text-white transition-colors">
-                  Portfolio
+          {/* Breadcrumb navigation */}
+          <nav className="text-sm text-gray-400 mb-6 flex items-center gap-2">
+            <Link href="/portfolio" className="hover:text-white transition-colors">
+              Portfolio
+            </Link>
+            {parentCategory && (
+              <>
+                <span className="text-gray-600">→</span>
+                <Link 
+                  href={`/portfolio?category=${parentCategory.slug}`}
+                  className="hover:text-white transition-colors"
+                >
+                  {parentCategory.name}
                 </Link>
-                <span className="mx-2">→</span>
-                <span className="text-white">{selectedCategoryInfo.name}</span>
-              </nav>
+              </>
+            )}
+            {selectedCategory && !selectedCategory.parentId && (
+              <>
+                <span className="text-gray-600">→</span>
+                <span className="text-white">{selectedCategory.name}</span>
+              </>
+            )}
+            {selectedCategory && selectedCategory.parentId && (
+              <>
+                <span className="text-gray-600">→</span>
+                <span className="text-white">{getDisplayName(selectedCategory.name)}</span>
+              </>
+            )}
+          </nav>
+
+          {/* Title and description */}
+          {selectedCategory ? (
+            <>
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 text-left">
-                {selectedCategoryInfo.name}
+                {selectedCategory.parentId 
+                  ? getDisplayName(selectedCategory.name)
+                  : selectedCategory.name
+                }
               </h1>
               <p className="text-lg text-gray-300 max-w-3xl text-left">
-                {selectedCategoryInfo.description || `Showcasing our ${selectedCategoryInfo.name.toLowerCase()} photography collection`}
+                {selectedCategory.description || 
+                  `Showcasing our ${getDisplayName(selectedCategory.name).toLowerCase()} photography collection`
+                }
               </p>
             </>
           ) : (
@@ -161,36 +219,73 @@ function PortfolioContent() {
         </div>
       </section>
 
-      {/* Filter Section */}
+      {/* Parent Categories Filter */}
       {categories.length > 0 && (
-        <section className="py-6 bg-black border-b border-gray-800">
+        <section className="py-4 bg-black border-b border-gray-800">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="flex flex-wrap gap-6 text-sm">
+            <div className="flex flex-wrap gap-4 md:gap-6 text-sm">
               <Link
                 href="/portfolio"
                 className={`
-                  transition-all duration-300 uppercase tracking-wider
-                  ${!selectedCategory 
-                    ? 'text-white font-semibold border-b-2 border-white pb-1' 
+                  transition-all duration-300 uppercase tracking-wider py-1
+                  ${!selectedCategorySlug 
+                    ? 'text-white font-semibold border-b-2 border-white' 
                     : 'text-gray-400 hover:text-white'
                   }
                 `}
               >
-                All Photos
+                All
               </Link>
-              {categories.map((category) => (
+              {categories.map((parent) => (
                 <Link
-                  key={category.id}
-                  href={`/portfolio?category=${category.slug}`}
+                  key={parent.id}
+                  href={`/portfolio?category=${parent.slug}`}
                   className={`
-                    transition-all duration-300 uppercase tracking-wider
-                    ${selectedCategory === category.id
-                      ? 'text-white font-semibold border-b-2 border-white pb-1'
+                    transition-all duration-300 uppercase tracking-wider py-1
+                    ${(selectedCategory?.id === parent.id || parentCategory?.id === parent.id)
+                      ? 'text-white font-semibold border-b-2 border-white'
                       : 'text-gray-400 hover:text-white'
                     }
                   `}
                 >
-                  {category.name}
+                  {parent.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Subcategory Filter (when a parent is selected) */}
+      {activeParent && activeParent.children && activeParent.children.length > 0 && (
+        <section className="py-3 bg-gray-900/50 border-b border-gray-800">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex flex-wrap gap-3 md:gap-5 text-sm">
+              <Link
+                href={`/portfolio?category=${activeParent.slug}`}
+                className={`
+                  transition-all duration-300 tracking-wide py-1
+                  ${selectedCategory?.id === activeParent.id
+                    ? 'text-white font-medium'
+                    : 'text-gray-500 hover:text-gray-300'
+                  }
+                `}
+              >
+                All {activeParent.name}
+              </Link>
+              {activeParent.children.map((sub) => (
+                <Link
+                  key={sub.id}
+                  href={`/portfolio?category=${sub.slug}`}
+                  className={`
+                    transition-all duration-300 tracking-wide py-1
+                    ${selectedCategory?.id === sub.id
+                      ? 'text-white font-medium'
+                      : 'text-gray-500 hover:text-gray-300'
+                    }
+                  `}
+                >
+                  {getDisplayName(sub.name)}
                 </Link>
               ))}
             </div>
@@ -221,15 +316,15 @@ function PortfolioContent() {
           <div className="text-center py-16">
             <div className="text-6xl mb-4">📸</div>
             <h3 className="text-2xl font-semibold text-gray-400 mb-2">
-              {selectedCategoryInfo ? 'No Photos in This Category' : 'No Photos Available'}
+              {selectedCategory ? 'No Photos in This Category' : 'No Photos Available'}
             </h3>
             <p className="text-gray-500 mb-4">
-              {selectedCategoryInfo 
-                ? `No photos found in the ${selectedCategoryInfo.name} category.`
+              {selectedCategory 
+                ? `No photos found in ${getDisplayName(selectedCategory.name)}.`
                 : 'No photos have been published yet. Check back soon!'
               }
             </p>
-            {selectedCategoryInfo && (
+            {selectedCategory && (
               <Link
                 href="/portfolio"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

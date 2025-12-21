@@ -17,7 +17,7 @@ export async function PUT(
       );
     }
 
-    const { name, description } = await req.json();
+    const { name, description, showInNav, parentId } = await req.json();
 
     if (!name) {
       return NextResponse.json(
@@ -49,7 +49,46 @@ export async function PUT(
       );
     }
 
-    const category = await nativeDB.updateCategory(params.id, name, slug, description || '');
+    // Prevent setting self as parent
+    if (parentId === params.id) {
+      return NextResponse.json(
+        { message: 'A category cannot be its own parent' },
+        { status: 400 }
+      );
+    }
+
+    // If parentId is provided, verify it exists and is not a child of this category
+    if (parentId) {
+      const parentCategory = await nativeDB.findCategoryById(parentId);
+      if (!parentCategory) {
+        return NextResponse.json(
+          { message: 'Parent category not found' },
+          { status: 400 }
+        );
+      }
+      // Prevent nesting more than 2 levels deep
+      if (parentCategory.parentId) {
+        return NextResponse.json(
+          { message: 'Cannot set a subcategory as parent. Maximum 2 levels allowed.' },
+          { status: 400 }
+        );
+      }
+      // Prevent circular reference (parent is a child of this category)
+      if (parentCategory.parentId === params.id) {
+        return NextResponse.json(
+          { message: 'Cannot create circular parent-child relationship' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const category = await nativeDB.updateCategory(params.id, {
+      name,
+      slug,
+      description: description || '',
+      showInNav: showInNav !== false, // default true
+      parentId: parentId || null
+    });
 
     if (!category) {
       return NextResponse.json(

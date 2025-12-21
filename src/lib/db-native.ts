@@ -177,6 +177,27 @@ export class NativeDBService {
       // Global photo ordering for "All Photos" view
       await client.query(`ALTER TABLE "Photo" ADD COLUMN IF NOT EXISTS position INT NOT NULL DEFAULT 0`);
 
+      // Category hierarchy support: showInNav and parentId columns
+      await client.query(`ALTER TABLE "Category" ADD COLUMN IF NOT EXISTS "showInNav" BOOLEAN NOT NULL DEFAULT TRUE`);
+      await client.query(`ALTER TABLE "Category" ADD COLUMN IF NOT EXISTS "parentId" TEXT`);
+      
+      // Add foreign key for category hierarchy (self-referential)
+      await client.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = 'Category_parentId_fkey'
+          ) THEN
+            ALTER TABLE "Category" ADD CONSTRAINT "Category_parentId_fkey" 
+              FOREIGN KEY ("parentId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+          END IF;
+        END
+        $$;
+      `);
+      
+      // Index for efficient parent-child lookups
+      await client.query(`CREATE INDEX IF NOT EXISTS "Category_parentId_idx" ON "Category"("parentId")`);
+
     } catch (error) {
       console.warn('Error ensuring junction tables:', error);
       // Don't throw error - tables might already exist
@@ -323,13 +344,72 @@ export class NativeDBService {
   }
 
   async findCategories(): Promise<any[]> {
+    // Ensure schema is up to date
+    await this.ensureJunctionTables();
+    
     const client = this.createClient();
     try {
       await client.connect();
       
       const result = await client.query(
-        'SELECT id, name, slug, description, "createdAt", "updatedAt" FROM "Category" ORDER BY name ASC'
+        'SELECT id, name, slug, description, "showInNav", "parentId", "createdAt", "updatedAt" FROM "Category" ORDER BY name ASC'
       );
+      
+      return result.rows;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async findCategoriesHierarchy(): Promise<any[]> {
+    // Ensure schema is up to date
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Fetch all categories
+      const result = await client.query(
+        'SELECT id, name, slug, description, "showInNav", "parentId", "createdAt", "updatedAt" FROM "Category" ORDER BY name ASC'
+      );
+      
+      const categories = result.rows;
+      
+      // Build hierarchy: parent categories with their children
+      const parentCategories = categories.filter((c: { parentId: string | null }) => !c.parentId);
+      const childCategories = categories.filter((c: { parentId: string | null }) => c.parentId);
+      
+      return parentCategories.map((parent: { id: string; parentId: string | null }) => ({
+        ...parent,
+        children: childCategories.filter((child: { parentId: string | null }) => child.parentId === parent.id)
+      }));
+    } finally {
+      await client.end();
+    }
+  }
+
+  async findCategoriesByParent(parentId: string | null): Promise<any[]> {
+    // Ensure schema is up to date
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      let result;
+      if (parentId === null) {
+        // Find root/parent categories (no parentId)
+        result = await client.query(
+          'SELECT id, name, slug, description, "showInNav", "parentId", "createdAt", "updatedAt" FROM "Category" WHERE "parentId" IS NULL ORDER BY name ASC'
+        );
+      } else {
+        // Find subcategories of a specific parent
+        result = await client.query(
+          'SELECT id, name, slug, description, "showInNav", "parentId", "createdAt", "updatedAt" FROM "Category" WHERE "parentId" = $1 ORDER BY name ASC',
+          [parentId]
+        );
+      }
       
       return result.rows;
     } finally {
@@ -343,7 +423,7 @@ export class NativeDBService {
       await client.connect();
       
       const result = await client.query(
-        'SELECT id, name, slug, description, "createdAt", "updatedAt" FROM "Category" WHERE name = $1 LIMIT 1',
+        'SELECT id, name, slug, description, "showInNav", "parentId", "createdAt", "updatedAt" FROM "Category" WHERE name = $1 LIMIT 1',
         [name]
       );
       
@@ -359,7 +439,7 @@ export class NativeDBService {
       await client.connect();
       
       const result = await client.query(
-        'SELECT id, name, slug, description, "createdAt", "updatedAt" FROM "Category" WHERE id = $1 LIMIT 1',
+        'SELECT id, name, slug, description, "showInNav", "parentId", "createdAt", "updatedAt" FROM "Category" WHERE id = $1 LIMIT 1',
         [id]
       );
       
@@ -369,14 +449,14 @@ export class NativeDBService {
     }
   }
 
-  async createCategory(name: string, slug: string, description: string): Promise<any> {
+  async findCategoryBySlug(slug: string): Promise<any> {
     const client = this.createClient();
     try {
       await client.connect();
       
       const result = await client.query(
-        'INSERT INTO "Category" (id, name, slug, description, "createdAt", "updatedAt") VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW()) RETURNING id, name, slug, description, "createdAt", "updatedAt"',
-        [name, slug, description]
+        'SELECT id, name, slug, description, "showInNav", "parentId", "createdAt", "updatedAt" FROM "Category" WHERE slug = $1 LIMIT 1',
+        [slug]
       );
       
       return result.rows.length > 0 ? result.rows[0] : null;
@@ -385,14 +465,60 @@ export class NativeDBService {
     }
   }
 
-  async updateCategory(id: string, name: string, slug: string, description: string): Promise<any> {
+  async createCategory(data: {
+    name: string;
+    slug: string;
+    description?: string;
+    showInNav?: boolean;
+    parentId?: string | null;
+  }): Promise<any> {
     const client = this.createClient();
     try {
       await client.connect();
       
       const result = await client.query(
-        'UPDATE "Category" SET name = $2, slug = $3, description = $4, "updatedAt" = NOW() WHERE id = $1 RETURNING id, name, slug, description, "createdAt", "updatedAt"',
-        [id, name, slug, description]
+        `INSERT INTO "Category" (id, name, slug, description, "showInNav", "parentId", "createdAt", "updatedAt") 
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW(), NOW()) 
+         RETURNING id, name, slug, description, "showInNav", "parentId", "createdAt", "updatedAt"`,
+        [
+          data.name,
+          data.slug,
+          data.description || '',
+          data.showInNav !== false, // default true
+          data.parentId || null
+        ]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async updateCategory(id: string, data: {
+    name: string;
+    slug: string;
+    description?: string;
+    showInNav?: boolean;
+    parentId?: string | null;
+  }): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        `UPDATE "Category" 
+         SET name = $2, slug = $3, description = $4, "showInNav" = $5, "parentId" = $6, "updatedAt" = NOW() 
+         WHERE id = $1 
+         RETURNING id, name, slug, description, "showInNav", "parentId", "createdAt", "updatedAt"`,
+        [
+          id,
+          data.name,
+          data.slug,
+          data.description || '',
+          data.showInNav !== false, // default true
+          data.parentId || null
+        ]
       );
       
       return result.rows.length > 0 ? result.rows[0] : null;
@@ -422,12 +548,12 @@ export class NativeDBService {
       await client.connect();
       
       const result = await client.query(
-        `SELECT c.id, c.name, c.slug, c.description, c."createdAt", c."updatedAt",
+        `SELECT c.id, c.name, c.slug, c.description, c."showInNav", c."parentId", c."createdAt", c."updatedAt",
                 COUNT(cp."B") as photo_count
          FROM "Category" c
          LEFT JOIN "_CategoryToPhoto" cp ON c.id = cp."A"
          WHERE c.id = $1
-         GROUP BY c.id, c.name, c.slug, c.description, c."createdAt", c."updatedAt"
+         GROUP BY c.id, c.name, c.slug, c.description, c."showInNav", c."parentId", c."createdAt", c."updatedAt"
          LIMIT 1`,
         [id]
       );

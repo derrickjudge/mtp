@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 
@@ -9,6 +9,8 @@ interface Category {
   name: string;
   slug: string;
   description?: string;
+  showInNav?: boolean;
+  parentId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,9 +33,23 @@ export default function AdminCategories() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    showInNav: true,
+    parentId: '' as string | null,
   });
   const [categoryPhotos, setCategoryPhotos] = useState<Record<string, Photo[]>>({});
   const [topPhotoIds, setTopPhotoIds] = useState<Record<string, string[]>>({});
+
+  // Organize categories into hierarchy
+  const { parentCategories, subcategoriesByParent } = useMemo(() => {
+    const parents = categories.filter(c => !c.parentId);
+    const subsByParent: Record<string, Category[]> = {};
+    
+    parents.forEach(parent => {
+      subsByParent[parent.id] = categories.filter(c => c.parentId === parent.id);
+    });
+    
+    return { parentCategories: parents, subcategoriesByParent: subsByParent };
+  }, [categories]);
 
   useEffect(() => {
     fetchCategories();
@@ -115,12 +131,19 @@ export default function AdminCategories() {
       const url = editingCategory ? `/api/categories/${editingCategory.id}` : '/api/categories';
       const method = editingCategory ? 'PUT' : 'POST';
 
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        showInNav: formData.showInNav,
+        parentId: formData.parentId || null,
+      };
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -139,7 +162,7 @@ export default function AdminCategories() {
         toast.success('Category created successfully');
       }
 
-      setFormData({ name: '', description: '' });
+      resetForm();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save category');
     } finally {
@@ -152,10 +175,19 @@ export default function AdminCategories() {
     setFormData({
       name: category.name,
       description: category.description || '',
+      showInNav: category.showInNav !== false,
+      parentId: category.parentId || '',
     });
   };
 
   const handleDelete = async (category: Category) => {
+    // Check if this is a parent with children
+    const hasChildren = categories.some(c => c.parentId === category.id);
+    if (hasChildren) {
+      toast.error('Cannot delete a parent category with subcategories. Delete subcategories first.');
+      return;
+    }
+
     if (!confirm(`Are you sure you want to delete "${category.name}"? This action cannot be undone.`)) {
       return;
     }
@@ -177,9 +209,15 @@ export default function AdminCategories() {
     }
   };
 
-  const handleCancel = () => {
+  const resetForm = () => {
     setEditingCategory(null);
-    setFormData({ name: '', description: '' });
+    setFormData({ name: '', description: '', showInNav: true, parentId: '' });
+  };
+
+  const getParentName = (parentId: string | null | undefined): string => {
+    if (!parentId) return '';
+    const parent = categories.find(c => c.id === parentId);
+    return parent ? parent.name : '';
   };
 
   if (isLoading) {
@@ -195,7 +233,7 @@ export default function AdminCategories() {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-white">Category Management</h1>
-        <p className="text-gray-400 mt-1">Manage photo categories for your portfolio</p>
+        <p className="text-gray-400 mt-1">Manage photo categories and subcategories for your portfolio</p>
       </div>
 
       {error && (
@@ -221,10 +259,35 @@ export default function AdminCategories() {
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="e.g., Concerts, Nature, Automotive"
+                className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+                placeholder="e.g., Music, Action Shots, Rugby"
                 required
               />
+            </div>
+
+            <div>
+              <label htmlFor="parentId" className="block text-sm font-medium text-gray-200 mb-2">
+                Parent Category
+              </label>
+              <select
+                id="parentId"
+                value={formData.parentId || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, parentId: e.target.value || null }))}
+                className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+              >
+                <option value="">None (This is a parent category)</option>
+                {parentCategories
+                  .filter(p => p.id !== editingCategory?.id) // Can't be own parent
+                  .map(parent => (
+                    <option key={parent.id} value={parent.id}>
+                      {parent.name}
+                    </option>
+                  ))
+                }
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                Leave empty to create a parent category, or select a parent to create a subcategory
+              </p>
             </div>
 
             <div>
@@ -236,12 +299,25 @@ export default function AdminCategories() {
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
-                className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
                 placeholder="Optional description for this category"
               />
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="showInNav"
+                checked={formData.showInNav}
+                onChange={(e) => setFormData(prev => ({ ...prev, showInNav: e.target.checked }))}
+                className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
+              />
+              <label htmlFor="showInNav" className="text-sm font-medium text-gray-200">
+                Show in Navigation
+              </label>
+            </div>
+
+            <div className="flex gap-3 pt-2">
               <button
                 type="submit"
                 disabled={isCreating}
@@ -252,7 +328,7 @@ export default function AdminCategories() {
               {editingCategory && (
                 <button
                   type="button"
-                  onClick={handleCancel}
+                  onClick={resetForm}
                   className="px-4 py-2 text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600"
                 >
                   Cancel
@@ -263,74 +339,169 @@ export default function AdminCategories() {
         </div>
 
         {/* Categories List */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-100">Existing Categories</h2>
+        <div className="bg-gray-800 rounded-lg p-6 max-h-[80vh] overflow-y-auto">
+          <h2 className="text-xl font-semibold mb-4 text-gray-100">Category Hierarchy</h2>
           
-          {categories.length > 0 ? (
-            <div className="space-y-3">
-              {categories.map((category) => (
-                <div key={category.id} className="bg-gray-700 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-white">{category.name}</h3>
-                      <p className="text-sm text-gray-400 mt-1">{category.slug}</p>
-                      {category.description && (
-                        <p className="text-sm text-gray-300 mt-2">{category.description}</p>
-                      )}
-                      <p className="text-xs text-gray-500 mt-2">
-                        Created: {new Date(category.createdAt).toLocaleDateString()}
-                      </p>
-                      {/* Curation Controls */}
-                      {(categoryPhotos[category.id] || []).length > 0 && (
-                        <div className="mt-4 space-y-2">
-                          {(categoryPhotos[category.id] || []).map((p, idx) => (
-                            <div key={p.id} className="flex items-center gap-3 bg-gray-800 rounded p-2">
-                              <div className="relative w-10 h-10 rounded overflow-hidden">
-                                <Image src={p.thumbnail || p.url} alt={p.title} fill className="object-cover" />
-                              </div>
-                              <div className="flex-1 text-sm text-gray-200 truncate">{p.title}</div>
-                              <div className="flex items-center gap-2">
-                                <button onClick={() => movePhoto(category.id, idx, -1)} className="px-2 py-1 text-xs bg-gray-600 rounded text-white">Up</button>
-                                <button onClick={() => movePhoto(category.id, idx, 1)} className="px-2 py-1 text-xs bg-gray-600 rounded text-white">Down</button>
-                                <label className="flex items-center gap-1 text-xs text-gray-200">
-                                  <input type="checkbox" checked={(topPhotoIds[category.id] || []).includes(p.id)} onChange={() => toggleTop(category.id, p.id)} className="rounded" />
-                                  Top
-                                </label>
-                              </div>
-                            </div>
-                          ))}
-                          <div className="pt-1">
-                            <button onClick={() => saveCuration(category.id)} className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Ordering</button>
-                          </div>
+          {parentCategories.length > 0 ? (
+            <div className="space-y-4">
+              {parentCategories.map((parent) => (
+                <div key={parent.id} className="bg-gray-700 rounded-lg overflow-hidden">
+                  {/* Parent Category */}
+                  <div className="p-4 border-b border-gray-600">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-white text-lg">{parent.name}</h3>
+                          {parent.showInNav === false && (
+                            <span className="px-2 py-0.5 text-xs bg-yellow-600/30 text-yellow-300 rounded">
+                              Hidden
+                            </span>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 ml-4">
-                      <button
-                        onClick={() => handleEdit(category)}
-                        className="px-3 py-1 text-sm text-blue-300 bg-blue-600/20 rounded hover:bg-blue-600/30"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(category)}
-                        className="px-3 py-1 text-sm text-red-300 bg-red-600/20 rounded hover:bg-red-600/30"
-                      >
-                        Delete
-                      </button>
+                        <p className="text-sm text-gray-400 mt-0.5">{parent.slug}</p>
+                        {parent.description && (
+                          <p className="text-sm text-gray-300 mt-2 line-clamp-2">{parent.description}</p>
+                        )}
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => handleEdit(parent)}
+                          className="px-3 py-1 text-sm text-blue-300 bg-blue-600/20 rounded hover:bg-blue-600/30"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(parent)}
+                          className="px-3 py-1 text-sm text-red-300 bg-red-600/20 rounded hover:bg-red-600/30"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
+                  
+                  {/* Subcategories */}
+                  {subcategoriesByParent[parent.id]?.length > 0 && (
+                    <div className="bg-gray-750 divide-y divide-gray-600">
+                      {subcategoriesByParent[parent.id].map((sub) => (
+                        <div key={sub.id} className="p-3 pl-8 bg-gray-800/50">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500">└</span>
+                                <h4 className="font-medium text-gray-100">{sub.name}</h4>
+                                {sub.showInNav === false && (
+                                  <span className="px-2 py-0.5 text-xs bg-yellow-600/30 text-yellow-300 rounded">
+                                    Hidden
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 ml-5">{sub.slug}</p>
+                              {sub.description && (
+                                <p className="text-sm text-gray-400 mt-1 ml-5 line-clamp-1">{sub.description}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-2 ml-4">
+                              <button
+                                onClick={() => handleEdit(sub)}
+                                className="px-2 py-1 text-xs text-blue-300 bg-blue-600/20 rounded hover:bg-blue-600/30"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(sub)}
+                                className="px-2 py-1 text-xs text-red-300 bg-red-600/20 rounded hover:bg-red-600/30"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* No subcategories message */}
+                  {(!subcategoriesByParent[parent.id] || subcategoriesByParent[parent.id].length === 0) && (
+                    <div className="p-3 pl-8 text-sm text-gray-500 italic">
+                      No subcategories yet
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-8">
               <div className="text-gray-400 text-lg mb-2">No categories yet</div>
-              <p className="text-gray-500">Create your first category to organize your photos</p>
+              <p className="text-gray-500">Create your first parent category to get started</p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Photo Curation Section (for categories with photos) */}
+      {categories.some(cat => (categoryPhotos[cat.id] || []).length > 0) && (
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-100">Photo Curation by Category</h2>
+          <div className="space-y-6">
+            {categories.filter(cat => (categoryPhotos[cat.id] || []).length > 0).map((category) => (
+              <div key={category.id} className="bg-gray-700 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="font-medium text-white">{category.name}</h3>
+                  {category.parentId && (
+                    <span className="text-xs text-gray-400">
+                      (in {getParentName(category.parentId)})
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {(categoryPhotos[category.id] || []).map((p, idx) => (
+                    <div key={p.id} className="flex items-center gap-3 bg-gray-800 rounded p-2">
+                      <div className="relative w-10 h-10 rounded overflow-hidden flex-shrink-0">
+                        <Image src={p.thumbnail || p.url} alt={p.title} fill className="object-cover" />
+                      </div>
+                      <div className="flex-1 text-sm text-gray-200 truncate">{p.title}</div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => movePhoto(category.id, idx, -1)} 
+                          className="px-2 py-1 text-xs bg-gray-600 rounded text-white hover:bg-gray-500 disabled:opacity-50"
+                          disabled={idx === 0}
+                        >
+                          ↑
+                        </button>
+                        <button 
+                          onClick={() => movePhoto(category.id, idx, 1)} 
+                          className="px-2 py-1 text-xs bg-gray-600 rounded text-white hover:bg-gray-500 disabled:opacity-50"
+                          disabled={idx === (categoryPhotos[category.id] || []).length - 1}
+                        >
+                          ↓
+                        </button>
+                        <label className="flex items-center gap-1 text-xs text-gray-200">
+                          <input 
+                            type="checkbox" 
+                            checked={(topPhotoIds[category.id] || []).includes(p.id)} 
+                            onChange={() => toggleTop(category.id, p.id)} 
+                            className="rounded border-gray-500 bg-gray-600" 
+                          />
+                          Top
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-2">
+                    <button 
+                      onClick={() => saveCuration(category.id)} 
+                      className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                    >
+                      Save Ordering
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}
