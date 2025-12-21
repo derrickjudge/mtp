@@ -1,5 +1,9 @@
 import { Client } from 'pg';
 
+// Cache flag to prevent running migrations on every query
+let _junctionTablesEnsured = false;
+let _ensurePromise: Promise<void> | null = null;
+
 // Native PostgreSQL client that completely bypasses Prisma
 export class NativeDBService {
   private createClient(): Client {
@@ -25,8 +29,30 @@ export class NativeDBService {
     });
   }
 
-  // Ensure junction tables exist
+  // Ensure junction tables exist (runs only once per application lifecycle)
   async ensureJunctionTables(): Promise<void> {
+    // Skip if already ensured
+    if (_junctionTablesEnsured) {
+      return;
+    }
+    
+    // If already running, wait for it to complete
+    if (_ensurePromise) {
+      return _ensurePromise;
+    }
+    
+    // Run migrations
+    _ensurePromise = this._runMigrations();
+    try {
+      await _ensurePromise;
+      _junctionTablesEnsured = true;
+    } finally {
+      _ensurePromise = null;
+    }
+  }
+
+  // Internal method that actually runs the migrations
+  private async _runMigrations(): Promise<void> {
     const client = this.createClient();
     try {
       await client.connect();
