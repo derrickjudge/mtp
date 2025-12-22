@@ -29,7 +29,7 @@ export default function Navigation() {
 
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
   const baseLink =
-    'text-gray-300 hover:text-white transition-colors rounded-md px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60';
+    'text-gray-300 hover:text-white transition-colors rounded-md px-3 py-2 text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60';
   const activeLink =
     'text-white relative after:absolute after:inset-x-1 after:-bottom-1 after:h-0.5 after:bg-white/80';
 
@@ -123,9 +123,9 @@ export default function Navigation() {
           <Image
             src={logoUrl}
             alt="MTP Collective"
-            width={300}
-            height={100}
-            className="h-[100px] w-auto object-contain"
+            width={225}
+            height={75}
+            className="h-[75px] w-auto object-contain"
             priority
           />
         ) : (

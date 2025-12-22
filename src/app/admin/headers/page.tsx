@@ -315,21 +315,21 @@ export default function AdminHeadersPage() {
           <h2 className="text-xl font-semibold text-white mb-1">Site Logo</h2>
           <p className="text-sm text-gray-400">
             Upload a logo to replace the text &quot;MTP COLLECTIVE&quot; in the navigation. 
-            Recommended: PNG with transparent background, height around 100px.
+            Recommended: PNG with transparent background, height around 75px.
           </p>
         </div>
         
         <div className="p-6">
           <div className="flex items-center gap-6">
             {/* Logo Preview */}
-            <div className="flex-shrink-0 min-w-[200px] h-[100px] bg-gray-900 rounded-lg flex items-center justify-center border border-gray-600 px-2">
+            <div className="flex-shrink-0 min-w-[180px] h-[75px] bg-gray-900 rounded-lg flex items-center justify-center border border-gray-600 px-2">
               {logoUrl ? (
                 <Image
                   src={logoUrl}
                   alt="Site Logo"
-                  width={300}
-                  height={100}
-                  className="h-[100px] w-auto object-contain"
+                  width={225}
+                  height={75}
+                  className="h-[75px] w-auto object-contain"
                 />
               ) : (
                 <span className="text-xl font-bold tracking-wider text-white">MTP COLLECTIVE</span>
