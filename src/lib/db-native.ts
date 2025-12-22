@@ -629,11 +629,7 @@ export class NativeDBService {
   }
 
   async linkPhotoToCategories(photoId: string, categoryIds: string[]): Promise<void> {
-    console.log(`[DB] linkPhotoToCategories: photoId=${photoId}, categoryIds=${categoryIds.join(', ')}`);
-    if (categoryIds.length === 0) {
-      console.log(`[DB] linkPhotoToCategories: No categories to link, returning`);
-      return;
-    }
+    if (categoryIds.length === 0) return;
     
     // Ensure junction tables exist before linking
     await this.ensureJunctionTables();
@@ -642,61 +638,14 @@ export class NativeDBService {
     try {
       await client.connect();
       
-      // First, verify the photo exists
-      const photoCheck = await client.query('SELECT id FROM "Photo" WHERE id = $1', [photoId]);
-      console.log(`[DB] linkPhotoToCategories: Photo exists: ${photoCheck.rows.length > 0}`);
-      
-      // Verify all categories exist
-      const placeholders = categoryIds.map((_, i) => `$${i + 1}`).join(', ');
-      const categoryCheck = await client.query(
-        `SELECT id, name FROM "Category" WHERE id IN (${placeholders})`,
-        categoryIds
-      );
-      console.log(`[DB] linkPhotoToCategories: Found ${categoryCheck.rows.length}/${categoryIds.length} categories: ${categoryCheck.rows.map((r: { id: string; name: string }) => `${r.id}=${r.name}`).join(', ')}`);
-      
-      // Check existing relationships
-      const existingCheck = await client.query(
-        `SELECT "A", "B" FROM "_CategoryToPhoto" WHERE "B" = $1`,
-        [photoId]
-      );
-      console.log(`[DB] linkPhotoToCategories: Photo already has ${existingCheck.rows.length} category links: ${existingCheck.rows.map((r: { A: string }) => r.A).join(', ')}`);
-      
-      // Insert multiple category-photo relationships
-      const values = categoryIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
+      // Insert category-photo relationships (skip existing via ON CONFLICT)
+      const values = categoryIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2}, 0, false)`).join(', ');
       const params = categoryIds.flatMap(categoryId => [categoryId, photoId]);
       
-      // Insert one at a time to debug
-      let totalInserted = 0;
-      for (const categoryId of categoryIds) {
-        // First, check if this specific link exists
-        const checkQuery = `SELECT * FROM "_CategoryToPhoto" WHERE "A" = $1 AND "B" = $2`;
-        const checkResult = await client.query(checkQuery, [categoryId, photoId]);
-        console.log(`[DB] linkPhotoToCategories: Link exists check for (${categoryId}, ${photoId}): ${checkResult.rows.length > 0 ? 'YES' : 'NO'}`);
-        
-        if (checkResult.rows.length === 0) {
-          // Try inserting WITHOUT ON CONFLICT to see the actual error
-          const singleQuery = `INSERT INTO "_CategoryToPhoto" ("A", "B", "position", "is_top_selection") VALUES ($1, $2, 0, false) RETURNING *`;
-          console.log(`[DB] linkPhotoToCategories: Inserting category ${categoryId} for photo ${photoId} (no ON CONFLICT)`);
-          try {
-            const result = await client.query(singleQuery, [categoryId, photoId]);
-            console.log(`[DB] linkPhotoToCategories: Insert SUCCESS! rowCount=${result.rowCount}, returned=${JSON.stringify(result.rows)}`);
-            totalInserted += result.rowCount || 0;
-          } catch (insertError: unknown) {
-            const err = insertError as Error & { code?: string; detail?: string };
-            console.error(`[DB] linkPhotoToCategories: INSERT FAILED! Error code=${err.code}, message=${err.message}, detail=${err.detail}`);
-          }
-        } else {
-          console.log(`[DB] linkPhotoToCategories: Skipping ${categoryId} - already linked`);
-        }
-      }
-      console.log(`[DB] linkPhotoToCategories: Total inserted: ${totalInserted}/${categoryIds.length}`);
-      
-      // Verify after insert
-      const afterCheck = await client.query(
-        `SELECT "A", "B" FROM "_CategoryToPhoto" WHERE "B" = $1`,
-        [photoId]
+      await client.query(
+        `INSERT INTO "_CategoryToPhoto" ("A", "B", "position", "is_top_selection") VALUES ${values} ON CONFLICT ("A", "B") DO NOTHING`,
+        params
       );
-      console.log(`[DB] linkPhotoToCategories: After insert, photo has ${afterCheck.rows.length} category links: ${afterCheck.rows.map((r: { A: string }) => r.A).join(', ')}`);
     } finally {
       await client.end();
     }
@@ -787,27 +736,20 @@ export class NativeDBService {
   }
 
   async clearPhotoCategories(photoId: string): Promise<void> {
-    console.log(`[DB] clearPhotoCategories: photoId=${photoId}`);
     // Ensure junction tables exist before clearing
     await this.ensureJunctionTables();
     
     const client = this.createClient();
     try {
       await client.connect();
-      
-      const result = await client.query('DELETE FROM "_CategoryToPhoto" WHERE "B" = $1', [photoId]);
-      console.log(`[DB] clearPhotoCategories: deleted ${result.rowCount} rows`);
+      await client.query('DELETE FROM "_CategoryToPhoto" WHERE "B" = $1', [photoId]);
     } finally {
       await client.end();
     }
   }
 
   async unlinkPhotoFromCategories(photoId: string, categoryIds: string[]): Promise<void> {
-    console.log(`[DB] unlinkPhotoFromCategories: photoId=${photoId}, categoryIds=${categoryIds.join(', ')}`);
-    if (categoryIds.length === 0) {
-      console.log(`[DB] unlinkPhotoFromCategories: No categories to unlink, returning`);
-      return;
-    }
+    if (categoryIds.length === 0) return;
     
     await this.ensureJunctionTables();
     
@@ -819,11 +761,10 @@ export class NativeDBService {
       const placeholders = categoryIds.map((_, index) => `$${index + 2}`).join(', ');
       const params = [photoId, ...categoryIds];
       
-      const query = `DELETE FROM "_CategoryToPhoto" WHERE "B" = $1 AND "A" IN (${placeholders})`;
-      console.log(`[DB] unlinkPhotoFromCategories: query=${query}, params=${JSON.stringify(params)}`);
-      
-      const result = await client.query(query, params);
-      console.log(`[DB] unlinkPhotoFromCategories: deleted ${result.rowCount} rows`);
+      await client.query(
+        `DELETE FROM "_CategoryToPhoto" WHERE "B" = $1 AND "A" IN (${placeholders})`,
+        params
+      );
     } finally {
       await client.end();
     }

@@ -123,46 +123,61 @@ export default function Navigation() {
             <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform ${isPortfolioDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
           
-          {/* Portfolio dropdown with hierarchy */}
+          {/* Portfolio dropdown with inline hierarchy */}
           {isPortfolioDropdownOpen && (
             <div 
               ref={dropdownRef}
-              className="absolute top-full left-0 mt-2 w-56 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50"
+              className="absolute top-full left-0 mt-2 w-64 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 max-h-[70vh] overflow-y-auto"
             >
               <Link
                 href="/portfolio"
                 className="block px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors border-b border-gray-700 rounded-t-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                 onClick={() => setIsPortfolioDropdownOpen(false)}
               >
-                View All
+                View All Photos
               </Link>
               
-              {categories.map((parent) => (
+              {categories.map((parent, index) => (
                 <div 
                   key={parent.id} 
-                  className="relative"
-                  onMouseEnter={() => setExpandedParent(parent.id)}
-                  onMouseLeave={() => setExpandedParent(null)}
+                  className={cn(
+                    "border-b border-gray-700/50 last:border-b-0",
+                    index === categories.length - 1 && "last:rounded-b-lg"
+                  )}
                 >
-                  <Link
-                    href={`/portfolio?category=${parent.slug}`}
-                    className="flex items-center justify-between px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                    onClick={() => setIsPortfolioDropdownOpen(false)}
-                  >
-                    <span>{parent.name}</span>
+                  {/* Parent category header with expand toggle */}
+                  <div className="flex items-center">
+                    <Link
+                      href={`/portfolio?category=${parent.slug}`}
+                      className="flex-1 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 font-medium"
+                      onClick={() => setIsPortfolioDropdownOpen(false)}
+                    >
+                      {parent.name}
+                    </Link>
                     {parent.children && parent.children.length > 0 && (
-                      <ChevronRightIcon className="w-4 h-4" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedParent(expandedParent === parent.id ? null : parent.id);
+                        }}
+                        className="px-3 py-3 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                        aria-label={`Expand ${parent.name} subcategories`}
+                      >
+                        <ChevronDownIcon 
+                          className={`w-4 h-4 transition-transform duration-200 ${expandedParent === parent.id ? 'rotate-180' : ''}`} 
+                        />
+                      </button>
                     )}
-                  </Link>
+                  </div>
                   
-                  {/* Subcategory flyout */}
+                  {/* Inline subcategories (accordion) */}
                   {expandedParent === parent.id && parent.children && parent.children.length > 0 && (
-                    <div className="absolute left-full top-0 ml-1 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50">
+                    <div className="bg-gray-800/50 border-t border-gray-700/50">
                       {parent.children.map((child) => (
                         <Link
                           key={child.id}
                           href={`/portfolio?category=${child.slug}`}
-                          className="block px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors first:rounded-t-lg last:rounded-b-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                          className="block px-6 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                           onClick={() => {
                             setIsPortfolioDropdownOpen(false);
                             setExpandedParent(null);

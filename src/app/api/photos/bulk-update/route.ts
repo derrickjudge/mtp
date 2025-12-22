@@ -76,11 +76,8 @@ export async function PUT(req: NextRequest) {
     let updatedCount = 0;
     const errors: { photoId: string; error: string }[] = [];
     
-    console.log(`[Bulk Update] Starting ${mode} operation for ${photoIds.length} photos with categories: ${categoryIds.join(', ')}`);
-    
     for (const photoId of photoIds) {
       try {
-        console.log(`[Bulk Update] Processing photo ${photoId}...`);
         switch (mode) {
           case 'add':
             // Add categories to photo (keeps existing)
@@ -99,24 +96,12 @@ export async function PUT(req: NextRequest) {
             break;
         }
         updatedCount++;
-        console.log(`[Bulk Update] Successfully updated photo ${photoId}`);
       } catch (error) {
-        console.error(`[Bulk Update] Error updating photo ${photoId}:`, error);
+        console.error(`Bulk update error for photo ${photoId}:`, error);
         errors.push({
           photoId,
           error: error instanceof Error ? error.message : 'Unknown error'
         });
-      }
-    }
-    
-    console.log(`[Bulk Update] Completed: ${updatedCount}/${photoIds.length} photos updated, ${errors.length} errors`);
-    
-    // Verify the updates by querying the database
-    console.log(`[Bulk Update] Verifying updates in database...`);
-    for (const photoId of photoIds) {
-      const photo = await nativeDB.findPhotoById(photoId);
-      if (photo) {
-        console.log(`[Bulk Update] Verification - Photo ${photoId} now has categories: ${photo.categories?.map((c: { id: string; name: string }) => c.name).join(', ') || 'none'}`);
       }
     }
 
