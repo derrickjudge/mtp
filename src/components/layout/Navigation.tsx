@@ -118,14 +118,14 @@ export default function Navigation() {
 
   return (
     <nav className="flex items-center justify-between">
-      <Link href="/" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded-md">
+      <Link href="/" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded-md -ml-2">
         {logoUrl ? (
           <Image
             src={logoUrl}
             alt="MTP Collective"
-            width={180}
-            height={50}
-            className="h-10 w-auto object-contain"
+            width={300}
+            height={100}
+            className="h-[100px] w-auto object-contain"
             priority
           />
         ) : (
