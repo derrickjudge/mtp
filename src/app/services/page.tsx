@@ -1,7 +1,7 @@
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { ServiceCard } from '@/components/common/ServiceCard';
 import { Image } from '@/components/common/Image';
-import { imageUrls } from '@/utils/imageUrls';
+import { getPageHeader } from '@/utils/pageHeaders';
 
 const services = [
   {
@@ -75,14 +75,16 @@ const services = [
   },
 ];
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const heroImage = await getPageHeader('services');
+  
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
       <section className="relative w-full" style={{ height: '40vh' }}>
         <div className="absolute inset-0">
           <Image
-            src={imageUrls.services}
+            src={heroImage}
             alt="MTP Collective Services"
             fill
             priority

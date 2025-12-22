@@ -2,6 +2,7 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { PhotoCard } from '@/components/common/PhotoCard';
 import { Image } from '@/components/common/Image';
 import { imageUrls } from '@/utils/imageUrls';
+import { getPageHeader } from '@/utils/pageHeaders';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -13,14 +14,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const heroImage = await getPageHeader('about');
+  
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
       <section className="relative w-full" style={{ height: '60vh' }}>
         <div className="absolute inset-0">
           <Image
-            src={imageUrls.about}
+            src={heroImage}
             alt="About MTP Collective"
             fill
             priority

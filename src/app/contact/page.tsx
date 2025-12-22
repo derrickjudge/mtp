@@ -1,7 +1,7 @@
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { ClientContactForm } from '@/components/common/ClientContactForm';
 import { Image } from '@/components/common/Image';
-import { imageUrls } from '@/utils/imageUrls';
+import { getPageHeader } from '@/utils/pageHeaders';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -13,14 +13,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const heroImage = await getPageHeader('contact');
+  
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
       <section className="relative w-full" style={{ height: '40vh' }}>
         <div className="absolute inset-0">
           <Image
-            src={imageUrls.contact}
+            src={heroImage}
             alt="Contact MTP Collective"
             fill
             priority

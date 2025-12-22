@@ -1,8 +1,8 @@
 import { Image } from '@/components/common/Image';
-import { imageUrls } from '@/utils/imageUrls';
 import Link from 'next/link';
 import type { Photo } from '@/types/photo';
 import { nativeDB } from '@/lib/db-native';
+import { getPageHeader } from '@/utils/pageHeaders';
 import type { Metadata } from 'next';
 
 // Make this page dynamic
@@ -65,10 +65,11 @@ async function fetchPhotosByCategory(categoryId: string, take: number = 1): Prom
 }
 
 export default async function HomePage() {
-  // Fetch featured photos and categories
-  const [featuredPhotos, categories] = await Promise.all([
+  // Fetch featured photos, categories, and hero image
+  const [featuredPhotos, categories, heroImage] = await Promise.all([
     fetchFeaturedPhotos(),
     fetchCategories(),
+    getPageHeader('home'),
   ]);
 
   // Fetch one photo per category for specialties section
@@ -87,7 +88,7 @@ export default async function HomePage() {
       <section className="relative w-full" style={{ height: '80vh' }}>
         <div className="absolute inset-0">
           <Image
-            src={imageUrls.hero}
+            src={heroImage}
             alt="MTP Collective Hero"
             fill
             priority

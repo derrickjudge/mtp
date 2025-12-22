@@ -1,0 +1,326 @@
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
+import { toast } from 'react-hot-toast';
+import { PhotoIcon, ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
+
+interface PageHeader {
+  key: string;
+  pageName: string;
+  description: string;
+  value: string | null;
+  defaultImage: string;
+}
+
+const PAGE_HEADERS: PageHeader[] = [
+  {
+    key: 'header:home',
+    pageName: 'Home',
+    description: 'Main hero image on the homepage',
+    value: null,
+    defaultImage: '/images/hero/hero.jpg'
+  },
+  {
+    key: 'header:about',
+    pageName: 'About Us',
+    description: 'Hero image on the About page',
+    value: null,
+    defaultImage: '/images/hero/about.jpg'
+  },
+  {
+    key: 'header:portfolio',
+    pageName: 'Portfolio',
+    description: 'Header image on the Portfolio page',
+    value: null,
+    defaultImage: '/images/hero/portfolio.jpg'
+  },
+  {
+    key: 'header:events',
+    pageName: 'Events',
+    description: 'Header image on the Events page',
+    value: null,
+    defaultImage: '/images/hero/hero.jpg'
+  },
+  {
+    key: 'header:contact',
+    pageName: 'Contact',
+    description: 'Hero image on the Contact page',
+    value: null,
+    defaultImage: '/images/hero/contact.jpg'
+  },
+  {
+    key: 'header:services',
+    pageName: 'Services',
+    description: 'Hero image on the Services page',
+    value: null,
+    defaultImage: '/images/hero/services.jpg'
+  }
+];
+
+export default function AdminHeadersPage() {
+  const [headers, setHeaders] = useState<PageHeader[]>(PAGE_HEADERS);
+  const [isLoading, setIsLoading] = useState(true);
+  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+
+  useEffect(() => {
+    fetchHeaders();
+  }, []);
+
+  const fetchHeaders = async () => {
+    try {
+      const response = await fetch('/api/settings?prefix=header:', { cache: 'no-store' });
+      if (response.ok) {
+        const settings = await response.json();
+        
+        // Merge settings with default headers
+        setHeaders(prevHeaders => 
+          prevHeaders.map(header => {
+            const setting = settings.find((s: { key: string }) => s.key === header.key);
+            return {
+              ...header,
+              value: setting?.value || null
+            };
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching headers:', error);
+      toast.error('Failed to load page headers');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFileSelect = async (key: string, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be less than 10MB');
+      return;
+    }
+
+    setUploadingFor(key);
+
+    try {
+      // Create form data for upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', `Header - ${headers.find(h => h.key === key)?.pageName || 'Page'}`);
+
+      // Upload the image
+      const uploadResponse = await fetch('/api/photos/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const uploadResult = await uploadResponse.json();
+      const imageUrl = uploadResult.url;
+
+      // Save the URL to settings
+      const settingsResponse = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key,
+          value: imageUrl,
+          metadata: {
+            originalName: file.name,
+            uploadedAt: new Date().toISOString()
+          }
+        })
+      });
+
+      if (!settingsResponse.ok) {
+        throw new Error('Failed to save setting');
+      }
+
+      // Update local state
+      setHeaders(prevHeaders =>
+        prevHeaders.map(h =>
+          h.key === key ? { ...h, value: imageUrl } : h
+        )
+      );
+
+      toast.success('Header image updated!');
+    } catch (error) {
+      console.error('Error uploading header:', error);
+      toast.error('Failed to upload header image');
+    } finally {
+      setUploadingFor(null);
+    }
+  };
+
+  const handleRemoveHeader = async (key: string) => {
+    if (!confirm('Are you sure you want to remove this custom header? The default image will be used.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/settings?key=${encodeURIComponent(key)}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove header');
+      }
+
+      // Update local state
+      setHeaders(prevHeaders =>
+        prevHeaders.map(h =>
+          h.key === key ? { ...h, value: null } : h
+        )
+      );
+
+      toast.success('Custom header removed. Default image will be used.');
+    } catch (error) {
+      console.error('Error removing header:', error);
+      toast.error('Failed to remove header');
+    }
+  };
+
+  const triggerFileInput = (key: string) => {
+    fileInputRefs.current[key]?.click();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-white mb-2">Page Headers</h1>
+        <p className="text-gray-400">
+          Customize the hero images displayed at the top of each main page. 
+          Upload high-quality images (recommended: 1920x1080 or larger).
+        </p>
+      </div>
+
+      {/* Headers Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {headers.map((header) => (
+          <div 
+            key={header.key}
+            className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700"
+          >
+            {/* Preview Image */}
+            <div className="relative aspect-video bg-gray-900">
+              <Image
+                src={header.value || header.defaultImage}
+                alt={`${header.pageName} header`}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+              
+              {/* Overlay with status */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              
+              {/* Status badge */}
+              <div className="absolute top-3 right-3">
+                {header.value ? (
+                  <span className="px-2 py-1 bg-green-500/80 text-white text-xs font-medium rounded-full">
+                    Custom
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 bg-gray-500/80 text-white text-xs font-medium rounded-full">
+                    Default
+                  </span>
+                )}
+              </div>
+
+              {/* Page name overlay */}
+              <div className="absolute bottom-3 left-3">
+                <h3 className="text-xl font-bold text-white">{header.pageName}</h3>
+                <p className="text-sm text-gray-300">{header.description}</p>
+              </div>
+
+              {/* Upload overlay on hover */}
+              {uploadingFor === header.key && (
+                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mb-2" />
+                    <span className="text-white text-sm">Uploading...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="p-4 flex items-center gap-3">
+              {/* Hidden file input */}
+              <input
+                type="file"
+                ref={el => { fileInputRefs.current[header.key] = el; }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileSelect(header.key, file);
+                  e.target.value = '';
+                }}
+                accept="image/*"
+                className="hidden"
+              />
+              
+              {/* Upload button */}
+              <button
+                onClick={() => triggerFileInput(header.key)}
+                disabled={uploadingFor !== null}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              >
+                <ArrowUpTrayIcon className="w-5 h-5" />
+                <span>{header.value ? 'Replace Image' : 'Upload Image'}</span>
+              </button>
+
+              {/* Remove button (only if custom image) */}
+              {header.value && (
+                <button
+                  onClick={() => handleRemoveHeader(header.key)}
+                  disabled={uploadingFor !== null}
+                  className="p-2 bg-red-600 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                  title="Remove custom header"
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Help text */}
+      <div className="mt-8 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+        <div className="flex items-start gap-3">
+          <PhotoIcon className="w-6 h-6 text-blue-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-white font-medium mb-1">Image Guidelines</h4>
+            <ul className="text-sm text-gray-400 space-y-1">
+              <li>• Recommended size: 1920x1080 pixels or larger</li>
+              <li>• Supported formats: JPG, PNG, WebP</li>
+              <li>• Maximum file size: 10MB</li>
+              <li>• Images will be automatically optimized for web delivery</li>
+              <li>• Use high-contrast images that work well with text overlays</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

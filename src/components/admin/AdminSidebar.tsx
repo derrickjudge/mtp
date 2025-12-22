@@ -10,7 +10,8 @@ import {
   DocumentTextIcon,
   CalendarDaysIcon,
   UsersIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  Squares2X2Icon
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -24,6 +25,7 @@ const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: HomeIcon },
   { name: 'Photos', href: '/admin/photos', icon: PhotoIcon },
   { name: 'Categories', href: '/admin/categories', icon: TagIcon },
+  { name: 'Page Headers', href: '/admin/headers', icon: Squares2X2Icon },
   { name: 'Articles', href: '/admin/articles', icon: DocumentTextIcon },
   { name: 'Events', href: '/admin/events', icon: CalendarDaysIcon },
   { name: 'Users', href: '/admin/users', icon: UsersIcon },

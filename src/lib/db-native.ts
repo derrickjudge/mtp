@@ -226,6 +226,18 @@ export class NativeDBService {
       // Index for efficient parent-child lookups
       await client.query(`CREATE INDEX IF NOT EXISTS "Category_parentId_idx" ON "Category"("parentId")`);
 
+      // SiteSettings table for page headers and other site-wide settings
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "SiteSettings" (
+          "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          "key" TEXT NOT NULL UNIQUE,
+          "value" TEXT,
+          "metadata" JSONB,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
     } catch (error) {
       console.warn('Error ensuring junction tables:', error);
       // Don't throw error - tables might already exist
@@ -1674,6 +1686,102 @@ export class NativeDBService {
       );
       
       return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  // Site Settings methods
+  async getSetting(key: string): Promise<any> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        'SELECT * FROM "SiteSettings" WHERE "key" = $1 LIMIT 1',
+        [key]
+      );
+      
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async getAllSettings(): Promise<any[]> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        'SELECT * FROM "SiteSettings" ORDER BY "key" ASC'
+      );
+      
+      return result.rows;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async getSettingsByPrefix(prefix: string): Promise<any[]> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        'SELECT * FROM "SiteSettings" WHERE "key" LIKE $1 ORDER BY "key" ASC',
+        [`${prefix}%`]
+      );
+      
+      return result.rows;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async upsertSetting(key: string, value: string, metadata?: Record<string, unknown>): Promise<any> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        `INSERT INTO "SiteSettings" ("key", "value", "metadata", "updatedAt")
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT ("key") DO UPDATE SET
+           "value" = EXCLUDED."value",
+           "metadata" = EXCLUDED."metadata",
+           "updatedAt" = CURRENT_TIMESTAMP
+         RETURNING *`,
+        [key, value, metadata ? JSON.stringify(metadata) : null]
+      );
+      
+      return result.rows[0];
+    } finally {
+      await client.end();
+    }
+  }
+
+  async deleteSetting(key: string): Promise<boolean> {
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      const result = await client.query(
+        'DELETE FROM "SiteSettings" WHERE "key" = $1',
+        [key]
+      );
+      
+      return (result.rowCount ?? 0) > 0;
     } finally {
       await client.end();
     }
