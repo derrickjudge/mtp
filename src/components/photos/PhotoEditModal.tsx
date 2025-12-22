@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Photo } from '@/types/photo';
 import { StarIcon } from '@heroicons/react/24/solid';
+import { toast } from 'react-hot-toast';
 
 interface Category {
   id: string;
@@ -111,6 +112,9 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
     setError(null);
 
     try {
+      console.log('[PhotoEditModal] Saving photo:', photo.id);
+      console.log('[PhotoEditModal] Selected categories:', selectedCategoryIds);
+      
       const response = await fetch(`/api/photos/${photo.id}`, {
         method: 'PUT',
         headers: {
@@ -127,14 +131,24 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
         }),
       });
 
+      console.log('[PhotoEditModal] Response status:', response.status);
+      
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('[PhotoEditModal] Error response:', errorData);
         throw new Error(errorData.message || 'Failed to update photo');
       }
 
+      const updatedPhoto = await response.json();
+      console.log('[PhotoEditModal] Updated photo categories:', updatedPhoto.categories?.map((c: {name: string}) => c.name));
+      
+      toast.success('Photo updated successfully!');
       onSave();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update photo');
+      console.error('[PhotoEditModal] Save error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update photo';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
