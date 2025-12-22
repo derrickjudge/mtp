@@ -110,6 +110,15 @@ export async function PUT(req: NextRequest) {
     }
     
     console.log(`[Bulk Update] Completed: ${updatedCount}/${photoIds.length} photos updated, ${errors.length} errors`);
+    
+    // Verify the updates by querying the database
+    console.log(`[Bulk Update] Verifying updates in database...`);
+    for (const photoId of photoIds) {
+      const photo = await nativeDB.findPhotoById(photoId);
+      if (photo) {
+        console.log(`[Bulk Update] Verification - Photo ${photoId} now has categories: ${photo.categories?.map((c: { id: string; name: string }) => c.name).join(', ') || 'none'}`);
+      }
+    }
 
     // Return appropriate response based on success/failures
     if (errors.length > 0 && updatedCount === 0) {
