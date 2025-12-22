@@ -127,9 +127,9 @@ export default function AdminHeadersPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('title', 'Site Logo');
+      formData.append('folder', 'logos');
 
-      const uploadResponse = await fetch('/api/photos/upload', {
+      const uploadResponse = await fetch('/api/upload/asset', {
         method: 'POST',
         body: formData
       });
@@ -208,10 +208,10 @@ export default function AdminHeadersPage() {
       // Create form data for upload
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('title', `Header - ${headers.find(h => h.key === key)?.pageName || 'Page'}`);
+      formData.append('folder', 'headers');
 
-      // Upload the image
-      const uploadResponse = await fetch('/api/photos/upload', {
+      // Upload the image (using asset endpoint - no Photo record created)
+      const uploadResponse = await fetch('/api/upload/asset', {
         method: 'POST',
         body: formData
       });
