@@ -657,7 +657,7 @@ export class NativeDBService {
         `SELECT "A", "B" FROM "_CategoryToPhoto" WHERE "B" = $1`,
         [photoId]
       );
-      console.log(`[DB] linkPhotoToCategories: Photo already has ${existingCheck.rows.length} category links`);
+      console.log(`[DB] linkPhotoToCategories: Photo already has ${existingCheck.rows.length} category links: ${existingCheck.rows.map((r: { A: string }) => r.A).join(', ')}`);
       
       // Insert multiple category-photo relationships
       const values = categoryIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
@@ -666,15 +666,20 @@ export class NativeDBService {
       const query = `INSERT INTO "_CategoryToPhoto" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`;
       console.log(`[DB] linkPhotoToCategories: query=${query}, params=${JSON.stringify(params)}`);
       
-      const result = await client.query(query, params);
-      console.log(`[DB] linkPhotoToCategories: result rowCount=${result.rowCount}`);
+      try {
+        const result = await client.query(query, params);
+        console.log(`[DB] linkPhotoToCategories: result rowCount=${result.rowCount}, command=${result.command}`);
+      } catch (insertError) {
+        console.error(`[DB] linkPhotoToCategories: INSERT ERROR:`, insertError);
+        throw insertError;
+      }
       
       // Verify after insert
       const afterCheck = await client.query(
         `SELECT "A", "B" FROM "_CategoryToPhoto" WHERE "B" = $1`,
         [photoId]
       );
-      console.log(`[DB] linkPhotoToCategories: After insert, photo has ${afterCheck.rows.length} category links`);
+      console.log(`[DB] linkPhotoToCategories: After insert, photo has ${afterCheck.rows.length} category links: ${afterCheck.rows.map((r: { A: string }) => r.A).join(', ')}`);
     } finally {
       await client.end();
     }
