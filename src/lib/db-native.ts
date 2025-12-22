@@ -663,16 +663,20 @@ export class NativeDBService {
       const values = categoryIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
       const params = categoryIds.flatMap(categoryId => [categoryId, photoId]);
       
-      const query = `INSERT INTO "_CategoryToPhoto" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`;
-      console.log(`[DB] linkPhotoToCategories: query=${query}, params=${JSON.stringify(params)}`);
-      
-      try {
-        const result = await client.query(query, params);
-        console.log(`[DB] linkPhotoToCategories: result rowCount=${result.rowCount}, command=${result.command}`);
-      } catch (insertError) {
-        console.error(`[DB] linkPhotoToCategories: INSERT ERROR:`, insertError);
-        throw insertError;
+      // Insert one at a time to debug
+      let totalInserted = 0;
+      for (const categoryId of categoryIds) {
+        const singleQuery = `INSERT INTO "_CategoryToPhoto" ("A", "B") VALUES ($1, $2) ON CONFLICT DO NOTHING`;
+        console.log(`[DB] linkPhotoToCategories: Inserting category ${categoryId} for photo ${photoId}`);
+        try {
+          const result = await client.query(singleQuery, [categoryId, photoId]);
+          console.log(`[DB] linkPhotoToCategories: Single insert result rowCount=${result.rowCount}, command=${result.command}`);
+          totalInserted += result.rowCount || 0;
+        } catch (insertError) {
+          console.error(`[DB] linkPhotoToCategories: INSERT ERROR for category ${categoryId}:`, insertError);
+        }
       }
+      console.log(`[DB] linkPhotoToCategories: Total inserted: ${totalInserted}/${categoryIds.length}`);
       
       // Verify after insert
       const afterCheck = await client.query(
