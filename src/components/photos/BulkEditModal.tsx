@@ -85,13 +85,23 @@ export function BulkEditModal({ photoIds, onClose, onComplete }: BulkEditModalPr
         })
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.message || 'Failed to update photos');
       }
 
-      const modeText = editMode === 'add' ? 'added to' : editMode === 'remove' ? 'removed from' : 'set for';
-      toast.success(`Categories ${modeText} ${photoIds.length} photos`);
+      // Check if all photos were updated
+      if (data.updatedCount !== photoIds.length) {
+        console.warn('Bulk update partial success:', data);
+        toast.error(`Only ${data.updatedCount}/${photoIds.length} photos were updated. Check console for details.`);
+        if (data.errors) {
+          console.error('Bulk update errors:', data.errors);
+        }
+      } else {
+        const modeText = editMode === 'add' ? 'added to' : editMode === 'remove' ? 'removed from' : 'set for';
+        toast.success(`Categories ${modeText} ${data.updatedCount} photos`);
+      }
       onComplete();
     } catch (error) {
       console.error('Error updating photos:', error);

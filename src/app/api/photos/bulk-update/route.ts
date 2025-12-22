@@ -74,34 +74,60 @@ export async function PUT(req: NextRequest) {
 
     // Perform bulk update based on mode
     let updatedCount = 0;
+    const errors: { photoId: string; error: string }[] = [];
+    
+    console.log(`[Bulk Update] Starting ${mode} operation for ${photoIds.length} photos with categories: ${categoryIds.join(', ')}`);
     
     for (const photoId of photoIds) {
-      switch (mode) {
-        case 'add':
-          // Add categories to photo (keeps existing)
-          await nativeDB.linkPhotoToCategories(photoId, categoryIds);
-          updatedCount++;
-          break;
-          
-        case 'remove':
-          // Remove specific categories from photo
-          await nativeDB.unlinkPhotoFromCategories(photoId, categoryIds);
-          updatedCount++;
-          break;
-          
-        case 'set':
-          // Replace all categories with the selected ones
-          await nativeDB.clearPhotoCategories(photoId);
-          await nativeDB.linkPhotoToCategories(photoId, categoryIds);
-          updatedCount++;
-          break;
+      try {
+        console.log(`[Bulk Update] Processing photo ${photoId}...`);
+        switch (mode) {
+          case 'add':
+            // Add categories to photo (keeps existing)
+            await nativeDB.linkPhotoToCategories(photoId, categoryIds);
+            break;
+            
+          case 'remove':
+            // Remove specific categories from photo
+            await nativeDB.unlinkPhotoFromCategories(photoId, categoryIds);
+            break;
+            
+          case 'set':
+            // Replace all categories with the selected ones
+            await nativeDB.clearPhotoCategories(photoId);
+            await nativeDB.linkPhotoToCategories(photoId, categoryIds);
+            break;
+        }
+        updatedCount++;
+        console.log(`[Bulk Update] Successfully updated photo ${photoId}`);
+      } catch (error) {
+        console.error(`[Bulk Update] Error updating photo ${photoId}:`, error);
+        errors.push({
+          photoId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
+    
+    console.log(`[Bulk Update] Completed: ${updatedCount}/${photoIds.length} photos updated, ${errors.length} errors`);
 
+    // Return appropriate response based on success/failures
+    if (errors.length > 0 && updatedCount === 0) {
+      return NextResponse.json({
+        message: `Failed to update any photos`,
+        updatedCount: 0,
+        errors
+      }, { status: 500 });
+    }
+    
     return NextResponse.json({
-      message: `Successfully updated ${updatedCount} photos`,
+      message: errors.length > 0 
+        ? `Updated ${updatedCount}/${photoIds.length} photos (${errors.length} failed)`
+        : `Successfully updated ${updatedCount} photos`,
       updatedCount,
-      mode
+      totalRequested: photoIds.length,
+      mode,
+      ...(errors.length > 0 && { errors })
     });
   } catch (error) {
     console.error('Bulk update error:', error);
