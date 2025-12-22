@@ -146,13 +146,15 @@ export class NativeDBService {
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_CategoryToPhoto_A_position_index" ON "_CategoryToPhoto"("A", position)
       `);
+      
+      // DROP the incorrect unique constraint on (A, position) - it prevents multiple photos at same position
       await client.query(`
         DO $$
         BEGIN
-          IF NOT EXISTS (
+          IF EXISTS (
             SELECT 1 FROM pg_constraint WHERE conname = '_CategoryToPhoto_A_position_unique'
           ) THEN
-            ALTER TABLE "_CategoryToPhoto" ADD CONSTRAINT "_CategoryToPhoto_A_position_unique" UNIQUE ("A", position);
+            ALTER TABLE "_CategoryToPhoto" DROP CONSTRAINT "_CategoryToPhoto_A_position_unique";
           END IF;
         END
         $$;
