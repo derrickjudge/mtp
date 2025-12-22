@@ -2,17 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nativeDB } from '@/lib/db-native';
-import { rateLimit } from '@/lib/rateLimit';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
 export async function PUT(req: NextRequest) {
   try {
     // Rate limiting
-    const rateLimitResult = rateLimit(req);
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { message: 'Too many requests, please try again later' },
-        { status: 429 }
-      );
+    const ip = getClientIp(req);
+    const rl = rateLimit(`photos:BULK:${ip}`, { tokens: 50, windowMs: 60_000 });
+    if (!rl.allowed) {
+      return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
     }
 
     // Check authentication
