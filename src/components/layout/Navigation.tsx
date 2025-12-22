@@ -118,7 +118,7 @@ export default function Navigation() {
 
   return (
     <nav className="flex items-center justify-between">
-      <Link href="/" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded-md -ml-2">
+      <Link href="/" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded-md">
         {logoUrl ? (
           <Image
             src={logoUrl}
