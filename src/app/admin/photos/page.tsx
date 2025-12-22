@@ -62,8 +62,8 @@ export default function AdminPhotos() {
 
   const fetchCategories = useCallback(async () => {
     try {
-      // Fetch hierarchical categories
-      const response = await fetch('/api/categories?hierarchy=true');
+      // Fetch hierarchical categories with cache-busting for admin
+      const response = await fetch('/api/categories?hierarchy=true', { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to fetch categories');
       }
@@ -88,7 +88,7 @@ export default function AdminPhotos() {
 
   const fetchEvents = useCallback(async () => {
     try {
-      const response = await fetch('/api/events');
+      const response = await fetch('/api/events', { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to fetch events');
       }
@@ -115,7 +115,8 @@ export default function AdminPhotos() {
         url += `?${params.toString()}`;
       }
       
-      const response = await fetch(url);
+      // Use cache: 'no-store' to ensure fresh data in admin
+      const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch photos');
       const data = await response.json();
       setPhotos(data.photos || data);
@@ -134,7 +135,7 @@ export default function AdminPhotos() {
     }
     
     try {
-      const response = await fetch(`/api/categories/${categoryId}/photos`);
+      const response = await fetch(`/api/categories/${categoryId}/photos`, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch category photos');
       const data = await response.json();
       setOrderedPhotos(data.photos || data);

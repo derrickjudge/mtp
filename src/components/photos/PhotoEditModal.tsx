@@ -58,9 +58,9 @@ export function PhotoEditModal({ photo, onClose, onSave }: PhotoEditModalProps) 
     const fetchData = async () => {
       try {
         const [categoriesResponse, tagsResponse, eventsResponse] = await Promise.all([
-          fetch('/api/categories?hierarchy=true'),
-          fetch('/api/tags'),
-          fetch('/api/events')
+          fetch('/api/categories?hierarchy=true', { cache: 'no-store' }),
+          fetch('/api/tags', { cache: 'no-store' }),
+          fetch('/api/events', { cache: 'no-store' })
         ]);
 
         if (categoriesResponse.ok) {
