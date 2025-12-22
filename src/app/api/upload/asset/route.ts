@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { r2Config } from '@/config/r2';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 const s3Client = new S3Client({
   region: 'auto',
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const key = `${folder}/${uuidv4()}.${ext}`;
+    const key = `${folder}/${randomUUID()}.${ext}`;
 
     await s3Client.send(new PutObjectCommand({
       Bucket: r2Config.bucketName,
