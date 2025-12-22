@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
+import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/utils/cn';
 
@@ -21,6 +22,7 @@ export default function Navigation() {
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
   const [mobileExpandedParent, setMobileExpandedParent] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const portfolioRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -31,7 +33,7 @@ export default function Navigation() {
   const activeLink =
     'text-white relative after:absolute after:inset-x-1 after:-bottom-1 after:h-0.5 after:bg-white/80';
 
-  // Fetch categories with hierarchy
+  // Fetch categories and logo
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -52,7 +54,22 @@ export default function Navigation() {
       }
     };
 
+    const fetchLogo = async () => {
+      try {
+        const response = await fetch('/api/settings?key=site:logo');
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.value) {
+            setLogoUrl(data.value);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error);
+      }
+    };
+
     fetchCategories();
+    fetchLogo();
   }, []);
 
   // Handle clicks outside dropdown to close it
@@ -101,8 +118,19 @@ export default function Navigation() {
 
   return (
     <nav className="flex items-center justify-between">
-      <Link href="/" className="text-xl font-bold tracking-wider focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded-md px-1">
-        MTP COLLECTIVE
+      <Link href="/" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded-md">
+        {logoUrl ? (
+          <Image
+            src={logoUrl}
+            alt="MTP Collective"
+            width={180}
+            height={50}
+            className="h-10 w-auto object-contain"
+            priority
+          />
+        ) : (
+          <span className="text-xl font-bold tracking-wider px-1">MTP COLLECTIVE</span>
+        )}
       </Link>
       
       {/* Desktop menu */}

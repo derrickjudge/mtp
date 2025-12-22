@@ -62,10 +62,14 @@ export default function AdminHeadersPage() {
   const [headers, setHeaders] = useState<PageHeader[]>(PAGE_HEADERS);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     fetchHeaders();
+    fetchLogo();
   }, []);
 
   const fetchHeaders = async () => {
@@ -90,6 +94,99 @@ export default function AdminHeadersPage() {
       toast.error('Failed to load page headers');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchLogo = async () => {
+    try {
+      const response = await fetch('/api/settings?key=site:logo', { cache: 'no-store' });
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.value) {
+          setLogoUrl(data.value);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching logo:', error);
+    }
+  };
+
+  const handleLogoSelect = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Logo must be less than 5MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', 'Site Logo');
+
+      const uploadResponse = await fetch('/api/photos/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload logo');
+      }
+
+      const uploadResult = await uploadResponse.json();
+      const imageUrl = uploadResult.url;
+
+      const settingsResponse = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: 'site:logo',
+          value: imageUrl,
+          metadata: {
+            originalName: file.name,
+            uploadedAt: new Date().toISOString()
+          }
+        })
+      });
+
+      if (!settingsResponse.ok) {
+        throw new Error('Failed to save logo setting');
+      }
+
+      setLogoUrl(imageUrl);
+      toast.success('Logo updated!');
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast.error('Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!confirm('Are you sure you want to remove the logo? The text "MTP COLLECTIVE" will be displayed instead.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/settings?key=site:logo', {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove logo');
+      }
+
+      setLogoUrl(null);
+      toast.success('Logo removed. Text will be displayed instead.');
+    } catch (error) {
+      console.error('Error removing logo:', error);
+      toast.error('Failed to remove logo');
     }
   };
 
@@ -206,9 +303,104 @@ export default function AdminHeadersPage() {
     <div className="p-8">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-2">Page Headers</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">Site Branding & Page Headers</h1>
         <p className="text-gray-400">
-          Customize the hero images displayed at the top of each main page. 
+          Customize your site logo and the hero images displayed at the top of each main page.
+        </p>
+      </div>
+
+      {/* Logo Section */}
+      <div className="mb-10 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+        <div className="p-6 border-b border-gray-700">
+          <h2 className="text-xl font-semibold text-white mb-1">Site Logo</h2>
+          <p className="text-sm text-gray-400">
+            Upload a logo to replace the text &quot;MTP COLLECTIVE&quot; in the navigation. 
+            Recommended: PNG with transparent background, max height 50px.
+          </p>
+        </div>
+        
+        <div className="p-6">
+          <div className="flex items-center gap-6">
+            {/* Logo Preview */}
+            <div className="flex-shrink-0 w-48 h-16 bg-gray-900 rounded-lg flex items-center justify-center border border-gray-600">
+              {logoUrl ? (
+                <Image
+                  src={logoUrl}
+                  alt="Site Logo"
+                  width={180}
+                  height={50}
+                  className="h-12 w-auto object-contain"
+                />
+              ) : (
+                <span className="text-xl font-bold tracking-wider text-white">MTP COLLECTIVE</span>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              {/* Hidden file input */}
+              <input
+                type="file"
+                ref={logoInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleLogoSelect(file);
+                  e.target.value = '';
+                }}
+                accept="image/*"
+                className="hidden"
+              />
+
+              <button
+                onClick={() => logoInputRef.current?.click()}
+                disabled={uploadingLogo}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              >
+                {uploadingLogo ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <span>Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpTrayIcon className="w-5 h-5" />
+                    <span>{logoUrl ? 'Replace Logo' : 'Upload Logo'}</span>
+                  </>
+                )}
+              </button>
+
+              {logoUrl && (
+                <button
+                  onClick={handleRemoveLogo}
+                  disabled={uploadingLogo}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  <TrashIcon className="w-5 h-5" />
+                  <span>Remove</span>
+                </button>
+              )}
+            </div>
+
+            {/* Status */}
+            <div className="ml-auto">
+              {logoUrl ? (
+                <span className="px-3 py-1 bg-green-500/20 text-green-300 text-sm font-medium rounded-full">
+                  Custom Logo
+                </span>
+              ) : (
+                <span className="px-3 py-1 bg-gray-500/20 text-gray-300 text-sm font-medium rounded-full">
+                  Using Text
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section Header for Page Headers */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-white mb-1">Page Hero Images</h2>
+        <p className="text-sm text-gray-400">
           Upload high-quality images (recommended: 1920x1080 or larger).
         </p>
       </div>
