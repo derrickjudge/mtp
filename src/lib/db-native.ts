@@ -627,7 +627,11 @@ export class NativeDBService {
   }
 
   async linkPhotoToCategories(photoId: string, categoryIds: string[]): Promise<void> {
-    if (categoryIds.length === 0) return;
+    console.log(`[DB] linkPhotoToCategories: photoId=${photoId}, categoryIds=${categoryIds.join(', ')}`);
+    if (categoryIds.length === 0) {
+      console.log(`[DB] linkPhotoToCategories: No categories to link, returning`);
+      return;
+    }
     
     // Ensure junction tables exist before linking
     await this.ensureJunctionTables();
@@ -640,10 +644,11 @@ export class NativeDBService {
       const values = categoryIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2})`).join(', ');
       const params = categoryIds.flatMap(categoryId => [categoryId, photoId]);
       
-      await client.query(
-        `INSERT INTO "_CategoryToPhoto" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`,
-        params
-      );
+      const query = `INSERT INTO "_CategoryToPhoto" ("A", "B") VALUES ${values} ON CONFLICT DO NOTHING`;
+      console.log(`[DB] linkPhotoToCategories: query=${query}, params=${JSON.stringify(params)}`);
+      
+      const result = await client.query(query, params);
+      console.log(`[DB] linkPhotoToCategories: result rowCount=${result.rowCount}`);
     } finally {
       await client.end();
     }
@@ -734,6 +739,7 @@ export class NativeDBService {
   }
 
   async clearPhotoCategories(photoId: string): Promise<void> {
+    console.log(`[DB] clearPhotoCategories: photoId=${photoId}`);
     // Ensure junction tables exist before clearing
     await this.ensureJunctionTables();
     
@@ -741,14 +747,19 @@ export class NativeDBService {
     try {
       await client.connect();
       
-      await client.query('DELETE FROM "_CategoryToPhoto" WHERE "B" = $1', [photoId]);
+      const result = await client.query('DELETE FROM "_CategoryToPhoto" WHERE "B" = $1', [photoId]);
+      console.log(`[DB] clearPhotoCategories: deleted ${result.rowCount} rows`);
     } finally {
       await client.end();
     }
   }
 
   async unlinkPhotoFromCategories(photoId: string, categoryIds: string[]): Promise<void> {
-    if (categoryIds.length === 0) return;
+    console.log(`[DB] unlinkPhotoFromCategories: photoId=${photoId}, categoryIds=${categoryIds.join(', ')}`);
+    if (categoryIds.length === 0) {
+      console.log(`[DB] unlinkPhotoFromCategories: No categories to unlink, returning`);
+      return;
+    }
     
     await this.ensureJunctionTables();
     
@@ -760,10 +771,11 @@ export class NativeDBService {
       const placeholders = categoryIds.map((_, index) => `$${index + 2}`).join(', ');
       const params = [photoId, ...categoryIds];
       
-      await client.query(
-        `DELETE FROM "_CategoryToPhoto" WHERE "B" = $1 AND "A" IN (${placeholders})`,
-        params
-      );
+      const query = `DELETE FROM "_CategoryToPhoto" WHERE "B" = $1 AND "A" IN (${placeholders})`;
+      console.log(`[DB] unlinkPhotoFromCategories: query=${query}, params=${JSON.stringify(params)}`);
+      
+      const result = await client.query(query, params);
+      console.log(`[DB] unlinkPhotoFromCategories: deleted ${result.rowCount} rows`);
     } finally {
       await client.end();
     }
