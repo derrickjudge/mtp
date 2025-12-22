@@ -747,6 +747,28 @@ export class NativeDBService {
     }
   }
 
+  async unlinkPhotoFromCategories(photoId: string, categoryIds: string[]): Promise<void> {
+    if (categoryIds.length === 0) return;
+    
+    await this.ensureJunctionTables();
+    
+    const client = this.createClient();
+    try {
+      await client.connect();
+      
+      // Build placeholders for the IN clause
+      const placeholders = categoryIds.map((_, index) => `$${index + 2}`).join(', ');
+      const params = [photoId, ...categoryIds];
+      
+      await client.query(
+        `DELETE FROM "_CategoryToPhoto" WHERE "B" = $1 AND "A" IN (${placeholders})`,
+        params
+      );
+    } finally {
+      await client.end();
+    }
+  }
+
   async clearPhotoTags(photoId: string): Promise<void> {
     // Ensure junction tables exist before clearing
     await this.ensureJunctionTables();
