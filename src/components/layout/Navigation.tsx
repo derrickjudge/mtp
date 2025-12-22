@@ -125,7 +125,7 @@ export default function Navigation() {
             alt="MTP Collective"
             width={225}
             height={75}
-            className="h-[75px] w-auto object-contain"
+            className="h-[75px] w-auto object-left object-contain"
             priority
           />
         ) : (
