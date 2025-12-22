@@ -224,11 +224,15 @@ export const photoService = {
     published?: boolean;
     featured?: boolean;
   }): Promise<PhotoWithRelations> {
+    console.log('[photoService.updatePhoto] Starting update for photo:', id);
+    console.log('[photoService.updatePhoto] Category IDs to set:', data.categoryIds);
+    
     // First, check if photo exists
     const existingPhoto = await nativeDB.findPhotoById(id);
     if (!existingPhoto) {
       throw new Error('Photo not found');
     }
+    console.log('[photoService.updatePhoto] Found existing photo:', existingPhoto.title);
 
     // Update the photo record
     const updatedPhoto = await nativeDB.updatePhoto(id, {
@@ -241,11 +245,15 @@ export const photoService = {
     if (!updatedPhoto) {
       throw new Error('Failed to update photo');
     }
+    console.log('[photoService.updatePhoto] Photo record updated');
 
     // Update category relationships
+    console.log('[photoService.updatePhoto] Clearing existing category links...');
     await nativeDB.clearPhotoCategories(id);
+    console.log('[photoService.updatePhoto] Cleared. Now linking to categories:', data.categoryIds);
     if (data.categoryIds.length > 0) {
       await nativeDB.linkPhotoToCategories(id, data.categoryIds);
+      console.log('[photoService.updatePhoto] Linked to', data.categoryIds.length, 'categories');
     }
 
     // Update tag relationships
@@ -262,6 +270,8 @@ export const photoService = {
 
     // Get the updated photo with relations
     const photoWithRelations = await nativeDB.getPhotoWithRelations(id);
+    console.log('[photoService.updatePhoto] Retrieved updated photo, categories:', 
+      photoWithRelations?.categories?.map((c: {name: string}) => c.name));
     
     if (!photoWithRelations) {
       throw new Error('Failed to retrieve updated photo');

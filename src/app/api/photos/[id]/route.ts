@@ -25,7 +25,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
+    console.log('[PUT /api/photos/:id] Session:', session?.user?.email, 'Role:', session?.user?.role);
+    
     if (!session?.user || session.user.role !== 'ADMIN') {
+      console.log('[PUT /api/photos/:id] Unauthorized - no valid admin session');
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -33,7 +36,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const { id } = params;
-    const { title, description, categoryIds, tagIds, eventIds, published, featured } = await req.json();
+    const body = await req.json();
+    const { title, description, categoryIds, tagIds, eventIds, published, featured } = body;
+    
+    console.log('[PUT /api/photos/:id] Update request for photo:', id);
+    console.log('[PUT /api/photos/:id] Category IDs:', categoryIds);
 
     if (!title) {
       return NextResponse.json(
@@ -52,9 +59,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       featured: featured ?? false,
     });
 
+    console.log('[PUT /api/photos/:id] Update successful, new categories:', updatedPhoto.categories?.map((c: {id: string; name: string}) => c.name));
     return NextResponse.json(updatedPhoto);
   } catch (error) {
-    console.error('Error updating photo:', error);
+    console.error('[PUT /api/photos/:id] Error updating photo:', error);
     return NextResponse.json(
       { message: error instanceof Error ? error.message : 'Failed to update photo' },
       { status: 500 }
