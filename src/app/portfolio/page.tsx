@@ -160,7 +160,7 @@ function PortfolioContent() {
     <div className="min-h-screen bg-black text-white">
       {/* Header Section */}
       <section className="py-16 bg-black">
-        <div className="max-w-7xl mx-auto pl-2 pr-4">
+        <div className="max-w-7xl mx-auto pl-1 pr-4">
           {/* Breadcrumb navigation */}
           <nav className="text-sm text-gray-400 mb-6 flex items-center gap-2">
             <Link href="/portfolio" className="hover:text-white transition-colors">
@@ -222,7 +222,7 @@ function PortfolioContent() {
       {/* Parent Categories Filter */}
       {categories.length > 0 && (
         <section className="py-4 bg-black border-b border-gray-800">
-          <div className="max-w-7xl mx-auto pl-2 pr-4">
+          <div className="max-w-7xl mx-auto pl-1 pr-4">
             <div className="flex flex-wrap gap-4 md:gap-6 text-sm">
               <Link
                 href="/portfolio"
@@ -259,7 +259,7 @@ function PortfolioContent() {
       {/* Subcategory Filter (when a parent is selected) */}
       {activeParent && activeParent.children && activeParent.children.length > 0 && (
         <section className="py-3 bg-gray-900/50 border-b border-gray-800">
-          <div className="max-w-7xl mx-auto pl-2 pr-4">
+          <div className="max-w-7xl mx-auto pl-1 pr-4">
             <div className="flex flex-wrap gap-3 md:gap-5 text-sm">
               <Link
                 href={`/portfolio?category=${activeParent.slug}`}

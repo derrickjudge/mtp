@@ -65,7 +65,7 @@ export default function RootLayout({
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
             <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80">
-              <div className="max-w-7xl mx-auto pl-2 pr-4 py-3">
+              <div className="max-w-7xl mx-auto pl-1 pr-4 py-3">
                 <Navigation />
               </div>
             </header>
