@@ -73,7 +73,7 @@ export default function RootLayout({
               {children}
             </main>
             <footer className="border-t border-gray-800">
-              <div className="container mx-auto px-4 py-8">
+              <div className="max-w-7xl mx-auto pl-1 pr-4 py-8">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   <div>
                     <h3 className="text-white text-lg font-semibold mb-4">MTP Collective</h3>

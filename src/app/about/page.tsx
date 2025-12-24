@@ -44,8 +44,8 @@ export default async function AboutPage() {
       </section>
 
       {/* Our Story */}
-      <section className="py-24 px-4 md:px-8 bg-black">
-        <div className="max-w-4xl mx-auto">
+      <section className="py-24 bg-black">
+        <div className="max-w-7xl mx-auto pl-1 pr-4">
           <SectionHeader
             title="Our Story"
             subtitle="From passion to profession, we've been capturing moments that matter since 2023."
@@ -71,8 +71,8 @@ export default async function AboutPage() {
       </section>
 
       {/* Our Mission */}
-      <section className="py-24 px-4 md:px-8 bg-zinc-900">
-        <div className="max-w-4xl mx-auto">
+      <section className="py-24 bg-zinc-900">
+        <div className="max-w-7xl mx-auto pl-1 pr-4">
           <SectionHeader
             title="Our Mission"
             subtitle="To capture and preserve moments that tell stories and evoke emotions."
@@ -95,8 +95,8 @@ export default async function AboutPage() {
       </section>
 
       {/* Our Team */}
-      <section className="py-24 px-4 md:px-8 bg-black">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-24 bg-black">
+        <div className="max-w-7xl mx-auto pl-1 pr-4">
           <SectionHeader
             title="Our Team"
             subtitle="Meet the photographers behind MTP Collective"
