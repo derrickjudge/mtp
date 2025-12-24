@@ -44,7 +44,7 @@ export default async function ContactPage() {
 
       {/* Contact Form Section */}
       <section className="py-24 bg-black">
-        <div className="max-w-7xl mx-auto pl-1 pr-4">
+        <div className="max-w-7xl mx-auto pl-0 pr-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Contact Information */}
             <div>

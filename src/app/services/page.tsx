@@ -106,7 +106,7 @@ export default async function ServicesPage() {
 
       {/* Services Grid */}
       <section className="py-24 bg-black">
-        <div className="max-w-7xl mx-auto pl-1 pr-4">
+        <div className="max-w-7xl mx-auto pl-0 pr-4">
           <SectionHeader
             title="What We Offer"
             subtitle="Discover our range of professional photography services"
@@ -126,7 +126,7 @@ export default async function ServicesPage() {
 
       {/* Process Section */}
       <section className="py-24 bg-zinc-900">
-        <div className="max-w-7xl mx-auto pl-1 pr-4">
+        <div className="max-w-7xl mx-auto pl-0 pr-4">
           <SectionHeader
             title="Our Process"
             subtitle="How we work with you to create stunning photographs"

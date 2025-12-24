@@ -76,13 +76,13 @@ export default async function EventsPage() {
           <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
             Events
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto pl-1 pr-4">
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto pl-0 pr-4">
             Capturing moments and stories from photography events, workshops, and exhibitions
           </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto pl-1 pr-4 py-12">
+      <div className="max-w-7xl mx-auto pl-0 pr-4 py-12">
         {/* Featured Events */}
         {featuredEvents.length > 0 && (
           <section className="mb-16">
