@@ -65,7 +65,7 @@ export default function RootLayout({
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
             <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80">
-              <div className="max-w-7xl ml-0 sm:ml-1 mr-auto pr-4 py-3">
+              <div className="max-w-7xl ml-1 mr-auto pr-4 py-3">
                 <Navigation />
               </div>
             </header>
@@ -73,7 +73,7 @@ export default function RootLayout({
               {children}
             </main>
             <footer className="border-t border-gray-800">
-              <div className="max-w-7xl ml-0 sm:ml-1 mr-auto pr-4 py-8">
+              <div className="max-w-7xl ml-1 mr-auto pr-4 py-8">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   <div>
                     <h3 className="text-white text-lg font-semibold mb-4">MTP Collective</h3>
