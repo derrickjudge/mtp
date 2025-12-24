@@ -187,7 +187,7 @@ export default function PhotoCollage({ photos, onPhotoClick }: PhotoCollageProps
       {/* Masonry Columns: equal column widths, variable heights */}
       <div 
         className="
-          max-w-7xl mx-auto pl-0 pr-4
+          max-w-7xl mx-auto pl-0 sm:pl-1 pr-4
           columns-1 sm:columns-2 md:columns-3 xl:columns-4
           [column-gap:0.5rem] sm:[column-gap:0.75rem] md:[column-gap:2px] xl:[column-gap:1rem] [column-fill:_balance]
         "
