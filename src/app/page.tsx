@@ -110,7 +110,7 @@ export default async function HomePage() {
 
       {/* Featured Photos */}
       <section className="py-24 bg-black">
-        <div className="max-w-7xl mx-auto pl-0 sm:pl-1 pr-4">
+        <div className="max-w-7xl ml-0 sm:ml-1 mr-auto pr-4">
           <h2 className="text-4xl font-bold text-center mb-16 text-white">
             Featured Photos
           </h2>
@@ -150,7 +150,7 @@ export default async function HomePage() {
 
       {/* Specialties */}
       <section className="py-24 bg-zinc-900">
-        <div className="max-w-7xl mx-auto pl-0 sm:pl-1 pr-4">
+        <div className="max-w-7xl ml-0 sm:ml-1 mr-auto pr-4">
           <h2 className="text-4xl font-bold text-center mb-16 text-white">
             Our Specialties
           </h2>
@@ -196,7 +196,7 @@ export default async function HomePage() {
 
       {/* About Section */}
       <section className="py-24 bg-black">
-        <div className="max-w-7xl mx-auto pl-0 sm:pl-1 pr-4">
+        <div className="max-w-7xl ml-0 sm:ml-1 mr-auto pr-4">
           <h2 className="text-4xl font-bold text-center mb-16 text-white">
             About MTP Collective
           </h2>

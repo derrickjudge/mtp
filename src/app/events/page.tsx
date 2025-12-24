@@ -82,7 +82,7 @@ export default async function EventsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto pl-0 sm:pl-1 pr-4 py-12">
+      <div className="max-w-7xl ml-0 sm:ml-1 mr-auto pr-4 py-12">
         {/* Featured Events */}
         {featuredEvents.length > 0 && (
           <section className="mb-16">
