@@ -1,7 +1,5 @@
 import { Image } from '@/components/common/Image';
 import Link from 'next/link';
-import type { Photo } from '@/types/photo';
-import { nativeDB } from '@/lib/db-native';
 import { getPageHeader } from '@/utils/pageHeaders';
 import type { Metadata } from 'next';
 
@@ -19,199 +17,67 @@ export const metadata: Metadata = {
   },
 };
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-}
-
-async function fetchFeaturedPhotos(): Promise<Photo[]> {
-  try {
-    const photos = await nativeDB.findPhotos({
-      featured: true,
-      published: true,
-      take: 6,
-    });
-    return photos;
-  } catch (error) {
-    console.error('Error fetching featured photos:', error);
-    return [];
-  }
-}
-
-async function fetchCategories(): Promise<Category[]> {
-  try {
-    const categories = await nativeDB.findCategories();
-    return categories;
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    return [];
-  }
-}
-
-async function fetchPhotosByCategory(categoryId: string, take: number = 1): Promise<Photo[]> {
-  try {
-    const photos = await nativeDB.findPhotos({
-      categoryId,
-      published: true,
-      take,
-    });
-    return photos;
-  } catch (error) {
-    console.error('Error fetching photos for category:', categoryId, error);
-    return [];
-  }
-}
-
 export default async function HomePage() {
-  // Fetch featured photos, categories, and hero image
-  const [featuredPhotos, categories, heroImage] = await Promise.all([
-    fetchFeaturedPhotos(),
-    fetchCategories(),
-    getPageHeader('home'),
-  ]);
-
-  // Fetch one photo per category for specialties section
-  const categoriesWithPhotos = await Promise.all(
-    categories.map(async (category) => ({
-      ...category,
-      photos: await fetchPhotosByCategory(category.id, 1),
-    }))
-  );
-
-  const specialtiesWithPhotos = categoriesWithPhotos.filter(category => category.photos.length > 0);
+  // Fetch hero image
+  const heroImage = await getPageHeader('home');
 
   return (
-    <div className="min-h-screen bg-black text-white" role="main">
-      {/* Hero Section */}
-      <section className="relative w-full" style={{ height: '60vh' }}>
+    <div className="bg-black text-white" role="main">
+      {/* Full-Screen Hero - Edge to Edge */}
+      <section className="relative w-screen h-screen -mt-16">
+        {/* Full-bleed background image */}
         <div className="absolute inset-0">
           <Image
             src={heroImage}
-            alt="MTP Collective Hero"
+            alt="MTP Collective"
             fill
             priority
             sizes="100vw"
-            className="brightness-75"
+            className="object-cover"
           />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/30 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-5xl md:text-3xl font-bold text-white mb-6 tracking-tight">
-              MTP Collective
+        
+        {/* Subtle gradient overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
+        
+        {/* Centered quote/tagline */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center px-6 max-w-5xl">
+            <h1 className="font-display text-5xl md:text-7xl lg:text-8xl text-white mb-6 tracking-wider leading-tight uppercase">
+              Every frame tells a story
             </h1>
-            <p className="text-xl md:text-lg text-gray-200 font-light">
-              Capturing moments through a unique lens
+            <p className="text-lg md:text-xl text-white/80 font-light tracking-widest uppercase">
+              Waiting to be discovered
             </p>
           </div>
         </div>
-      </section>
 
-      {/* Featured Photos */}
-      <section className="py-24 px-4 md:px-8 bg-black">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16 text-white">
-            Featured Photos
-          </h2>
-          {featuredPhotos.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {featuredPhotos.slice(0, 6).map((photo) => (
-                <div key={photo.id} className="relative w-full" style={{ height: '400px' }}>
-                  <div className="absolute inset-0 group overflow-hidden rounded-lg">
-                    <Image
-                      src={photo.thumbnail || photo.url}
-                      alt={photo.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <h3 className="text-white font-semibold text-lg">{photo.title}</h3>
-                      {photo.description && (
-                        <p className="text-gray-300 text-sm mt-1">{photo.description}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16">
-              <div className="text-6xl mb-4">📸</div>
-              <p className="text-gray-400 text-lg">
-                Featured photos coming soon! Check back for our latest work.
-              </p>
-            </div>
-          )}
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+          <svg 
+            className="w-6 h-6 text-white/70" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
         </div>
       </section>
 
-      {/* Specialties */}
-      <section className="py-24 px-4 md:px-8 bg-zinc-900">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16 text-white">
-            Our Specialties
-          </h2>
-          {specialtiesWithPhotos.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {specialtiesWithPhotos.map((category) => (
-                <Link key={category.id} href="/portfolio" className="block">
-                  <div className="relative w-full" style={{ height: '400px' }}>
-                    <div className="absolute inset-0 group overflow-hidden rounded-lg cursor-pointer">
-                      <Image
-                        src={category.photos[0].thumbnail || category.photos[0].url}
-                        alt={`${category.name} photography`}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end justify-center p-8">
-                        <h3 className="text-2xl font-bold text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                          {category.name}
-                        </h3>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16">
-              <div className="text-6xl mb-4">🎨</div>
-              <p className="text-gray-400 text-lg">
-                Our photography specialties are being curated. Visit our portfolio to see our work!
-              </p>
-              <Link
-                href="/portfolio"
-                className="inline-block mt-4 px-6 py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                View Portfolio
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section className="py-24 px-4 md:px-8 bg-black">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16 text-white">
-            About MTP Collective
-          </h2>
-          <div className="text-gray-300 text-lg space-y-6">
-            <p className="leading-relaxed">
-              We are a collective of passionate photographers dedicated to capturing
-              the essence of life through our lenses. From the energy of live
-              concerts to the beauty of nature and the power of automotive design,
-              we bring our unique perspective to every shot.
-            </p>
-            <p className="leading-relaxed">
-              Our mission is to create timeless images that tell stories and evoke
-              emotions, preserving moments that would otherwise be lost to time.
-            </p>
-          </div>
+      {/* Minimal Content Section */}
+      <section className="py-24 px-6 bg-black">
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-xl md:text-2xl text-gray-300 font-light leading-relaxed mb-12">
+            MTP Collective captures the raw energy of live music, the intensity of sports, 
+            and the authentic moments of street life. We don&apos;t just take photos—we preserve feelings.
+          </p>
+          <Link
+            href="/portfolio"
+            className="inline-block px-8 py-4 border border-white/30 text-white font-medium tracking-wider uppercase text-sm hover:bg-white hover:text-black transition-all duration-300"
+          >
+            View Portfolio
+          </Link>
         </div>
       </section>
     </div>

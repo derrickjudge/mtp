@@ -6,7 +6,12 @@ module.exports = {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['var(--font-barlow)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-bebas)', 'Impact', 'sans-serif'],
+      },
+    },
   },
   safelist: [
     // Grid column spans

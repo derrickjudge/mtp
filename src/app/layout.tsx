@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Barlow, Bebas_Neue } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/layout/Navigation";
 import { AuthProvider } from "@/components/providers/SessionProvider";
@@ -9,7 +9,17 @@ import DisableContextMenu from '@/components/common/DisableContextMenu';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
-const inter = Inter({ subsets: ["latin"] });
+const barlow = Barlow({ 
+  subsets: ["latin"],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-barlow',
+});
+
+const bebasNeue = Bebas_Neue({ 
+  subsets: ["latin"],
+  weight: ['400'],
+  variable: '--font-bebas',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.mtpcollective.com'),
@@ -60,7 +70,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://pub-8473897a453e4a39824456dc238f2559.r2.dev" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="//pub-8473897a453e4a39824456dc238f2559.r2.dev" />
       </head>
-      <body className={`${inter.className} font-sans antialiased bg-black text-white min-h-screen flex flex-col`}>
+      <body className={`${barlow.variable} ${bebasNeue.variable} font-sans antialiased bg-black text-white min-h-screen flex flex-col`}>
         <DisableContextMenu />
         <AuthProvider>
           <div className="min-h-screen flex flex-col">

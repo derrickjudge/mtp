@@ -129,7 +129,7 @@ export default function Navigation() {
             priority
           />
         ) : (
-          <span className="text-xl font-bold tracking-wider px-1">MTP COLLECTIVE</span>
+          <span className="font-display text-2xl tracking-widest">MTP COLLECTIVE</span>
         )}
       </Link>
       

@@ -194,7 +194,7 @@ function PortfolioContent() {
           {/* Title and description */}
           {selectedCategory ? (
             <>
-              <h1 className="text-5xl md:text-3xl font-bold text-white mb-4 text-left">
+              <h1 className="font-display text-5xl md:text-6xl text-white mb-4 text-left tracking-wider uppercase">
                 {selectedCategory.parentId 
                   ? getDisplayName(selectedCategory.name)
                   : selectedCategory.name
@@ -208,7 +208,7 @@ function PortfolioContent() {
             </>
           ) : (
             <>
-              <h1 className="text-5xl md:text-3xl font-bold text-white mb-4 text-left">
+              <h1 className="font-display text-5xl md:text-6xl text-white mb-4 text-left tracking-wider uppercase">
                 Portfolio
               </h1>
               <p className="text-xl md:text-lg text-gray-300 max-w-3xl text-left">
