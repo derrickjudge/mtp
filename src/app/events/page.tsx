@@ -2,7 +2,8 @@ import React from 'react';
 import { nativeDB } from '@/lib/db-native';
 import { CalendarIcon, MapPinIcon, PhotoIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Image } from '@/components/common/Image';
+import { getPageHeader } from '@/utils/pageHeaders';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -59,9 +60,10 @@ async function fetchCategories(): Promise<Category[]> {
 }
 
 export default async function EventsPage() {
-  const [events, categories] = await Promise.all([
+  const [events, categories, heroImage] = await Promise.all([
     fetchEvents(),
     fetchCategories(),
+    getPageHeader('events'),
   ]);
 
   const featuredEvents = events.filter(event => event.featured);
@@ -70,17 +72,28 @@ export default async function EventsPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
-      <div className="relative h-96 flex items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/20 to-blue-900/20" />
-        <div className="relative z-10 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-            Events
-          </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto px-4">
-            Capturing moments and stories from photography events, workshops, and exhibitions
-          </p>
+      <section className="relative w-full" style={{ height: '40vh' }}>
+        <div className="absolute inset-0">
+          <Image
+            src={heroImage}
+            alt="MTP Collective Events"
+            fill
+            priority
+            sizes="100vw"
+            className="brightness-75"
+          />
         </div>
-      </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/30 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-5xl md:text-3xl font-bold text-white mb-6 tracking-tight">
+              Events
+            </h1>
+            <p className="text-xl md:text-lg text-gray-200 font-light">
+              Capturing moments and stories from photography events
+            </p>
+          </div>
+        </div>
+      </section>
 
       <div className="container mx-auto px-4 py-12">
         {/* Featured Events */}

@@ -41,7 +41,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
     const height = (photo.metadata?.height && Number.isFinite(photo.metadata.height)) ? photo.metadata.height : 900;
     const paddingBottom = `${(height / width) * 100}%`;
     return (
-      <div className="mb-4 sm:mb-6 lg:mb-8 break-inside-avoid inline-block w-full">
+      <div className="mb-2 sm:mb-3 md:mb-[2px] 2xl:mb-4 break-inside-avoid inline-block w-full">
         <div className="relative w-full bg-gray-900/40 rounded" style={{ paddingBottom }} />
       </div>
     );
@@ -54,7 +54,7 @@ function PhotoItem({ photo, onPhotoClick, isVisible }: PhotoItemProps) {
         transition-transform duration-300 ease-out
         ${imageLoaded ? 'opacity-100' : 'opacity-0'}
         w-full inline-block align-top
-        mb-4 sm:mb-6 lg:mb-8 break-inside-avoid
+        mb-2 sm:mb-3 md:mb-[2px] 2xl:mb-4 break-inside-avoid
       `}
       onClick={handleClick}
     >

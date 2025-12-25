@@ -194,13 +194,13 @@ function PortfolioContent() {
           {/* Title and description */}
           {selectedCategory ? (
             <>
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 text-left">
+              <h1 className="text-5xl md:text-3xl font-bold text-white mb-4 text-left">
                 {selectedCategory.parentId 
                   ? getDisplayName(selectedCategory.name)
                   : selectedCategory.name
                 }
               </h1>
-              <p className="text-lg text-gray-300 max-w-3xl text-left">
+              <p className="text-xl md:text-lg text-gray-300 max-w-3xl text-left">
                 {selectedCategory.description || 
                   `Showcasing our ${getDisplayName(selectedCategory.name).toLowerCase()} photography collection`
                 }
@@ -208,10 +208,10 @@ function PortfolioContent() {
             </>
           ) : (
             <>
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 text-left">
+              <h1 className="text-5xl md:text-3xl font-bold text-white mb-4 text-left">
                 Portfolio
               </h1>
-              <p className="text-lg text-gray-300 max-w-3xl text-left">
+              <p className="text-xl md:text-lg text-gray-300 max-w-3xl text-left">
                 Explore our photography collections showcasing the art of capturing moments across different genres.
               </p>
             </>

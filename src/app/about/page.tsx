@@ -20,7 +20,7 @@ export default async function AboutPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
-      <section className="relative w-full" style={{ height: '60vh' }}>
+      <section className="relative w-full" style={{ height: '40vh' }}>
         <div className="absolute inset-0">
           <Image
             src={heroImage}
@@ -33,10 +33,10 @@ export default async function AboutPage() {
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/30 flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
+            <h1 className="text-5xl md:text-3xl font-bold text-white mb-6 tracking-tight">
               About Us
             </h1>
-            <p className="text-xl md:text-2xl text-gray-200 font-light">
+            <p className="text-xl md:text-lg text-gray-200 font-light">
               Our story and mission
             </p>
           </div>
