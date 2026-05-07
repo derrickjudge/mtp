@@ -17,6 +17,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Check authentication (admin only)
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const prefix = searchParams.get('prefix');
     const key = searchParams.get('key');
