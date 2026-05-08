@@ -7,23 +7,26 @@ jest.mock('@/components/common/Image', () => ({
 }));
 
 describe('ServicesPage', () => {
-  it('renders the hero section', () => {
-    render(<ServicesPage />);
+  it('renders the hero section', async () => {
+    const ui = await ServicesPage();
+    render(ui as unknown as React.ReactElement);
     expect(screen.getByText('Our Services')).toBeInTheDocument();
     expect(screen.getByText('Professional photography services for every occasion')).toBeInTheDocument();
     expect(screen.getByAltText('MTP Collective Services')).toBeInTheDocument();
   });
 
-  it('renders the services grid section', () => {
-    render(<ServicesPage />);
+  it('renders the services grid section', async () => {
+    const ui = await ServicesPage();
+    render(ui as unknown as React.ReactElement);
     expect(screen.getByText('What We Offer')).toBeInTheDocument();
     expect(screen.getByText('Concert Photography')).toBeInTheDocument();
     expect(screen.getByText('Automotive Photography')).toBeInTheDocument();
     expect(screen.getByText('Nature Photography')).toBeInTheDocument();
   });
 
-  it('renders the process section', () => {
-    render(<ServicesPage />);
+  it('renders the process section', async () => {
+    const ui = await ServicesPage();
+    render(ui as unknown as React.ReactElement);
     expect(screen.getByText('Our Process')).toBeInTheDocument();
     expect(screen.getByText('Consultation')).toBeInTheDocument();
     expect(screen.getByText('Planning')).toBeInTheDocument();

@@ -47,7 +47,7 @@ describe('PortfolioPage', () => {
   it('renders the hero and loading states, then empty state', async () => {
     render(<PortfolioPage />);
 
-    expect(screen.getByText('Portfolio')).toBeInTheDocument();
+    expect(screen.getAllByText('Portfolio')[0]).toBeInTheDocument();
     expect(
       screen.getByText(/Explore our photography collections/i)
     ).toBeInTheDocument();

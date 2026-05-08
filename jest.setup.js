@@ -46,6 +46,8 @@ if (typeof global.fetch === 'undefined') {
 // Mock nativeDB to avoid real DB access during tests
 jest.mock('@/lib/db-native', () => ({
   nativeDB: {
+    getSetting: jest.fn().mockResolvedValue(null),
+    getSettingsByPrefix: jest.fn().mockResolvedValue([]),
     findPhotos: jest.fn().mockResolvedValue([]),
     findCategories: jest.fn().mockResolvedValue([]),
     findPhotoById: jest.fn().mockResolvedValue(null),

@@ -12,15 +12,17 @@ jest.mock('@/components/common/ClientContactForm', () => ({
 }));
 
 describe('ContactPage', () => {
-  it('renders the hero section', () => {
-    render(<ContactPage />);
+  it('renders the hero section', async () => {
+    const ui = await ContactPage();
+    render(ui as unknown as React.ReactElement);
     expect(screen.getByText('Contact Us')).toBeInTheDocument();
     expect(screen.getByText('Get in touch with our team')).toBeInTheDocument();
     expect(screen.getByAltText('Contact MTP Collective')).toBeInTheDocument();
   });
 
-  it('renders the contact information section', () => {
-    render(<ContactPage />);
+  it('renders the contact information section', async () => {
+    const ui = await ContactPage();
+    render(ui as unknown as React.ReactElement);
     expect(screen.getByText('Get in Touch')).toBeInTheDocument();
     expect(screen.getByText(/We'd love to hear from you/i)).toBeInTheDocument();
     expect(screen.getByText('Email')).toBeInTheDocument();
@@ -31,8 +33,9 @@ describe('ContactPage', () => {
     expect(screen.getByText('Follow Us')).toBeInTheDocument();
   });
 
-  it('renders the contact form', () => {
-    render(<ContactPage />);
+  it('renders the contact form', async () => {
+    const ui = await ContactPage();
+    render(ui as unknown as React.ReactElement);
     expect(screen.getByTestId('contact-form')).toBeInTheDocument();
   });
 }); 
