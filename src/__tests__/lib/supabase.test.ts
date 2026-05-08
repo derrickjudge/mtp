@@ -1,6 +1,6 @@
 // This project may not include a real supabase client; mock module inline
 const supabase = {
-  from: jest.fn(() => ({
+  from: jest.fn((_table: string) => ({
     select: jest.fn(),
     insert: jest.fn(),
     update: jest.fn(),
