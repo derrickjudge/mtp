@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { photoService } from '@/services/photoService';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -7,6 +6,7 @@ import { authOptions } from '@/lib/auth';
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
+    const { photoService } = await import('@/services/photoService');
     const photo = await photoService.getPhotoById(id);
     if (!photo) {
       return NextResponse.json({ message: 'Photo not found' }, { status: 404 });
@@ -49,6 +49,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       );
     }
 
+    const { photoService } = await import('@/services/photoService');
     const updatedPhoto = await photoService.updatePhoto(id, {
       title,
       description,
@@ -81,6 +82,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       );
     }
     const { id } = params;
+    const { photoService } = await import('@/services/photoService');
     await photoService.deletePhoto(id);
     return NextResponse.json({ message: 'Photo deleted' });
   } catch (error) {

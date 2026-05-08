@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { photoService } from '@/services/photoService';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
@@ -26,6 +25,7 @@ export async function GET(req: NextRequest) {
 
     let photos;
     try {
+      const { photoService } = await import('@/services/photoService');
       photos = await photoService.getPhotos({ categoryId, tagId, eventId, featured, published, take, skip });
     } catch (e) {
       console.error('Error in photoService.getPhotos:', e);
@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // Upload photo
+    const { photoService } = await import('@/services/photoService');
     const photo = await photoService.uploadPhoto({
       file: buffer,
       fileName: file.name,
