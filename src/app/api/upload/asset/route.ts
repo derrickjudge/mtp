@@ -3,17 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { r2Config } from '@/config/r2';
 import { randomUUID } from 'crypto';
-
-const s3Client = new S3Client({
-  region: 'auto',
-  endpoint: r2Config.endpoint,
-  credentials: {
-    accessKeyId: r2Config.accessKeyId,
-    secretAccessKey: r2Config.secretAccessKey,
-  },
-});
 
 /**
  * Asset upload endpoint - uploads files to R2 without creating Photo records.
@@ -38,12 +28,28 @@ export async function POST(req: NextRequest) {
     }
 
     // Check R2 configuration
-    if (!r2Config.bucketName || !r2Config.publicUrl) {
+    const r2Config = {
+      bucketName: process.env.R2_BUCKET_NAME || '',
+      publicUrl: process.env.R2_PUBLIC_URL || '',
+      endpoint: process.env.R2_ENDPOINT || '',
+      accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    };
+    if (!r2Config.bucketName || !r2Config.publicUrl || !r2Config.endpoint || !r2Config.accessKeyId || !r2Config.secretAccessKey) {
       return NextResponse.json(
         { message: 'Storage not configured' },
         { status: 503 }
       );
     }
+
+    const s3Client = new S3Client({
+      region: 'auto',
+      endpoint: r2Config.endpoint,
+      credentials: {
+        accessKeyId: r2Config.accessKeyId,
+        secretAccessKey: r2Config.secretAccessKey,
+      },
+    });
 
     const formData = await req.formData();
     const file = formData.get('file') as File;
