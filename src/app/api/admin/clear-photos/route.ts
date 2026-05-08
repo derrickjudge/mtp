@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nativeDB } from '@/lib/db-native';
-import { photoService } from '@/services/photoService';
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -16,6 +15,23 @@ export async function DELETE(req: NextRequest) {
     }
 
     console.log('🗑️ Starting bulk photo deletion...');
+
+    // Check if R2 is configured before importing photo service
+    const hasR2Config = process.env.R2_BUCKET_NAME &&
+      process.env.R2_ACCESS_KEY_ID &&
+      process.env.R2_SECRET_ACCESS_KEY;
+
+    if (!hasR2Config) {
+      return NextResponse.json(
+        {
+          message: 'Bulk photo deletion requires Cloudflare R2 configuration.',
+          details: 'Missing R2_BUCKET_NAME, R2_ACCESS_KEY_ID, or R2_SECRET_ACCESS_KEY environment variables.'
+        },
+        { status: 503 }
+      );
+    }
+
+    const { photoService } = await import('@/services/photoService');
 
     // Get all photos
     const photos = await nativeDB.findPhotos({ published: false }); // Get all photos including unpublished
