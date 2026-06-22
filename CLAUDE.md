@@ -1,0 +1,79 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+npm run dev          # Start dev server (http://localhost:3000)
+npm run build        # prisma generate + next build
+npm run lint         # ESLint via next lint
+npm test             # Run all tests
+npm run test:watch   # Jest in watch mode
+npx jest src/__tests__/lib/rateLimit.test.ts   # Run a single test file
+npm run create-admin # Seed an admin user (ts-node)
+npm run check-db     # Verify DB connectivity
+```
+
+## Architecture
+
+**Stack:** Next.js 14 (App Router) · TypeScript · Tailwind CSS · NextAuth v4 · Prisma (schema-only) · Supabase PostgreSQL · Cloudflare R2 · Vercel
+
+### Database: Dual-client pattern
+
+The project uses **Prisma for schema definition only** (`prisma/schema.prisma`). All runtime queries go through `src/lib/db-native.ts` — a hand-rolled `NativeDBService` class using the `pg` client directly. This was done to work around Prisma's prepared-statement incompatibility with Supabase's connection pooler (pgBouncer).
+
+- Always use `nativeDB` from `@/lib/db-native` for queries — never `PrismaClient` at runtime.
+- `nativeDB` lazily creates and closes a `pg.Client` per query.
+- Junction tables (`_CategoryToPhoto`, etc.) are created by `ensureJunctionTables()`, which runs once per process lifetime.
+
+### Image storage: R2 (server-side only)
+
+- Config lives in `src/config/r2.ts`, populated from `R2_*` env vars (never `NEXT_PUBLIC_*`).
+- `src/services/photoService.ts` is the single entry point for all photo operations: upload, resize (via `sharp`), persist to DB, and delete from R2.
+- `src/lib/r2Client.ts` is a stub — client-side R2 access is disallowed.
+- Uploaded images are stored as two keys: `photos/<timestamp>-<random>.webp` (2000px max) and `thumbnails/<timestamp>-<random>.webp` (400px).
+
+### Auth
+
+- NextAuth v4 with `CredentialsProvider` and JWT sessions (7-day expiry).
+- `src/lib/auth.ts` uses `nativeDB.findUserByEmail` — no Prisma adapter.
+- Roles: `USER | EDITOR | ADMIN`. Only `ADMIN` can access `/admin/*`.
+- Middleware (`src/middleware.ts`) guards all `/admin/*` routes; login page is always permitted.
+
+### API layer
+
+All routes live under `src/app/api/`. Rate limiting is applied per-IP using a token-bucket implementation in `src/lib/rateLimit.ts` (in-memory, resets on cold start). Use `rateLimit(key, { tokens, windowMs })` at the top of any mutating route handler.
+
+### Admin panel
+
+`/admin` routes are full-page React components under `src/app/admin/`. The sidebar (`src/components/admin/AdminSidebar.tsx`) and header (`src/components/admin/AdminHeader.tsx`) are shared layout components.
+
+## Environment Variables
+
+All secrets live in `.env.local` (never committed). Required vars:
+
+| Variable | Purpose |
+|---|---|
+| `POSTGRES_PRISMA_URL` | Supabase PostgreSQL connection string (with pgBouncer params) |
+| `DATABASE_URL` | Fallback DB URL |
+| `R2_BUCKET_NAME` | Cloudflare R2 bucket |
+| `R2_PUBLIC_URL` | Public CDN base URL for R2 objects |
+| `R2_ENDPOINT` | R2 S3-compatible endpoint |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 credentials (server-side only) |
+| `NEXTAUTH_SECRET` | JWT signing secret |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase client-side config |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase admin access (server-side only) |
+
+## Testing
+
+Tests live in `src/__tests__/` mirroring the `src/` structure. `jest.setup.js` mocks:
+- `next/navigation`, `next/image`
+- All `R2_*` and `NEXTAUTH_SECRET` env vars with safe test values
+- `nativeDB` entirely — tests never hit the real database
+
+To add a new API route test, follow the pattern in `src/__tests__/api/photos/route.test.ts`.
+
+## Supabase Migrations
+
+Schema history is tracked in `supabase/migrations/`. The Prisma schema (`prisma/schema.prisma`) is the authoritative source for the data model; run `prisma generate` before building to regenerate the client types used for type hints.
