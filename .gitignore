@@ -33,6 +33,13 @@
 *.tsbuildinfo
 next-env.d.ts
 
+# Prisma local SQLite (dev)
+prisma/*.db
+prisma/*.db-journal
+
+# Coverage reports
+lcov.info
+
 # IDE specific files
 .vscode/
 .idea/
