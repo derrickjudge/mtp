@@ -11,13 +11,19 @@ export async function GET(req: NextRequest) {
     if (!rl.allowed) {
       return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
     }
+    const session = await getServerSession(authOptions);
+    const isAdmin = session?.user?.role === 'ADMIN';
+
     const { searchParams } = new URL(req.url);
     const categoryId = searchParams.get('category') || undefined;
     const tagId = searchParams.get('tag') || undefined;
     const eventId = searchParams.get('event') || undefined;
     const featured = searchParams.get('featured') === 'true' ? true : undefined;
     const publishedParam = searchParams.get('published');
-    const published = publishedParam ? publishedParam === 'true' : undefined;
+    // Only admins may see unpublished photos; everyone else is forced to published-only
+    const published = isAdmin
+      ? (publishedParam ? publishedParam === 'true' : undefined)
+      : true;
     const takeParam = searchParams.get('take');
     const skipParam = searchParams.get('skip');
     const take = takeParam ? parseInt(takeParam) : undefined;
@@ -32,8 +38,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Failed to fetch photos' }, { status: 500 });
     }
     const res = NextResponse.json({ photos });
-    // For unfiltered "All Photos" listing, avoid caching to reflect ordering changes immediately
-    if (!categoryId && !eventId && !tagId) {
+    // Admin responses may contain unpublished photos and must never reach the CDN cache.
+    // For unfiltered "All Photos" listing, avoid caching to reflect ordering changes immediately.
+    if (isAdmin || (!categoryId && !eventId && !tagId)) {
       res.headers.set('Cache-Control', 'no-store');
     } else {
       res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');

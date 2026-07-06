@@ -143,6 +143,87 @@ describe('GET /api/events', () => {
   });
 });
 
+describe('GET /api/events - published visibility', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (rateLimit as jest.Mock).mockReturnValue({ allowed: true });
+    (nativeDB.findEvents as jest.Mock).mockResolvedValue([]);
+  });
+
+  it('should force published=true for anonymous requests', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue(null);
+
+    const request = new NextRequest('http://localhost:3000/api/events');
+    await GET(request);
+
+    expect(nativeDB.findEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ published: true })
+    );
+  });
+
+  it('should force published=true when anonymous requests ask for unpublished', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue(null);
+
+    const request = new NextRequest('http://localhost:3000/api/events?published=false');
+    await GET(request);
+
+    expect(nativeDB.findEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ published: true })
+    );
+  });
+
+  it('should force published=true for non-admin authenticated requests', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'user-1', role: 'USER' },
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/events?published=false');
+    await GET(request);
+
+    expect(nativeDB.findEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ published: true })
+    );
+  });
+
+  it('should allow admins to request unpublished events', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'admin-1', role: 'ADMIN' },
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/events?published=false');
+    await GET(request);
+
+    expect(nativeDB.findEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ published: false })
+    );
+  });
+
+  it('should return all events to admins when no param is given', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'admin-1', role: 'ADMIN' },
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/events');
+    await GET(request);
+
+    expect(nativeDB.findEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ published: undefined })
+    );
+  });
+
+  it('should never CDN-cache admin responses', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'admin-1', role: 'ADMIN' },
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/events');
+    const response = await GET(request);
+
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(response.headers.get('CDN-Cache-Control')).toBeNull();
+  });
+});
+
 describe('POST /api/events', () => {
   beforeEach(() => {
     jest.clearAllMocks();
