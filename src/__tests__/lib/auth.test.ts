@@ -20,6 +20,7 @@ jest.mock('bcryptjs', () => ({
 
 import { nativeDB } from '@/lib/db-native';
 import bcrypt from 'bcryptjs';
+import { bucketCount } from '@/lib/rateLimit';
 
 type AuthorizeFn = (
   credentials: Record<'email' | 'password', string> | undefined,
@@ -94,6 +95,30 @@ describe('authorize', () => {
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     await expect(authorize(credentials, req)).rejects.toThrow(/too many login attempts/i);
     expect(nativeDB.findUserByEmail).toHaveBeenCalledTimes(5);
+  });
+
+  it('should not create per-account buckets once the IP is already blocked', async () => {
+    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+    const req = requestFromIp('10.9.9.9');
+
+    // Exhaust the per-IP limit (20/window) using unique emails.
+    for (let i = 0; i < 20; i++) {
+      await expect(
+        authorize({ email: `flood-${i}@example.com`, password: 'x' }, req)
+      ).rejects.toThrow(/invalid credentials|too many login attempts/i);
+    }
+
+    const countAfterExhaustion = bucketCount();
+
+    // Further attempts with unique emails must be short-circuited by the IP
+    // limiter before the per-account limiter runs, so no new buckets appear.
+    for (let i = 0; i < 100; i++) {
+      await expect(
+        authorize({ email: `flood-again-${i}@example.com`, password: 'x' }, req)
+      ).rejects.toThrow(/too many login attempts/i);
+    }
+
+    expect(bucketCount()).toBe(countAfterExhaustion);
   });
 
   it('should not throttle a different IP for the same email', async () => {

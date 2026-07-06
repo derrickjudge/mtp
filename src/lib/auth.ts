@@ -36,12 +36,16 @@ export const authOptions: NextAuthOptions = {
         }
 
         const ip = getClientIpFromRecord(req?.headers ?? {});
-        const ipLimit = rateLimit(`login:ip:${ip}`, LOGIN_IP_LIMIT);
-        const accountLimit = rateLimit(
-          `login:account:${ip}:${email.toLowerCase()}`,
-          LOGIN_ACCOUNT_LIMIT
-        );
-        if (!ipLimit.allowed || !accountLimit.allowed) {
+        // Check the per-IP limit first and short-circuit: once an IP is blocked,
+        // do not create per-account buckets for it (an attacker could otherwise
+        // grow the bucket map with unique emails from an already-throttled IP).
+        if (!rateLimit(`login:ip:${ip}`, LOGIN_IP_LIMIT).allowed) {
+          throw new Error('Too many login attempts. Please try again later.');
+        }
+        // Cap the email portion of the key (RFC 5321 max is 254) so an attacker
+        // cannot amplify memory use with oversized addresses.
+        const accountKey = `login:account:${ip}:${email.toLowerCase().slice(0, 254)}`;
+        if (!rateLimit(accountKey, LOGIN_ACCOUNT_LIMIT).allowed) {
           throw new Error('Too many login attempts. Please try again later.');
         }
 
