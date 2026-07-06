@@ -33,12 +33,30 @@ export function rateLimit(key: RateLimitKey, options: RateLimitOptions) {
   return { allowed: true };
 }
 
+// x-real-ip is set by the hosting platform (Vercel) and cannot be spoofed by
+// the client, unlike the leftmost x-forwarded-for entry, so prefer it.
 export function getClientIp(req: Request | { headers: Headers }): string {
-  const headers = req instanceof Request ? req.headers : req.headers;
+  const headers = req.headers;
+  const realIp = headers.get('x-real-ip');
+  if (realIp) return realIp.trim();
   const forwarded = headers.get('x-forwarded-for');
   if (forwarded) return forwarded.split(',')[0].trim();
-  const realIp = headers.get('x-real-ip');
+  return 'unknown';
+}
+
+// Same extraction for plain header records (e.g. NextAuth's authorize() request).
+export function getClientIpFromRecord(
+  headers: Record<string, string | string[] | undefined>
+): string {
+  const headerValue = (value: string | string[] | undefined): string | undefined => {
+    const raw = Array.isArray(value) ? value[0] : value;
+    const trimmed = raw?.trim();
+    return trimmed || undefined;
+  };
+  const realIp = headerValue(headers['x-real-ip']);
   if (realIp) return realIp;
+  const forwarded = headerValue(headers['x-forwarded-for']);
+  if (forwarded) return forwarded.split(',')[0].trim();
   return 'unknown';
 }
 

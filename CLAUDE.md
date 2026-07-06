@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Rigor & Hosting
+
+    Rigor: production
+    Hosting: managed-cloud
+
+Live site with real users on Vercel. Full rigor applies: TDD, feature branches
+with PR merges to main, and the complete pre-commit checklist.
+
 ## Commands
 
 ```bash

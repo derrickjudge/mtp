@@ -2,6 +2,13 @@ import type { NextAuthOptions } from 'next-auth';
 import { nativeDB } from '@/lib/db-native';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
+import { rateLimit, getClientIpFromRecord } from '@/lib/rateLimit';
+
+// Brute-force protection: attempts are counted per IP+account and per IP.
+// In-memory buckets reset on serverless cold starts, so these are a slowdown,
+// not a hard guarantee.
+const LOGIN_ACCOUNT_LIMIT = { tokens: 5, windowMs: 15 * 60_000 };
+const LOGIN_IP_LIMIT = { tokens: 20, windowMs: 15 * 60_000 };
 
 // Updated auth configuration with native PostgreSQL client only
 export const authOptions: NextAuthOptions = {
@@ -22,13 +29,23 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
-        try {
-          const { email, password } = credentials as { email?: string; password?: string };
-          if (!email || !password) {
-            throw new Error('Invalid credentials');
-          }
+      async authorize(credentials, req) {
+        const { email, password } = (credentials ?? {}) as { email?: string; password?: string };
+        if (!email || !password) {
+          throw new Error('Invalid credentials');
+        }
 
+        const ip = getClientIpFromRecord(req?.headers ?? {});
+        const ipLimit = rateLimit(`login:ip:${ip}`, LOGIN_IP_LIMIT);
+        const accountLimit = rateLimit(
+          `login:account:${ip}:${email.toLowerCase()}`,
+          LOGIN_ACCOUNT_LIMIT
+        );
+        if (!ipLimit.allowed || !accountLimit.allowed) {
+          throw new Error('Too many login attempts. Please try again later.');
+        }
+
+        try {
           // Use native PostgreSQL client to completely bypass Prisma
           const user = await nativeDB.findUserByEmail(email);
 

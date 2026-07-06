@@ -12,16 +12,24 @@ export async function GET(req: NextRequest) {
     if (!rl.allowed) {
       return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
     }
+    const session = await getServerSession(authOptions);
+    const isAdmin = session?.user?.role === 'ADMIN';
+
     const { searchParams } = new URL(req.url);
-    const published = searchParams.get('published');
+    const publishedParam = searchParams.get('published');
     const featured = searchParams.get('featured') === 'true';
     const categoryId = searchParams.get('category') || undefined;
     const tagId = searchParams.get('tag') || undefined;
     const take = searchParams.get('take') ? parseInt(searchParams.get('take')!) : undefined;
     const skip = searchParams.get('skip') ? parseInt(searchParams.get('skip')!) : undefined;
 
+    // Only admins may see unpublished articles; everyone else is forced to published-only
+    const published = isAdmin
+      ? (publishedParam === 'true' ? true : publishedParam === 'false' ? false : undefined)
+      : true;
+
     const articles = await nativeDB.findArticles({
-      published: published === 'true' ? true : published === 'false' ? false : undefined,
+      published,
       featured,
       categoryId,
       tagId,
@@ -38,8 +46,13 @@ export async function GET(req: NextRequest) {
     );
 
     const res = NextResponse.json(articlesWithRelations);
-    res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
-    res.headers.set('CDN-Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    // Admin responses may contain unpublished articles and must never reach the CDN cache
+    if (isAdmin) {
+      res.headers.set('Cache-Control', 'no-store');
+    } else {
+      res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+      res.headers.set('CDN-Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    }
     return res;
   } catch (error) {
     console.error('Error fetching articles:', error);
