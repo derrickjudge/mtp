@@ -66,8 +66,8 @@ All secrets live in `.env.local` (never committed). Required vars:
 |---|---|
 | `POSTGRES_PRISMA_URL` | Supabase PostgreSQL connection string (with pgBouncer params) |
 | `DATABASE_URL` | Fallback DB URL |
-| `DATABASE_CA_CERT` | Optional. Supabase CA certificate as inline PEM. When set, the DB connection verifies the server certificate (`rejectUnauthorized: true`); when unset, TLS is unverified. |
-| `DATABASE_CA_CERT_PATH` | Optional. Path to a CA certificate file (`.crt`/`.pem`), used when `DATABASE_CA_CERT` is not set. Same effect as the inline variant. |
+| `DATABASE_CA_CERT_PATH` | Preferred. Path to a CA certificate file (`.crt`/`.pem`). When set, the DB connection verifies the server certificate (`rejectUnauthorized: true`); when unset, TLS is unverified. Store certs in files, not inline. |
+| `DATABASE_CA_CERT` | Fallback for platforms without a convenient filesystem. Inline PEM contents of the CA certificate; takes precedence over `DATABASE_CA_CERT_PATH` when both are set. |
 | `R2_BUCKET_NAME` | Cloudflare R2 bucket |
 | `R2_PUBLIC_URL` | Public CDN base URL for R2 objects |
 | `R2_ENDPOINT` | R2 S3-compatible endpoint |
