@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching categories:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to fetch categories' },
+      { message: 'Failed to fetch categories' },
       { status: 500 }
     );
   }
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error creating category:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to create category' },
+      { message: 'Failed to create category' },
       { status: 500 }
     );
   }

@@ -66,7 +66,7 @@ export async function DELETE(req: NextRequest) {
   } catch (error) {
     console.error('Error during bulk photo deletion:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to delete photos' },
+      { message: 'Failed to delete photos' },
       { status: 500 }
     );
   }

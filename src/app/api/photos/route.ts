@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { validateImageUpload } from '@/lib/uploadValidation';
 
 // GET /api/photos?category=concert&tag=music&event=eventId&featured=true&published=true
 export async function GET(req: NextRequest) {
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching photos:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to fetch photos' },
+      { message: 'Failed to fetch photos' },
       { status: 500 }
     );
   }
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
     }
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user || session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -79,11 +80,16 @@ export async function POST(req: NextRequest) {
     const categoryIds = formData.getAll('categoryIds') as string[];
     const tagIds = formData.getAll('tagIds') as string[];
 
-    if (!file || !title) {
+    if (!title) {
       return NextResponse.json(
-        { message: 'File and title are required' },
+        { message: 'Title is required' },
         { status: 400 }
       );
+    }
+
+    const validation = validateImageUpload(file);
+    if (!validation.valid) {
+      return NextResponse.json({ message: validation.message }, { status: validation.status });
     }
 
     // Convert File to Buffer
@@ -112,7 +118,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error uploading photo:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to upload photo' },
+      { message: 'Failed to upload photo' },
       { status: 500 }
     );
   }

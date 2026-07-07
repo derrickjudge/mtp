@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   } catch (error) {
     console.error('Error fetching photo:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to fetch photo' },
+      { message: 'Failed to fetch photo' },
       { status: 500 }
     );
   }
@@ -65,7 +65,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   } catch (error) {
     console.error('[PUT /api/photos/:id] Error updating photo:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to update photo' },
+      { message: 'Failed to update photo' },
       { status: 500 }
     );
   }
@@ -88,7 +88,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   } catch (error) {
     console.error('Error deleting photo:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to delete photo' },
+      { message: 'Failed to delete photo' },
       { status: 500 }
     );
   }

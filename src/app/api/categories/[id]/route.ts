@@ -101,7 +101,7 @@ export async function PUT(
   } catch (error) {
     console.error('Error updating category:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to update category' },
+      { message: 'Failed to update category' },
       { status: 500 }
     );
   }
@@ -148,7 +148,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting category:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to delete category' },
+      { message: 'Failed to delete category' },
       { status: 500 }
     );
   }

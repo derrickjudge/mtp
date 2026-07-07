@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   } catch (error) {
     console.error('Error fetching event:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to fetch event' },
+      { message: 'Failed to fetch event' },
       { status: 500 }
     );
   }
@@ -104,7 +104,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   } catch (error) {
     console.error('Error updating event:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to update event' },
+      { message: 'Failed to update event' },
       { status: 500 }
     );
   }
@@ -135,7 +135,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   } catch (error) {
     console.error('Error deleting event:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to delete event' },
+      { message: 'Failed to delete event' },
       { status: 500 }
     );
   }

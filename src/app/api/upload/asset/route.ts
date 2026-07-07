@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
+import { validateImageUpload, safeImageExtension } from '@/lib/uploadValidation';
 
 /**
  * Asset upload endpoint - uploads files to R2 without creating Photo records.
@@ -21,9 +22,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Check authentication
+    // Check authentication and admin role
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user || session.user.role !== 'ADMIN') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
@@ -55,18 +56,9 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File;
     const folder = (formData.get('folder') as string) || 'assets';
 
-    if (!file) {
-      return NextResponse.json({ message: 'File is required' }, { status: 400 });
-    }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json({ message: 'Only image files are allowed' }, { status: 400 });
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ message: 'File must be less than 10MB' }, { status: 400 });
+    const validation = validateImageUpload(file);
+    if (!validation.valid) {
+      return NextResponse.json({ message: validation.message }, { status: validation.status });
     }
 
     // Validate folder name (only allow specific folders)
@@ -76,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const ext = safeImageExtension(file.type, file.name);
     const key = `${folder}/${randomUUID()}.${ext}`;
 
     await s3Client.send(new PutObjectCommand({
@@ -92,7 +84,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error uploading asset:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to upload asset' },
+      { message: 'Failed to upload asset' },
       { status: 500 }
     );
   }

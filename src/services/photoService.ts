@@ -1,7 +1,9 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { randomUUID } from 'crypto';
 import { r2Config } from '@/config/r2';
 import { nativeDB } from '@/lib/db-native';
 import { Category, Tag, Photo } from '@/types/photo';
+import { safeImageExtension } from '@/lib/uploadValidation';
 import sharp from 'sharp';
 
 const s3Client = new S3Client({
@@ -72,8 +74,10 @@ export const photoService = {
     authorId,
     metadata,
   }: UploadPhotoParams): Promise<PhotoWithRelations> {
-    // Generate unique file name
-    const uniqueFileName = `${Date.now()}-${fileName}`;
+    // Generate a storage key server-side; never trust the client filename, which
+    // could contain path separators or traversal sequences.
+    const extension = safeImageExtension(contentType, fileName);
+    const uniqueFileName = `${Date.now()}-${randomUUID()}.${extension}`;
     const thumbnailFileName = `thumbnails/${uniqueFileName}`;
 
     // Extract original image dimensions for proper aspect ratio

@@ -1,4 +1,5 @@
 import { Client } from 'pg';
+import { buildSslConfig } from '@/lib/dbSsl';
 
 // Cache flag to prevent running migrations on every query
 let _junctionTablesEnsured = false;
@@ -21,7 +22,7 @@ export class NativeDBService {
       database: url.pathname.slice(1), // Remove leading slash
       user: url.username,
       password: url.password,
-      ssl: url.searchParams.get('sslmode') !== 'disable' ? { rejectUnauthorized: false } : false,
+      ssl: buildSslConfig(baseUrl),
       // Disable prepared statements completely
       statement_timeout: 30000,
       query_timeout: 30000,
