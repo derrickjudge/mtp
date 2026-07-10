@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching events:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to fetch events' },
+      { message: 'Failed to fetch events' },
       { status: 500 }
     );
   }
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error creating event:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to create event' },
+      { message: 'Failed to create event' },
       { status: 500 }
     );
   }

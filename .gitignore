@@ -23,6 +23,9 @@
 # misc
 *.pem
 
+# certificates (CA/client certs live in files, referenced by *_PATH env vars)
+/certs/
+
 # env files (can opt-in for committing if needed)
 .env*
 

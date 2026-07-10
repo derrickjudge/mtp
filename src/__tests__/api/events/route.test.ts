@@ -139,7 +139,7 @@ describe('GET /api/events', () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.message).toBe('Database error');
+    expect(data.message).toBe('Failed to fetch events');
   });
 });
 
@@ -411,8 +411,9 @@ describe('POST /api/events', () => {
     const response = await POST(request);
     const data = await response.json();
 
+    // The internal error detail must not leak to the client.
     expect(response.status).toBe(500);
-    expect(data.message).toBe('Creation failed');
+    expect(data.message).toBe('Failed to create event');
   });
 });
 

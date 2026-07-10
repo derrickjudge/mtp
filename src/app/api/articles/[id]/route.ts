@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   } catch (error) {
     console.error('Error fetching article:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to fetch article' },
+      { message: 'Failed to fetch article' },
       { status: 500 }
     );
   }
@@ -138,7 +138,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   } catch (error) {
     console.error('Error updating article:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to update article' },
+      { message: 'Failed to update article' },
       { status: 500 }
     );
   }
@@ -179,7 +179,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   } catch (error) {
     console.error('Error deleting article:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to delete article' },
+      { message: 'Failed to delete article' },
       { status: 500 }
     );
   }

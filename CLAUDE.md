@@ -40,7 +40,8 @@ The project uses **Prisma for schema definition only** (`prisma/schema.prisma`).
 - Config lives in `src/config/r2.ts`, populated from `R2_*` env vars (never `NEXT_PUBLIC_*`).
 - `src/services/photoService.ts` is the single entry point for all photo operations: upload, resize (via `sharp`), persist to DB, and delete from R2.
 - `src/lib/r2Client.ts` is a stub — client-side R2 access is disallowed.
-- Uploaded images are stored as two keys: `photos/<timestamp>-<random>.webp` (2000px max) and `thumbnails/<timestamp>-<random>.webp` (400px).
+- Storage keys are generated server-side (`<timestamp>-<uuid>.<ext>` and `thumbnails/<timestamp>-<uuid>.<ext>`) via `randomUUID`; the client filename is never used in the key. The main image is resized to 1200x800 (fit inside) and the thumbnail to 300x200 (cover).
+- Upload routes require an `ADMIN` session and validate type/size via `validateImageUpload` in `src/lib/uploadValidation.ts` (images only, 10MB max).
 
 ### Auth
 
@@ -65,6 +66,8 @@ All secrets live in `.env.local` (never committed). Required vars:
 |---|---|
 | `POSTGRES_PRISMA_URL` | Supabase PostgreSQL connection string (with pgBouncer params) |
 | `DATABASE_URL` | Fallback DB URL |
+| `DATABASE_CA_CERT_PATH` | Preferred. Path to a CA certificate file (`.crt`/`.pem`). When set, the DB connection verifies the server certificate (`rejectUnauthorized: true`); when unset, TLS is unverified. Store certs in files, not inline. |
+| `DATABASE_CA_CERT` | Fallback for platforms without a convenient filesystem. Inline PEM contents of the CA certificate; takes precedence over `DATABASE_CA_CERT_PATH` when both are set. |
 | `R2_BUCKET_NAME` | Cloudflare R2 bucket |
 | `R2_PUBLIC_URL` | Public CDN base URL for R2 objects |
 | `R2_ENDPOINT` | R2 S3-compatible endpoint |

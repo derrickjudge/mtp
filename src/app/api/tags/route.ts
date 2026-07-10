@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching tags:', error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Failed to fetch tags' },
+      { message: 'Failed to fetch tags' },
       { status: 500 }
     );
   }

@@ -100,7 +100,7 @@ export async function PUT(req: NextRequest) {
         console.error(`Bulk update error for photo ${photoId}:`, error);
         errors.push({
           photoId,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: 'Unknown error'
         });
       }
     }

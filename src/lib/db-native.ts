@@ -1,4 +1,5 @@
 import { Client } from 'pg';
+import { buildSslConfig } from '@/lib/dbSsl';
 
 // Cache flag to prevent running migrations on every query
 let _junctionTablesEnsured = false;
@@ -21,7 +22,7 @@ export class NativeDBService {
       database: url.pathname.slice(1), // Remove leading slash
       user: url.username,
       password: url.password,
-      ssl: url.searchParams.get('sslmode') !== 'disable' ? { rejectUnauthorized: false } : false,
+      ssl: buildSslConfig(baseUrl),
       // Disable prepared statements completely
       statement_timeout: 30000,
       query_timeout: 30000,
@@ -932,17 +933,83 @@ export class NativeDBService {
     }
   }
 
-  // Find users for author selection
+  // Find users for author selection and the admin user-management list
   async findUsers(): Promise<any[]> {
     const client = this.createClient();
     try {
       await client.connect();
-      
+
       const result = await client.query(
-        'SELECT id, email, name, role FROM "User" ORDER BY name ASC, email ASC'
+        'SELECT id, email, name, role, "createdAt", "updatedAt" FROM "User" ORDER BY name ASC, email ASC'
       );
-      
+
       return result.rows;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async createUser(data: {
+    email: string;
+    password: string;
+    name?: string | null;
+    role: 'USER' | 'EDITOR' | 'ADMIN';
+  }): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+
+      const result = await client.query(
+        `INSERT INTO "User" (id, email, name, password, role, "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW(), NOW())
+         RETURNING id, email, name, role, "createdAt", "updatedAt"`,
+        [data.email, data.name || null, data.password, data.role]
+      );
+
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async updateUser(id: string, data: {
+    email: string;
+    name?: string | null;
+    role: 'USER' | 'EDITOR' | 'ADMIN';
+    password?: string;
+  }): Promise<any> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+
+      const result = data.password
+        ? await client.query(
+            `UPDATE "User"
+             SET email = $2, name = $3, role = $4, password = $5, "updatedAt" = NOW()
+             WHERE id = $1
+             RETURNING id, email, name, role, "createdAt", "updatedAt"`,
+            [id, data.email, data.name || null, data.role, data.password]
+          )
+        : await client.query(
+            `UPDATE "User"
+             SET email = $2, name = $3, role = $4, "updatedAt" = NOW()
+             WHERE id = $1
+             RETURNING id, email, name, role, "createdAt", "updatedAt"`,
+            [id, data.email, data.name || null, data.role]
+          );
+
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const client = this.createClient();
+    try {
+      await client.connect();
+      await client.query('DELETE FROM "User" WHERE id = $1', [id]);
+      return true;
     } finally {
       await client.end();
     }

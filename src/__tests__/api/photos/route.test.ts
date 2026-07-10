@@ -231,6 +231,28 @@ describe('POST /api/photos', () => {
     expect(data.message).toBe('Unauthorized');
   });
 
+  it('should return 401 when authenticated but not an admin', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'user-1', role: 'USER' },
+    });
+
+    const formData = new FormData();
+    formData.append('file', new Blob(['test'], { type: 'image/jpeg' }), 'test.jpg');
+    formData.append('title', 'Test Photo');
+
+    const request = new NextRequest('http://localhost:3000/api/photos', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(data.message).toBe('Unauthorized');
+    expect(photoService.uploadPhoto).not.toHaveBeenCalled();
+  });
+
   it('should return 400 when file is missing', async () => {
     (getServerSession as jest.Mock).mockResolvedValue({
       user: { id: 'user-1', role: 'ADMIN' },
@@ -248,7 +270,29 @@ describe('POST /api/photos', () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.message).toBe('File and title are required');
+    expect(data.message).toBe('File is required');
+  });
+
+  it('should return 400 when the file is not an image', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'user-1', role: 'ADMIN' },
+    });
+
+    const formData = new FormData();
+    formData.append('file', new Blob(['%PDF'], { type: 'application/pdf' }), 'doc.pdf');
+    formData.append('title', 'Test Photo');
+
+    const request = new NextRequest('http://localhost:3000/api/photos', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.message).toMatch(/image/i);
+    expect(photoService.uploadPhoto).not.toHaveBeenCalled();
   });
 
   it('should return 400 when title is missing', async () => {
@@ -268,7 +312,7 @@ describe('POST /api/photos', () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.message).toBe('File and title are required');
+    expect(data.message).toBe('Title is required');
   });
 
   it('should upload photo successfully when authenticated', async () => {
@@ -343,7 +387,7 @@ describe('POST /api/photos', () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.message).toBe('Upload failed');
+    expect(data.message).toBe('Failed to upload photo');
   });
 });
 
