@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import { PhotoIcon, ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { MAX_IMAGE_BYTES } from '@/lib/uploadValidation';
+
+const MAX_IMAGE_MB = MAX_IMAGE_BYTES / (1024 * 1024);
 
 interface PageHeader {
   key: string;
@@ -117,8 +120,8 @@ export default function AdminHeadersPage() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Logo must be less than 5MB');
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error(`Logo must be less than ${MAX_IMAGE_MB}MB`);
       return;
     }
 
@@ -196,9 +199,8 @@ export default function AdminHeadersPage() {
       return;
     }
 
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image must be less than 10MB');
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error(`Image must be less than ${MAX_IMAGE_MB}MB`);
       return;
     }
 
@@ -505,7 +507,7 @@ export default function AdminHeadersPage() {
             <ul className="text-sm text-gray-400 space-y-1">
               <li>• Recommended size: 1920x1080 pixels or larger</li>
               <li>• Supported formats: JPG, PNG, WebP</li>
-              <li>• Maximum file size: 10MB</li>
+              <li>• Maximum file size: {MAX_IMAGE_MB}MB</li>
               <li>• Images will be automatically optimized for web delivery</li>
               <li>• Use high-contrast images that work well with text overlays</li>
             </ul>
