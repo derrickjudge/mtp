@@ -14,7 +14,20 @@ interface PageHeader {
   description: string;
   value: string | null;
   defaultImage: string;
+  recommendedSize: string;
+  previewAspectClass: string;
 }
+
+// Home renders full-screen (100vw x 100vh) with object-cover, so any
+// landscape image crops safely - the crop just varies a lot by device.
+// Every other page renders a fixed-height wide banner (100vw x 40vh) with
+// object-cover, so a landscape/portrait-shaped image gets cropped hard on
+// the sides; a wide banner shape avoids that. The preview box below uses the
+// same shape as the real page so what you see here is what you get live.
+const FULLSCREEN_HINT = '1920×1080+ landscape, subject centered (fills the entire screen)';
+const FULLSCREEN_ASPECT = 'aspect-video'; // 16:9, close enough to most screens
+const BANNER_HINT = '~1920×480 (4:1) wide banner - tall or square photos get cropped tightly';
+const BANNER_ASPECT = 'aspect-[4/1]';
 
 const PAGE_HEADERS: PageHeader[] = [
   {
@@ -22,42 +35,54 @@ const PAGE_HEADERS: PageHeader[] = [
     pageName: 'Home',
     description: 'Main hero image on the homepage',
     value: null,
-    defaultImage: '/images/hero/hero.jpg'
+    defaultImage: '/images/hero/hero.jpg',
+    recommendedSize: FULLSCREEN_HINT,
+    previewAspectClass: FULLSCREEN_ASPECT
   },
   {
     key: 'header:about',
     pageName: 'About Us',
     description: 'Hero image on the About page',
     value: null,
-    defaultImage: '/images/hero/about.jpg'
+    defaultImage: '/images/hero/about.jpg',
+    recommendedSize: BANNER_HINT,
+    previewAspectClass: BANNER_ASPECT
   },
   {
     key: 'header:portfolio',
     pageName: 'Portfolio',
     description: 'Header image on the Portfolio page',
     value: null,
-    defaultImage: '/images/hero/portfolio.jpg'
+    defaultImage: '/images/hero/portfolio.jpg',
+    recommendedSize: BANNER_HINT,
+    previewAspectClass: BANNER_ASPECT
   },
   {
     key: 'header:events',
     pageName: 'Events',
     description: 'Header image on the Events page',
     value: null,
-    defaultImage: '/images/hero/hero.jpg'
+    defaultImage: '/images/hero/hero.jpg',
+    recommendedSize: BANNER_HINT,
+    previewAspectClass: BANNER_ASPECT
   },
   {
     key: 'header:contact',
     pageName: 'Contact',
     description: 'Hero image on the Contact page',
     value: null,
-    defaultImage: '/images/hero/contact.jpg'
+    defaultImage: '/images/hero/contact.jpg',
+    recommendedSize: BANNER_HINT,
+    previewAspectClass: BANNER_ASPECT
   },
   {
     key: 'header:services',
     pageName: 'Services',
     description: 'Hero image on the Services page',
     value: null,
-    defaultImage: '/images/hero/services.jpg'
+    defaultImage: '/images/hero/services.jpg',
+    recommendedSize: BANNER_HINT,
+    previewAspectClass: BANNER_ASPECT
   }
 ];
 
@@ -403,7 +428,9 @@ export default function AdminHeadersPage() {
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-white mb-1">Page Hero Images</h2>
         <p className="text-sm text-gray-400">
-          Upload high-quality images (recommended: 1920x1080 or larger).
+          Upload high-quality images. The Home page fills the whole screen; every
+          other page below shows a short, wide banner - see the recommended shape
+          under each image so it doesn&apos;t get cropped oddly.
         </p>
       </div>
 
@@ -415,7 +442,7 @@ export default function AdminHeadersPage() {
             className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700"
           >
             {/* Preview Image */}
-            <div className="relative aspect-video bg-gray-900">
+            <div className={`relative ${header.previewAspectClass} bg-gray-900`}>
               <Image
                 src={header.value || header.defaultImage}
                 alt={`${header.pageName} header`}
@@ -458,41 +485,46 @@ export default function AdminHeadersPage() {
             </div>
 
             {/* Actions */}
-            <div className="p-4 flex items-center gap-3">
-              {/* Hidden file input */}
-              <input
-                type="file"
-                ref={el => { fileInputRefs.current[header.key] = el; }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileSelect(header.key, file);
-                  e.target.value = '';
-                }}
-                accept="image/*"
-                className="hidden"
-              />
-              
-              {/* Upload button */}
-              <button
-                onClick={() => triggerFileInput(header.key)}
-                disabled={uploadingFor !== null}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-              >
-                <ArrowUpTrayIcon className="w-5 h-5" />
-                <span>{header.value ? 'Replace Image' : 'Upload Image'}</span>
-              </button>
+            <div className="p-4">
+              <p className="text-xs text-gray-400 mb-3">
+                Recommended: {header.recommendedSize}
+              </p>
+              <div className="flex items-center gap-3">
+                {/* Hidden file input */}
+                <input
+                  type="file"
+                  ref={el => { fileInputRefs.current[header.key] = el; }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelect(header.key, file);
+                    e.target.value = '';
+                  }}
+                  accept="image/*"
+                  className="hidden"
+                />
 
-              {/* Remove button (only if custom image) */}
-              {header.value && (
+                {/* Upload button */}
                 <button
-                  onClick={() => handleRemoveHeader(header.key)}
+                  onClick={() => triggerFileInput(header.key)}
                   disabled={uploadingFor !== null}
-                  className="p-2 bg-red-600 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-                  title="Remove custom header"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
                 >
-                  <TrashIcon className="w-5 h-5" />
+                  <ArrowUpTrayIcon className="w-5 h-5" />
+                  <span>{header.value ? 'Replace Image' : 'Upload Image'}</span>
                 </button>
-              )}
+
+                {/* Remove button (only if custom image) */}
+                {header.value && (
+                  <button
+                    onClick={() => handleRemoveHeader(header.key)}
+                    disabled={uploadingFor !== null}
+                    className="p-2 bg-red-600 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                    title="Remove custom header"
+                  >
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -505,7 +537,7 @@ export default function AdminHeadersPage() {
           <div>
             <h4 className="text-white font-medium mb-1">Image Guidelines</h4>
             <ul className="text-sm text-gray-400 space-y-1">
-              <li>• Recommended size: 1920x1080 pixels or larger</li>
+              <li>• Home is full-screen; every other page is a wide banner - see the recommended size under each image above</li>
               <li>• Supported formats: JPG, PNG, WebP</li>
               <li>• Maximum file size: {MAX_IMAGE_MB}MB</li>
               <li>• Images will be automatically optimized for web delivery</li>
