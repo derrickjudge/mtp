@@ -23,7 +23,7 @@ export function SectionHeader({
     <div className={cn('mb-16', alignClasses[align], className)}>
       <h2 className="text-4xl font-bold text-white mb-4">{title}</h2>
       {subtitle && (
-        <p className={cn('text-xl text-gray-300', align === 'left' ? 'max-w-none' : 'max-w-2xl')}>
+        <p className="text-xl text-gray-300">
           {subtitle}
         </p>
       )}
