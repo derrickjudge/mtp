@@ -1,7 +1,11 @@
 // Shared validation for user-supplied image uploads. Used by the photo and
 // asset upload routes so limits stay consistent across every upload path.
 
-export const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB
+// Vercel serverless functions hard-cap request bodies at 4.5MB, enforced by
+// the platform before the request reaches this code (returns a generic 413
+// with no app-level message). Stay safely under that so our own validation
+// message is the one users actually see.
+export const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4MB
 
 export type UploadValidationResult =
   | { valid: true }
@@ -25,7 +29,7 @@ export function validateImageUpload(file: File | undefined | null): UploadValida
     return { valid: false, status: 400, message: 'File is empty' };
   }
   if (file.size > MAX_IMAGE_BYTES) {
-    return { valid: false, status: 413, message: 'File must be less than 10MB' };
+    return { valid: false, status: 413, message: 'File must be less than 4MB' };
   }
   return { valid: true };
 }
