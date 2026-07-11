@@ -3,8 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
 import { generateThumbnail, getImageDimensions } from '@/utils/imageProcessing';
-
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+import { validateImageUpload } from '@/lib/uploadValidation';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,24 +27,11 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
-    if (!file) {
+    const validation = validateImageUpload(file);
+    if (!validation.valid) {
       return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      );
-    }
-
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json(
-        { error: 'Only image files are allowed' },
-        { status: 400 }
-      );
-    }
-
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      return NextResponse.json(
-        { error: 'File must be less than 10MB' },
-        { status: 413 }
+        { error: validation.message },
+        { status: validation.status }
       );
     }
 

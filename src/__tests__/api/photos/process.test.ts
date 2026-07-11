@@ -8,6 +8,7 @@
 
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/photos/process/route';
+import { MAX_IMAGE_BYTES } from '@/lib/uploadValidation';
 
 // Mock dependencies
 jest.mock('@/lib/auth', () => ({
@@ -89,7 +90,7 @@ describe('POST /api/photos/process', () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe('No file provided');
+    expect(data.error).toBe('File is required');
   });
 
   it('should return 400 for non-image files', async () => {
@@ -109,7 +110,7 @@ describe('POST /api/photos/process', () => {
       user: { id: 'admin-1', role: 'ADMIN' },
     });
 
-    const oversized = new Blob([new Uint8Array(10 * 1024 * 1024 + 1)], { type: 'image/jpeg' });
+    const oversized = new Blob([new Uint8Array(MAX_IMAGE_BYTES + 1)], { type: 'image/jpeg' });
     const response = await POST(buildRequest(oversized, 'big.jpg'));
 
     expect(response.status).toBe(413);
