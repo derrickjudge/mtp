@@ -53,6 +53,11 @@ model Article {
   featured    Boolean     @default(false)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  // Free-text byline, independent of any User account (e.g. guest/freelance
+  // contributors). Falls back to "Anonymous Author" when blank.
+  authorName  String?
+  // Internal creator reference (which admin account created the article);
+  // no longer used as the public byline.
   author      User        @relation(fields: [authorId], references: [id])
   authorId    String
 }

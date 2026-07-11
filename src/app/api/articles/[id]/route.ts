@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { nativeDB } from '@/lib/db-native';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { normalizeAuthorName, DEFAULT_AUTHOR_NAME } from '@/lib/articleValidation';
 
 // GET /api/articles/[id] - Get single article
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -35,18 +36,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const { id } = params;
-    const { 
-      title, 
-      content, 
-      excerpt, 
-      published, 
-      featured, 
-      coverImage, 
+    const {
+      title,
+      content,
+      excerpt,
+      published,
+      featured,
+      coverImage,
       publishDate,
-      authorId,
-      categoryIds, 
+      authorName,
+      categoryIds,
       tagIds,
-      eventIds 
+      eventIds
     } = await req.json();
 
     if (!title || !content) {
@@ -65,15 +66,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       );
     }
 
-    // Validate author if provided and different from existing
-    if (authorId && authorId !== existingArticle.authorId) {
-      const author = await nativeDB.findUserById(authorId);
-      if (!author) {
-        return NextResponse.json(
-          { message: 'Invalid author selected' },
-          { status: 400 }
-        );
-      }
+    // The byline is free text so an article can credit an author without an
+    // admin account. Omitted means "leave as-is"; an explicit blank value
+    // resets to the default.
+    const authorNameResult = authorName === undefined
+      ? { valid: true as const, authorName: existingArticle.authorName || DEFAULT_AUTHOR_NAME }
+      : normalizeAuthorName(authorName);
+    if (!authorNameResult.valid) {
+      return NextResponse.json(
+        { message: authorNameResult.message },
+        { status: authorNameResult.status }
+      );
     }
 
     // Generate slug from title if title changed
@@ -103,7 +106,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       featured: featured ?? false,
       coverImage,
       publishDate,
-      authorId: authorId || existingArticle.authorId,
+      authorId: existingArticle.authorId,
+      authorName: authorNameResult.authorName,
     });
 
     if (!updatedArticle) {

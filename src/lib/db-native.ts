@@ -1030,8 +1030,8 @@ export class NativeDBService {
       await client.connect();
       
       let query = `
-        SELECT a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", 
-               a.published, a.featured, a."publishDate", a."createdAt", a."updatedAt", a."authorId"
+        SELECT a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage",
+               a.published, a.featured, a."publishDate", a."createdAt", a."updatedAt", a."authorId", a."authorName"
         FROM "Article" a
         WHERE 1=1
       `;
@@ -1084,7 +1084,7 @@ export class NativeDBService {
       await client.connect();
       
       const result = await client.query(
-        'SELECT id, title, slug, content, excerpt, "coverImage", published, featured, "publishDate", "authorId", "createdAt", "updatedAt" FROM "Article" WHERE id = $1 LIMIT 1',
+        'SELECT id, title, slug, content, excerpt, "coverImage", published, featured, "publishDate", "authorId", "authorName", "createdAt", "updatedAt" FROM "Article" WHERE id = $1 LIMIT 1',
         [id]
       );
       
@@ -1100,7 +1100,7 @@ export class NativeDBService {
       await client.connect();
       
       const result = await client.query(
-        'SELECT id, title, slug, content, excerpt, "coverImage", published, featured, "publishDate", "authorId", "createdAt", "updatedAt" FROM "Article" WHERE slug = $1 LIMIT 1',
+        'SELECT id, title, slug, content, excerpt, "coverImage", published, featured, "publishDate", "authorId", "authorName", "createdAt", "updatedAt" FROM "Article" WHERE slug = $1 LIMIT 1',
         [slug]
       );
       
@@ -1121,15 +1121,16 @@ export class NativeDBService {
     featured?: boolean;
     metaDescription?: string;
     authorId: string;
+    authorName: string;
   }): Promise<any> {
     const client = this.createClient();
     try {
       await client.connect();
-      
+
       const result = await client.query(
-        `INSERT INTO "Article" (id, title, slug, content, excerpt, "coverImage", "publishDate", published, featured, "authorId", "createdAt", "updatedAt") 
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW()) 
-         RETURNING id, title, slug, content, excerpt, "coverImage", "publishDate", published, featured, "authorId", "createdAt", "updatedAt"`,
+        `INSERT INTO "Article" (id, title, slug, content, excerpt, "coverImage", "publishDate", published, featured, "authorId", "authorName", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+         RETURNING id, title, slug, content, excerpt, "coverImage", "publishDate", published, featured, "authorId", "authorName", "createdAt", "updatedAt"`,
         [
           data.title,
           data.slug,
@@ -1139,10 +1140,11 @@ export class NativeDBService {
           data.publishDate ? new Date(data.publishDate).toISOString() : null,
           data.published ?? false,
           data.featured ?? false,
-          data.authorId
+          data.authorId,
+          data.authorName
         ]
       );
-      
+
       return result.rows.length > 0 ? result.rows[0] : null;
     } finally {
       await client.end();
@@ -1159,17 +1161,18 @@ export class NativeDBService {
     published?: boolean;
     featured?: boolean;
     authorId?: string;
+    authorName: string;
   }): Promise<any> {
     const client = this.createClient();
     try {
       await client.connect();
-      
+
       const result = await client.query(
-        `UPDATE "Article" 
-         SET title = $2, slug = $3, content = $4, excerpt = $5, "coverImage" = $6, 
-             "publishDate" = $7, published = $8, featured = $9, "authorId" = $10, "updatedAt" = NOW() 
-         WHERE id = $1 
-         RETURNING id, title, slug, content, excerpt, "coverImage", "publishDate", published, featured, "authorId", "createdAt", "updatedAt"`,
+        `UPDATE "Article"
+         SET title = $2, slug = $3, content = $4, excerpt = $5, "coverImage" = $6,
+             "publishDate" = $7, published = $8, featured = $9, "authorId" = $10, "authorName" = $11, "updatedAt" = NOW()
+         WHERE id = $1
+         RETURNING id, title, slug, content, excerpt, "coverImage", "publishDate", published, featured, "authorId", "authorName", "createdAt", "updatedAt"`,
         [
           id,
           data.title,
@@ -1180,10 +1183,11 @@ export class NativeDBService {
           data.publishDate ? new Date(data.publishDate).toISOString() : null,
           data.published ?? false,
           data.featured ?? false,
-          data.authorId
+          data.authorId,
+          data.authorName
         ]
       );
-      
+
       return result.rows.length > 0 ? result.rows[0] : null;
     } finally {
       await client.end();
@@ -1289,9 +1293,9 @@ export class NativeDBService {
       
       // Get article with categories, tags, and events
       const result = await client.query(
-        `SELECT 
-           a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", 
-           a.published, a.featured, a."authorId", a."createdAt", a."updatedAt", a."publishDate",
+        `SELECT
+           a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage",
+           a.published, a.featured, a."authorId", a."authorName", a."createdAt", a."updatedAt", a."publishDate",
            COALESCE(
              json_agg(
                DISTINCT jsonb_build_object(
@@ -1334,7 +1338,7 @@ export class NativeDBService {
          LEFT JOIN "_EventArticles" ea ON a.id = ea."B"
          LEFT JOIN "Event" e ON ea."A" = e.id
          WHERE a.id = $1
-         GROUP BY a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", a.published, a.featured, a."authorId", a."createdAt", a."updatedAt", a."publishDate"
+         GROUP BY a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", a.published, a.featured, a."authorId", a."authorName", a."createdAt", a."updatedAt", a."publishDate"
          LIMIT 1`,
         [id]
       );
