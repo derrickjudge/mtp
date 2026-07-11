@@ -643,18 +643,35 @@ export class NativeDBService {
 
   async linkPhotoToCategories(photoId: string, categoryIds: string[]): Promise<void> {
     if (categoryIds.length === 0) return;
-    
+
     // Ensure junction tables exist before linking
     await this.ensureJunctionTables();
-    
+
     const client = this.createClient();
     try {
       await client.connect();
-      
+
+      // Tagging a subcategory implicitly tags its parent too, so the photo
+      // shows up under "all photos" for the parent group. Category nesting
+      // is capped at one level (see categories/[id] route), so a single
+      // lookup covers it - no need to recurse.
+      const placeholders = categoryIds.map((_, index) => `$${index + 1}`).join(', ');
+      const parentResult = await client.query(
+        `SELECT id, "parentId" FROM "Category" WHERE id IN (${placeholders})`,
+        categoryIds
+      );
+      const expandedIds = new Set(categoryIds);
+      for (const row of parentResult.rows) {
+        if (row.parentId) {
+          expandedIds.add(row.parentId);
+        }
+      }
+      const allCategoryIds = Array.from(expandedIds);
+
       // Insert category-photo relationships (skip existing via ON CONFLICT)
-      const values = categoryIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2}, 0, false)`).join(', ');
-      const params = categoryIds.flatMap(categoryId => [categoryId, photoId]);
-      
+      const values = allCategoryIds.map((_, index) => `($${index * 2 + 1}, $${index * 2 + 2}, 0, false)`).join(', ');
+      const params = allCategoryIds.flatMap(categoryId => [categoryId, photoId]);
+
       await client.query(
         `INSERT INTO "_CategoryToPhoto" ("A", "B", "position", "is_top_selection") VALUES ${values} ON CONFLICT ("A", "B") DO NOTHING`,
         params
