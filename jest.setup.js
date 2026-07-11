@@ -37,6 +37,7 @@ process.env.R2_ENDPOINT = 'https://account-id.r2.cloudflarestorage.com'
 process.env.R2_ACCESS_KEY_ID = 'test-access-key'
 process.env.R2_SECRET_ACCESS_KEY = 'test-secret-key'
 process.env.NEXTAUTH_SECRET = 'test-secret'
+process.env.RESEND_API_KEY = 'test-resend-key'
 
 // Provide a default global fetch for tests that expect it
 if (typeof global.fetch === 'undefined') {

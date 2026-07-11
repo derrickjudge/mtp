@@ -75,6 +75,7 @@ All secrets live in `.env.local` (never committed). Required vars:
 | `NEXTAUTH_SECRET` | JWT signing secret |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase client-side config |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase admin access (server-side only) |
+| `RESEND_API_KEY` | Resend API key used by `/api/contact` to send contact-form submissions. The `from` address (`contact@mtpcollective.com`) must be a verified sending domain in Resend or sends will fail. |
 
 ## Testing
 
