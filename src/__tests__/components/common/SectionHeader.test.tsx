@@ -32,15 +32,12 @@ describe('SectionHeader', () => {
     expect(headerDiv).toHaveClass('custom-class');
   });
 
-  it('does not cap subtitle width for left alignment, so it can hold a single line', () => {
-    render(<SectionHeader title="Test Title" subtitle="A longer subtitle that should stay on one line" align="left" />);
-    const subtitle = screen.getByText('A longer subtitle that should stay on one line');
-    expect(subtitle).not.toHaveClass('max-w-2xl');
-  });
+  it('does not cap subtitle width, regardless of alignment, so longer subtitles are not forced to wrap early', () => {
+    const text = 'A longer subtitle that should be free to hold a single line';
+    const { rerender } = render(<SectionHeader title="Test Title" subtitle={text} align="left" />);
+    expect(screen.getByText(text)).not.toHaveClass('max-w-2xl');
 
-  it('keeps a reading-width cap on centered subtitles', () => {
-    render(<SectionHeader title="Test Title" subtitle="A centered subtitle" align="center" />);
-    const subtitle = screen.getByText('A centered subtitle');
-    expect(subtitle).toHaveClass('max-w-2xl');
+    rerender(<SectionHeader title="Test Title" subtitle={text} align="center" />);
+    expect(screen.getByText(text)).not.toHaveClass('max-w-2xl');
   });
 }); 

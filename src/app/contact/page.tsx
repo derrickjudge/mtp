@@ -49,7 +49,6 @@ export default async function ContactPage() {
           <SectionHeader
             title="Get in Touch"
             subtitle="We'd love to hear from you. Send us a message and we'll respond as soon as possible."
-            align="left"
           />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Contact Information */}
