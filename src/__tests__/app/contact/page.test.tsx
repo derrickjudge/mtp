@@ -27,9 +27,9 @@ describe('ContactPage', () => {
     expect(screen.getByText(/We'd love to hear from you/i)).toBeInTheDocument();
     expect(screen.getByText('Email')).toBeInTheDocument();
     expect(screen.getByText('contact@mtpcollective.com')).toBeInTheDocument();
-    expect(screen.getByText('Phone')).toBeInTheDocument();
-    expect(screen.getByText('(123) 456-7890')).toBeInTheDocument();
+    expect(screen.queryByText('Phone')).not.toBeInTheDocument();
     expect(screen.getByText('Location')).toBeInTheDocument();
+    expect(screen.getByText('San Diego, California')).toBeInTheDocument();
     expect(screen.getByText('Follow Us')).toBeInTheDocument();
   });
 

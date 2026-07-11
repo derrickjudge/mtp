@@ -2,6 +2,7 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { ClientContactForm } from '@/components/common/ClientContactForm';
 import { Image } from '@/components/common/Image';
 import { getPageHeader } from '@/utils/pageHeaders';
+import { EnvelopeIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -45,59 +46,89 @@ export default async function ContactPage() {
       {/* Contact Form Section */}
       <section className="py-24 px-4 md:px-8 bg-black">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <SectionHeader
+            title="Get in Touch"
+            subtitle="We'd love to hear from you. Send us a message and we'll respond as soon as possible."
+            align="left"
+          />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Contact Information */}
-            <div>
-              <SectionHeader
-                title="Get in Touch"
-                subtitle="We'd love to hear from you. Send us a message and we'll respond as soon as possible."
-                align="left"
-              />
-              <div className="space-y-8">
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Email</h3>
-                  <p className="text-gray-300">
-                    <a
-                      href="mailto:contact@mtpcollective.com"
-                      className="hover:text-white transition-colors"
+            <div className="bg-gray-900 rounded-lg border border-gray-800 p-8">
+              <div className="divide-y divide-gray-800">
+                {/* Email */}
+                <div className="flex items-start gap-4 pb-6">
+                  <div className="flex-none w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center text-indigo-400">
+                    <EnvelopeIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">
+                      Email
+                    </h3>
+                    <p className="text-gray-200">
+                      <a
+                        href="mailto:contact@mtpcollective.com"
+                        className="hover:text-indigo-400 transition-colors"
+                      >
+                        contact@mtpcollective.com
+                      </a>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="flex items-start gap-4 py-6">
+                  <div className="flex-none w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center text-indigo-400">
+                    <MapPinIcon className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">
+                      Location
+                    </h3>
+                    <p className="text-gray-200 mb-3">San Diego, California</p>
+                    <div
+                      className="relative h-24 rounded-lg border border-gray-800 bg-gray-950 overflow-hidden"
+                      aria-hidden="true"
                     >
-                      contact@mtpcollective.com
-                    </a>
-                  </p>
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          backgroundImage:
+                            'radial-gradient(circle, rgba(255,255,255,0.14) 1px, transparent 1.4px)',
+                          backgroundSize: '16px 16px',
+                          maskImage:
+                            'radial-gradient(circle at 32% 45%, black, transparent 75%)',
+                          WebkitMaskImage:
+                            'radial-gradient(circle at 32% 45%, black, transparent 75%)',
+                        }}
+                      />
+                      <div
+                        className="absolute text-indigo-400"
+                        style={{ left: '32%', top: '45%', transform: 'translate(-50%, -100%)' }}
+                      >
+                        <MapPinIcon className="w-6 h-6 drop-shadow" />
+                      </div>
+                      <span className="absolute right-2.5 bottom-2 text-[10px] tracking-wide text-gray-500">
+                        32.72&deg;N, 117.16&deg;W
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Phone</h3>
-                  <p className="text-gray-300">
+
+                {/* Follow Us */}
+                <div className="pt-6">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
+                    Follow Us
+                  </h3>
+                  <div className="flex items-center gap-3">
                     <a
-                      href="tel:+1234567890"
-                      className="hover:text-white transition-colors"
+                      href="https://www.instagram.com/monkey_take_photo/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-colors"
                     >
-                      (123) 456-7890
-                    </a>
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Location</h3>
-                  <p className="text-gray-300">
-                    123 Photography Street
-                    <br />
-                    City, State 12345
-                    <br />
-                    United States
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Follow Us</h3>
-                  <div className="flex space-x-4">
-<a
-                                      href="https://www.instagram.com/monkey_take_photo/"
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-gray-400 hover:text-white transition-colors"
-                                    >
                       <span className="sr-only">Instagram</span>
                       <svg
-                        className="h-6 w-6"
+                        className="h-[18px] w-[18px]"
                         fill="currentColor"
                         viewBox="0 0 24 24"
                         aria-hidden="true"
@@ -109,13 +140,14 @@ export default async function ContactPage() {
                         />
                       </svg>
                     </a>
+                    <span className="text-sm text-gray-400">@monkey_take_photo</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Contact Form */}
-            <div>
+            <div className="bg-gray-900 rounded-lg border border-gray-800 p-8">
               <ClientContactForm />
             </div>
           </div>
@@ -123,4 +155,4 @@ export default async function ContactPage() {
       </section>
     </div>
   );
-} 
+}
