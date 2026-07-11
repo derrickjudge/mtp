@@ -18,7 +18,7 @@ interface Article {
   featured: boolean;
   createdAt: string;
   updatedAt: string;
-  authorId: string;
+  authorName?: string;
   categories?: Category[];
   tags?: Tag[];
   events?: Event[];
@@ -53,20 +53,12 @@ interface Event {
   location?: string;
 }
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
 export default function AdminArticles() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -79,7 +71,7 @@ export default function AdminArticles() {
     excerpt: '',
     coverImage: '',
     publishDate: '',
-    authorId: '',
+    authorName: '',
     published: false,
     featured: false,
     categoryIds: [] as string[],
@@ -93,12 +85,11 @@ export default function AdminArticles() {
 
   const fetchData = async () => {
     try {
-      const [articlesRes, categoriesRes, eventsRes, photosRes, usersRes] = await Promise.all([
+      const [articlesRes, categoriesRes, eventsRes, photosRes] = await Promise.all([
         fetch('/api/articles'),
         fetch('/api/categories'),
         fetch('/api/events'),
         fetch('/api/photos?take=50'), // Get recent photos for selection
-        fetch('/api/users') // Get users for author selection
       ]);
 
       if (articlesRes.ok) {
@@ -119,11 +110,6 @@ export default function AdminArticles() {
       if (photosRes.ok) {
         const photosData = await photosRes.json();
         setPhotos(photosData.photos || []);
-      }
-
-      if (usersRes.ok) {
-        const usersData = await usersRes.json();
-        setUsers(usersData);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -182,8 +168,8 @@ export default function AdminArticles() {
         excerpt: '', 
         coverImage: '',
         publishDate: '',
-        authorId: '',
-        published: false, 
+        authorName: '',
+        published: false,
         featured: false,
         categoryIds: [],
         tagIds: [],
@@ -205,7 +191,7 @@ export default function AdminArticles() {
       excerpt: article.excerpt || '',
       coverImage: article.coverImage || '',
       publishDate: article.publishDate ? article.publishDate.split('T')[0] : '',
-      authorId: article.authorId,
+      authorName: article.authorName || '',
       published: article.published,
       featured: article.featured,
       categoryIds: article.categories?.map(c => c.id) || [],
@@ -245,8 +231,8 @@ export default function AdminArticles() {
       excerpt: '', 
       coverImage: '',
       publishDate: '',
-      authorId: '',
-      published: false, 
+      authorName: '',
+      published: false,
       featured: false,
       categoryIds: [],
       tagIds: [],
@@ -262,10 +248,10 @@ export default function AdminArticles() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          ...article, 
+        body: JSON.stringify({
+          ...article,
           published: !article.published,
-          authorId: article.authorId,
+          authorName: article.authorName,
           categoryIds: article.categories?.map(c => c.id) || [],
           tagIds: article.tags?.map(t => t.id) || [],
           eventIds: article.events?.map(e => e.id) || [],
@@ -308,10 +294,7 @@ export default function AdminArticles() {
     }));
   };
 
-  const getAuthorName = (authorId: string) => {
-    const user = users.find(u => u.id === authorId);
-    return user ? user.name : 'Unknown Author';
-  };
+  const getAuthorName = (authorName: string | undefined) => authorName || 'Anonymous Author';
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '';
@@ -375,26 +358,22 @@ export default function AdminArticles() {
 
             {/* Author and Publish Date Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Author Selection */}
+              {/* Author Name */}
               <div>
-                <label htmlFor="authorId" className="block text-sm font-medium text-gray-200 mb-2">
+                <label htmlFor="authorName" className="block text-sm font-medium text-gray-200 mb-2">
                   <UserIcon className="w-4 h-4 inline mr-1" />
                   Author
                 </label>
-                <select
-                  id="authorId"
-                  value={formData.authorId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, authorId: e.target.value }))}
+                <input
+                  type="text"
+                  id="authorName"
+                  value={formData.authorName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, authorName: e.target.value }))}
                   className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="">Select author...</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.role})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-400 mt-1">Leave empty to default to current user</p>
+                  placeholder="Anonymous Author"
+                  maxLength={100}
+                />
+                <p className="text-xs text-gray-400 mt-1">Any name, no account required. Leave empty for &quot;Anonymous Author&quot;</p>
               </div>
 
               {/* Publish Date */}
@@ -650,7 +629,7 @@ export default function AdminArticles() {
                     <div className="flex items-center gap-4 text-xs text-gray-400 mb-2">
                       <div className="flex items-center gap-1">
                         <UserIcon className="w-3 h-3" />
-                        {getAuthorName(article.authorId)}
+                        {getAuthorName(article.authorName)}
                       </div>
                       {article.publishDate && (
                         <div className="flex items-center gap-1">

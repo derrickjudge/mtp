@@ -3,6 +3,7 @@ import { nativeDB } from '@/lib/db-native';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { normalizeAuthorName } from '@/lib/articleValidation';
 
 // GET /api/articles - List all articles
 export async function GET(req: NextRequest) {
@@ -74,19 +75,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { 
-      title, 
-      content, 
-      excerpt, 
-      published, 
-      featured, 
-      coverImage, 
+    const {
+      title,
+      content,
+      excerpt,
+      published,
+      featured,
+      coverImage,
       publishDate,
-      authorId,
-      categoryIds, 
-      tagIds, 
+      authorName,
+      categoryIds,
+      tagIds,
       eventIds,
-      metaDescription 
+      metaDescription
     } = await req.json();
 
     if (!title || !content) {
@@ -96,18 +97,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Use provided authorId or default to current user
-    const finalAuthorId = authorId || session.user.id;
-
-    // Validate that the provided authorId exists if it's different from current user
-    if (authorId && authorId !== session.user.id) {
-      const author = await nativeDB.findUserById(authorId);
-      if (!author) {
-        return NextResponse.json(
-          { message: 'Invalid author selected' },
-          { status: 400 }
-        );
-      }
+    // The byline is free text so an article can credit an author without an
+    // admin account; authorId stays internal (the creating admin), never
+    // client-supplied.
+    const authorNameResult = normalizeAuthorName(authorName);
+    if (!authorNameResult.valid) {
+      return NextResponse.json(
+        { message: authorNameResult.message },
+        { status: authorNameResult.status }
+      );
     }
 
     // Generate slug from title
@@ -134,7 +132,8 @@ export async function POST(req: NextRequest) {
       coverImage,
       publishDate,
       metaDescription,
-      authorId: finalAuthorId,
+      authorId: session.user.id,
+      authorName: authorNameResult.authorName,
     });
 
     if (!article) {
