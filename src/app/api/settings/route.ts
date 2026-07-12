@@ -4,6 +4,11 @@ import { authOptions } from '@/lib/auth';
 import { nativeDB } from '@/lib/db-native';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
+// Single-key settings that public (unauthenticated) pages legitimately need
+// to read - e.g. the site logo, rendered in the nav for every visitor. Bulk
+// reads (prefix or the full list) and every other key stay admin-only.
+const PUBLIC_SETTING_KEYS = new Set(['site:logo']);
+
 // GET /api/settings - Get all settings or filter by prefix
 export async function GET(req: NextRequest) {
   try {
@@ -11,21 +16,23 @@ export async function GET(req: NextRequest) {
     const ip = getClientIp(req);
     const rl = rateLimit(`settings:GET:${ip}`, { tokens: 100, windowMs: 60_000 });
     if (!rl.allowed) {
-      return new NextResponse('Too Many Requests', { 
-        status: 429, 
-        headers: { 'Retry-After': String(rl.retryAfter) } 
+      return new NextResponse('Too Many Requests', {
+        status: 429,
+        headers: { 'Retry-After': String(rl.retryAfter) }
       });
-    }
-
-    // Check authentication (admin only)
-    const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const prefix = searchParams.get('prefix');
     const key = searchParams.get('key');
+
+    const isPublicKeyRequest = !!key && PUBLIC_SETTING_KEYS.has(key);
+    if (!isPublicKeyRequest) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user || session.user.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
 
     // If specific key requested
     if (key) {
