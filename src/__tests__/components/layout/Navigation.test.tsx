@@ -3,9 +3,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Navigation from '@/components/layout/Navigation';
 
 describe('Navigation', () => {
-  it('renders the logo', () => {
+  it('renders the text logo fallback when no logoUrl is provided', () => {
     render(<Navigation />);
     expect(screen.getByText('MTP COLLECTIVE')).toBeInTheDocument();
+  });
+
+  it('renders the real logo image immediately when logoUrl is provided, with no fetch/flash', () => {
+    render(<Navigation logoUrl="https://cdn.example.com/logo.png" />);
+    const logo = screen.getByAltText('MTP Collective');
+    expect(logo).toBeInTheDocument();
+    expect(screen.queryByText('MTP COLLECTIVE')).not.toBeInTheDocument();
   });
 
   it('renders all navigation links in desktop view', async () => {

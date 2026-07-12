@@ -8,6 +8,7 @@ import { Toaster } from 'react-hot-toast';
 import DisableContextMenu from '@/components/common/DisableContextMenu';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { nativeDB } from '@/lib/db-native';
 
 const barlow = Barlow({ 
   subsets: ["latin"],
@@ -57,11 +58,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+async function getSiteLogo(): Promise<string | null> {
+  try {
+    const setting = await nativeDB.getSetting('site:logo');
+    return setting?.value || null;
+  } catch (error) {
+    console.error('Error fetching site logo:', error);
+    return null;
+  }
+}
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const logoUrl = await getSiteLogo();
+
   // Disable right-click (context menu) on public pages for images
   // Excludes admin routes handled by middleware
   return (
@@ -76,7 +89,7 @@ export default function RootLayout({
           <div className="min-h-screen flex flex-col">
             <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80">
               <div className="max-w-7xl mx-auto pl-2 pr-4 py-3">
-                <Navigation />
+                <Navigation logoUrl={logoUrl} />
               </div>
             </header>
             <main className="flex-grow pt-16">
