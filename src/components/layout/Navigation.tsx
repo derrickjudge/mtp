@@ -16,13 +16,18 @@ interface Category {
   children?: Category[];
 }
 
-export default function Navigation() {
+interface NavigationProps {
+  // Resolved server-side by the root layout so the real logo is present in
+  // the initial render instead of flashing the text fallback on every load.
+  logoUrl?: string | null;
+}
+
+export default function Navigation({ logoUrl = null }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPortfolioDropdownOpen, setIsPortfolioDropdownOpen] = useState(false);
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
   const [mobileExpandedParent, setMobileExpandedParent] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const portfolioRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -33,7 +38,7 @@ export default function Navigation() {
   const activeLink =
     'text-white relative after:absolute after:inset-x-1 after:-bottom-1 after:h-0.5 after:bg-white/80';
 
-  // Fetch categories and logo
+  // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -54,22 +59,7 @@ export default function Navigation() {
       }
     };
 
-    const fetchLogo = async () => {
-      try {
-        const response = await fetch('/api/settings?key=site:logo');
-        if (response.ok) {
-          const data = await response.json();
-          if (data?.value) {
-            setLogoUrl(data.value);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching logo:', error);
-      }
-    };
-
     fetchCategories();
-    fetchLogo();
   }, []);
 
   // Handle clicks outside dropdown to close it
