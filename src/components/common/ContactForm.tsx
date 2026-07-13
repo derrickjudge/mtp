@@ -104,7 +104,7 @@ export function ContactForm({ className, onSubmit }: ContactFormProps) {
           value={formData.name}
           onChange={handleChange}
           className={cn(
-            'mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm',
+            'mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-base text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500',
             errors.name && 'border-red-500'
           )}
         />
@@ -127,7 +127,7 @@ export function ContactForm({ className, onSubmit }: ContactFormProps) {
           value={formData.email}
           onChange={handleChange}
           className={cn(
-            'mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm',
+            'mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-base text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500',
             errors.email && 'border-red-500'
           )}
         />
@@ -150,7 +150,7 @@ export function ContactForm({ className, onSubmit }: ContactFormProps) {
           value={formData.subject}
           onChange={handleChange}
           className={cn(
-            'mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm',
+            'mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-base text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500',
             errors.subject && 'border-red-500'
           )}
         />
@@ -173,7 +173,7 @@ export function ContactForm({ className, onSubmit }: ContactFormProps) {
           value={formData.message}
           onChange={handleChange}
           className={cn(
-            'mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm',
+            'mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-base text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500',
             errors.message && 'border-red-500'
           )}
         />

@@ -44,7 +44,7 @@ export default async function AboutPage() {
       </section>
 
       {/* Our Story */}
-      <section className="py-24 px-4 md:px-8 bg-black">
+      <section className="pt-12 pb-24 px-4 md:px-8 bg-black">
         <div className="max-w-4xl mx-auto">
           <SectionHeader
             title="Our Story"
