@@ -105,6 +105,19 @@ export class NativeDBService {
         )
       `);
 
+      // Create _ArticleToPhoto junction table if it doesn't exist.
+      // Carries the article's curated photo-set ordering in `position`.
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "_ArticleToPhoto" (
+          "A" TEXT NOT NULL,
+          "B" TEXT NOT NULL,
+          CONSTRAINT "_ArticleToPhoto_pkey" PRIMARY KEY ("A", "B"),
+          CONSTRAINT "_ArticleToPhoto_A_fkey" FOREIGN KEY ("A") REFERENCES "Article"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "_ArticleToPhoto_B_fkey" FOREIGN KEY ("B") REFERENCES "Photo"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `);
+      await client.query(`ALTER TABLE "_ArticleToPhoto" ADD COLUMN IF NOT EXISTS position INT NOT NULL DEFAULT 0`);
+
       // Create Event junction tables
       await client.query(`
         CREATE TABLE IF NOT EXISTS "_EventPhotos" (
@@ -171,6 +184,14 @@ export class NativeDBService {
       
       await client.query(`
         CREATE INDEX IF NOT EXISTS "_ArticleToTag_B_index" ON "_ArticleToTag"("B")
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_ArticleToPhoto_B_index" ON "_ArticleToPhoto"("B")
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS "_ArticleToPhoto_A_position_index" ON "_ArticleToPhoto"("A", position)
       `);
 
       await client.query(`
@@ -731,6 +752,7 @@ export class NativeDBService {
       // Delete photo relationships first
       await client.query('DELETE FROM "_CategoryToPhoto" WHERE "B" = $1', [id]);
       await client.query('DELETE FROM "_PhotoToTag" WHERE "A" = $1', [id]);
+      await client.query('DELETE FROM "_ArticleToPhoto" WHERE "B" = $1', [id]);
       
       // Delete the photo
       await client.query('DELETE FROM "Photo" WHERE id = $1', [id]);
@@ -1221,6 +1243,7 @@ export class NativeDBService {
       // Delete article relationships first
       await client.query('DELETE FROM "_ArticleToCategory" WHERE "A" = $1', [id]);
       await client.query('DELETE FROM "_ArticleToTag" WHERE "A" = $1', [id]);
+      await client.query('DELETE FROM "_ArticleToPhoto" WHERE "A" = $1', [id]);
       
       // Delete the article
       const result = await client.query('DELETE FROM "Article" WHERE id = $1', [id]);
@@ -1275,6 +1298,36 @@ export class NativeDBService {
     }
   }
 
+  /**
+   * Links photos to an article as its curated photo set. The order of
+   * `photoIds` is persisted as the `position` column, so callers should pass
+   * the photos in the exact order they should render.
+   */
+  async linkArticleToPhotos(articleId: string, photoIds: string[]): Promise<void> {
+    if (photoIds.length === 0) return;
+
+    await this.ensureJunctionTables();
+
+    const client = this.createClient();
+    try {
+      await client.connect();
+
+      // Insert multiple article-photo relationships, position taken from the
+      // caller-supplied ordering
+      const values = photoIds
+        .map((_, index) => `($${index * 3 + 1}, $${index * 3 + 2}, $${index * 3 + 3})`)
+        .join(', ');
+      const params = photoIds.flatMap((photoId, index) => [articleId, photoId, index]);
+
+      await client.query(
+        `INSERT INTO "_ArticleToPhoto" ("A", "B", position) VALUES ${values} ON CONFLICT DO NOTHING`,
+        params
+      );
+    } finally {
+      await client.end();
+    }
+  }
+
   async clearArticleCategories(articleId: string): Promise<void> {
     await this.ensureJunctionTables();
     
@@ -1301,6 +1354,19 @@ export class NativeDBService {
     }
   }
 
+  async clearArticlePhotos(articleId: string): Promise<void> {
+    await this.ensureJunctionTables();
+
+    const client = this.createClient();
+    try {
+      await client.connect();
+
+      await client.query('DELETE FROM "_ArticleToPhoto" WHERE "A" = $1', [articleId]);
+    } finally {
+      await client.end();
+    }
+  }
+
   async getArticleWithRelations(id: string): Promise<any> {
     await this.ensureJunctionTables();
     
@@ -1308,7 +1374,7 @@ export class NativeDBService {
     try {
       await client.connect();
       
-      // Get article with categories, tags, and events
+      // Get article with categories, tags, events, and its curated photo set
       const result = await client.query(
         `SELECT
            a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage",
@@ -1344,9 +1410,31 @@ export class NativeDBService {
                  'date', e.date,
                  'location', e.location
                )
-             ) FILTER (WHERE e.id IS NOT NULL), 
+             ) FILTER (WHERE e.id IS NOT NULL),
              '[]'
-           ) as events
+           ) as events,
+           -- Correlated subquery rather than another json_agg over a join:
+           -- json_agg(DISTINCT ...) sorts by the JSON value, which would
+           -- discard the curated position ordering.
+           (
+             SELECT COALESCE(
+               json_agg(
+                 jsonb_build_object(
+                   'id', p.id,
+                   'title', p.title,
+                   'description', p.description,
+                   'url', p.url,
+                   'thumbnail', p.thumbnail,
+                   'position', ap.position
+                 )
+                 ORDER BY ap.position ASC, p."createdAt" DESC
+               ),
+               '[]'
+             )
+             FROM "_ArticleToPhoto" ap
+             JOIN "Photo" p ON p.id = ap."B"
+             WHERE ap."A" = a.id
+           ) as photos
          FROM "Article" a
          LEFT JOIN "_ArticleToCategory" ac ON a.id = ac."A"
          LEFT JOIN "Category" c ON ac."B" = c.id

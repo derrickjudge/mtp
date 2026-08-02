@@ -27,6 +27,7 @@ jest.mock('@/lib/db-native', () => ({
     linkArticleToCategories: jest.fn(),
     linkArticleToTags: jest.fn(),
     linkArticleToEvents: jest.fn(),
+    linkArticleToPhotos: jest.fn(),
   },
 }));
 
@@ -220,5 +221,25 @@ describe('POST /api/articles', () => {
 
     expect(response.status).toBe(409);
     expect(nativeDB.createArticle).not.toHaveBeenCalled();
+  });
+
+  it('links the selected photo set to the new article, preserving order', async () => {
+    (nativeDB.createArticle as jest.Mock).mockResolvedValue({ id: 'a1' });
+    (nativeDB.getArticleWithRelations as jest.Mock).mockResolvedValue({ id: 'a1' });
+
+    await POST(
+      postRequest({ title: 'Hello', content: 'World', photoIds: ['p3', 'p1', 'p2'] })
+    );
+
+    expect(nativeDB.linkArticleToPhotos).toHaveBeenCalledWith('a1', ['p3', 'p1', 'p2']);
+  });
+
+  it('does not link photos when no photo set is provided', async () => {
+    (nativeDB.createArticle as jest.Mock).mockResolvedValue({ id: 'a1' });
+    (nativeDB.getArticleWithRelations as jest.Mock).mockResolvedValue({ id: 'a1' });
+
+    await POST(postRequest({ title: 'Hello', content: 'World' }));
+
+    expect(nativeDB.linkArticleToPhotos).not.toHaveBeenCalled();
   });
 });

@@ -25,9 +25,11 @@ jest.mock('@/lib/db-native', () => ({
     clearArticleCategories: jest.fn(),
     clearArticleTags: jest.fn(),
     clearArticleEvents: jest.fn(),
+    clearArticlePhotos: jest.fn(),
     linkArticleToCategories: jest.fn(),
     linkArticleToTags: jest.fn(),
     linkArticleToEvents: jest.fn(),
+    linkArticleToPhotos: jest.fn(),
   },
 }));
 
@@ -118,5 +120,19 @@ describe('PUT /api/articles/[id]', () => {
 
     const response = await call({ title: 'Old Title', content: 'Body' }, 'missing-1');
     expect(response.status).toBe(404);
+  });
+
+  it('replaces the photo set with the submitted order', async () => {
+    await call({ title: 'Old Title', content: 'Body', photoIds: ['p2', 'p1'] });
+
+    expect(nativeDB.clearArticlePhotos).toHaveBeenCalledWith('article-1');
+    expect(nativeDB.linkArticleToPhotos).toHaveBeenCalledWith('article-1', ['p2', 'p1']);
+  });
+
+  it('clears the photo set when an empty selection is submitted', async () => {
+    await call({ title: 'Old Title', content: 'Body', photoIds: [] });
+
+    expect(nativeDB.clearArticlePhotos).toHaveBeenCalledWith('article-1');
+    expect(nativeDB.linkArticleToPhotos).not.toHaveBeenCalled();
   });
 });

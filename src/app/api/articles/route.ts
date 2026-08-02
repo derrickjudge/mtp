@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
       categoryIds,
       tagIds,
       eventIds,
+      photoIds,
       metaDescription
     } = await req.json();
 
@@ -154,6 +155,11 @@ export async function POST(req: NextRequest) {
 
     if (eventIds && eventIds.length > 0) {
       await nativeDB.linkArticleToEvents(article.id, eventIds);
+    }
+
+    // Photo-set order is the client-supplied array order
+    if (photoIds && photoIds.length > 0) {
+      await nativeDB.linkArticleToPhotos(article.id, photoIds);
     }
 
     // Get the article with its relations

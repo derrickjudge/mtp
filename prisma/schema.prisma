@@ -29,6 +29,7 @@ model Photo {
   categories  Category[]  @relation("PhotoCategories")
   tags        Tag[]       @relation("PhotoTags")
   events      Event[]     @relation("EventPhotos")
+  articles    Article[]
   published   Boolean     @default(false)
   featured    Boolean     @default(false)
   metadata    Json?
@@ -49,6 +50,13 @@ model Article {
   categories  Category[]  @relation("ArticleCategories")
   tags        Tag[]       @relation("ArticleTags")
   events      Event[]     @relation("EventArticles")
+  // Curated photo set shown as an inline gallery on the article page. Unnamed
+  // so Prisma's default junction name (_ArticleToPhoto) matches the table
+  // created by ensureJunctionTables(). The per-article display order lives in
+  // that table's `position` column, which Prisma cannot express on an implicit
+  // m-n relation; ordering is handled by nativeDB.linkArticleToPhotos and
+  // getArticleWithRelations.
+  photos      Photo[]
   published   Boolean     @default(false)
   featured    Boolean     @default(false)
   createdAt   DateTime    @default(now())

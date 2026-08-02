@@ -47,7 +47,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       authorName,
       categoryIds,
       tagIds,
-      eventIds
+      eventIds,
+      photoIds
     } = await req.json();
 
     if (!title || !content) {
@@ -133,6 +134,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     await nativeDB.clearArticleEvents(id);
     if (eventIds && eventIds.length > 0) {
       await nativeDB.linkArticleToEvents(id, eventIds);
+    }
+
+    // Replace the photo set; the client-supplied array order becomes the
+    // stored display order
+    await nativeDB.clearArticlePhotos(id);
+    if (photoIds && photoIds.length > 0) {
+      await nativeDB.linkArticleToPhotos(id, photoIds);
     }
 
     // Get the updated article with relations
