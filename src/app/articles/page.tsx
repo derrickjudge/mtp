@@ -104,42 +104,45 @@ export default async function ArticlesPage({
         </div>
       </section>
 
-      <div className="max-w-5xl mx-auto px-4 py-12">
-        {/* Shown only when arriving from a category link on an article, so the
-            filtered view is explained and escapable. There is no category
-            browse UI on this page. */}
-        {selectedCategory && (
-          <div className="flex items-center gap-3 text-sm text-gray-400 mb-8 pb-6 border-b border-gray-800">
-            <span>
-              Showing articles in{' '}
-              <span className="text-blue-300">{selectedCategory.name}</span>
-            </span>
-            <Link href="/articles" className="text-gray-400 hover:text-white underline">
-              View all articles
-            </Link>
-          </div>
-        )}
+      {/* Same width as the contact page: px-4 md:px-8 around a max-w-7xl column */}
+      <div className="px-4 md:px-8 py-12">
+        <div className="max-w-7xl mx-auto">
+          {/* Shown only when arriving from a category link on an article, so the
+              filtered view is explained and escapable. There is no category
+              browse UI on this page. */}
+          {selectedCategory && (
+            <div className="flex items-center gap-3 text-sm text-gray-400 mb-8 pb-6 border-b border-gray-800">
+              <span>
+                Showing articles in{' '}
+                <span className="text-blue-300">{selectedCategory.name}</span>
+              </span>
+              <Link href="/articles" className="text-gray-400 hover:text-white underline">
+                View all articles
+              </Link>
+            </div>
+          )}
 
-        {/* One flat list: the query returns featured first, then newest */}
-        {articles.map((article) => (
-          <ArticleRow key={article.id} article={article} />
-        ))}
+          {/* One flat list: the query returns featured first, then newest */}
+          {articles.map((article) => (
+            <ArticleRow key={article.id} article={article} />
+          ))}
 
-        {articles.length === 0 && (
-          <div className="text-center py-16">
-            <DocumentTextIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-2xl font-semibold text-gray-400 mb-2">
-              {selectedCategory
-                ? `No articles found in ${selectedCategory.name}`
-                : 'No articles published yet'}
-            </h3>
-            <p className="text-gray-500">
-              {selectedCategory
-                ? 'Try another category, or view all articles.'
-                : 'Check back soon for photography stories and insights!'}
-            </p>
-          </div>
-        )}
+          {articles.length === 0 && (
+            <div className="text-center py-16">
+              <DocumentTextIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-2xl font-semibold text-gray-400 mb-2">
+                {selectedCategory
+                  ? `No articles found in ${selectedCategory.name}`
+                  : 'No articles published yet'}
+              </h3>
+              <p className="text-gray-500">
+                {selectedCategory
+                  ? 'Try another category, or view all articles.'
+                  : 'Check back soon for photography stories and insights!'}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -201,18 +204,22 @@ function ArticleRow({ article }: { article: Article }) {
         )}
       </div>
 
+      {/* items-stretch (the flex default) makes the image take its height from
+          the text beside it, so the two columns stay balanced instead of the
+          image running past a short excerpt. The min-height keeps it from
+          collapsing when the excerpt is only a line or two. */}
       <div className="flex flex-col sm:flex-row gap-6">
         {article.coverImage && (
           <Link
             href={href}
-            className="sm:w-2/5 flex-shrink-0 relative aspect-[4/3] overflow-hidden rounded"
+            className="sm:w-[30%] flex-shrink-0 relative min-h-[140px] overflow-hidden rounded"
           >
             <Image
               src={article.coverImage}
               alt={article.title}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 640px) 100vw, 40vw"
+              sizes="(max-width: 640px) 100vw, 33vw"
             />
           </Link>
         )}
