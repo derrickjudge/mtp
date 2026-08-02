@@ -44,7 +44,7 @@ export default async function ContactPage() {
       </section>
 
       {/* Contact Form Section */}
-      <section className="py-24 px-4 md:px-8 bg-black">
+      <section className="pt-12 pb-24 px-4 md:px-8 bg-black">
         <div className="max-w-7xl mx-auto">
           <SectionHeader
             title="Get in Touch"
@@ -139,7 +139,14 @@ export default async function ContactPage() {
                         />
                       </svg>
                     </a>
-                    <span className="text-sm text-gray-400">@monkey_take_photo</span>
+                    <a
+                      href="https://www.instagram.com/monkey_take_photo/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-200 hover:text-indigo-400 transition-colors"
+                    >
+                      @monkey_take_photo
+                    </a>
                   </div>
                 </div>
               </div>

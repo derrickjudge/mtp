@@ -33,6 +33,14 @@ describe('ContactPage', () => {
     expect(screen.getByText('Follow Us')).toBeInTheDocument();
   });
 
+  it('links the Instagram handle text to the profile, not just the icon', async () => {
+    const ui = await ContactPage();
+    render(ui as unknown as React.ReactElement);
+    const handleLink = screen.getByRole('link', { name: '@monkey_take_photo' });
+    expect(handleLink).toHaveAttribute('href', 'https://www.instagram.com/monkey_take_photo/');
+    expect(handleLink).toHaveAttribute('target', '_blank');
+  });
+
   it('renders the contact form', async () => {
     const ui = await ContactPage();
     render(ui as unknown as React.ReactElement);
