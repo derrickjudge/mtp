@@ -41,7 +41,7 @@ The project uses **Prisma for schema definition only** (`prisma/schema.prisma`).
 - `src/services/photoService.ts` is the single entry point for all photo operations: upload, resize (via `sharp`), persist to DB, and delete from R2.
 - `src/lib/r2Client.ts` is a stub — client-side R2 access is disallowed.
 - Storage keys are generated server-side (`<timestamp>-<uuid>.<ext>` and `thumbnails/<timestamp>-<uuid>.<ext>`) via `randomUUID`; the client filename is never used in the key. The main image is resized to 1200x800 (fit inside) and the thumbnail to 300x200 (cover).
-- Upload routes require an `ADMIN` session and validate type/size via `validateImageUpload` in `src/lib/uploadValidation.ts` (images only, 10MB max).
+- Upload routes require an `ADMIN` session and validate type/size via `validateImageUpload` in `src/lib/uploadValidation.ts` (images only, 4MB max — kept under Vercel's 4.5MB serverless request body cap).
 
 ### Auth
 
