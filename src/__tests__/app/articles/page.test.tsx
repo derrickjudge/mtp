@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import ArticlesPage from '@/app/articles/page';
 import { nativeDB } from '@/lib/db-native';
 
@@ -29,6 +29,7 @@ const featuredArticle = {
   title: 'Championship Final',
   slug: 'championship-final',
   excerpt: 'How the final unfolded',
+  contentSnippet: 'Full match report body text',
   coverImage: null, // deliberately absent: the badge must still render
   published: true,
   featured: true,
@@ -44,6 +45,7 @@ const regularArticle = {
   title: 'Night at the Venue',
   slug: 'night-at-the-venue',
   excerpt: 'A concert in low light',
+  contentSnippet: 'Concert body text',
   coverImage: 'https://cdn.example.com/cover.jpg',
   published: true,
   featured: false,
@@ -58,6 +60,13 @@ const regularArticle = {
 async function renderPage(searchParams: Record<string, string> = {}) {
   const ui = await ArticlesPage({ searchParams });
   return render(ui as unknown as React.ReactElement);
+}
+
+/** Article titles in the order they appear in the document. */
+function renderedTitleOrder(container: HTMLElement): string[] {
+  return Array.from(container.querySelectorAll('article h2')).map(
+    (h) => h.textContent?.trim() ?? ''
+  );
 }
 
 describe('Articles landing page', () => {
@@ -78,27 +87,42 @@ describe('Articles landing page', () => {
     );
   });
 
-  it('renders featured articles in their own section', async () => {
-    await renderPage();
+  it('renders one flat list, preserving the order the query returned', async () => {
+    const { container } = await renderPage();
 
-    expect(screen.getByText('Featured Articles')).toBeInTheDocument();
-    expect(screen.getByText('Championship Final')).toBeInTheDocument();
+    // Featured-first-then-newest ordering is applied by the SQL; the page must
+    // not re-sort or split the list into sections.
+    expect(renderedTitleOrder(container)).toEqual([
+      'Championship Final',
+      'Night at the Venue',
+    ]);
+    expect(screen.queryByText('Featured Articles')).not.toBeInTheDocument();
+    expect(screen.queryByText('All Articles')).not.toBeInTheDocument();
   });
 
-  it('shows the Featured badge on an article with no cover image', async () => {
+  it('does not render a category filter row', async () => {
+    const { container } = await renderPage();
+
+    const hrefs = Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(hrefs.filter((h) => h?.startsWith('/articles?category='))).toHaveLength(0);
+    expect(screen.queryByText('Rugby')).not.toBeInTheDocument();
+    expect(screen.queryByText('Concerts')).not.toBeInTheDocument();
+  });
+
+  it('marks the featured article so its position at the top is explained', async () => {
     await renderPage();
 
     // Regression: the badge used to be nested inside the cover-image block, so
     // a featured article without a cover image showed nothing.
-    expect(screen.getAllByText('Featured').length).toBeGreaterThan(0);
+    expect(screen.getByText('Featured')).toBeInTheDocument();
   });
 
   it('shows the author byline and the publish date, not createdAt', async () => {
     await renderPage();
 
-    expect(screen.getAllByText(/Jane Rivera/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Jane Rivera/)).toBeInTheDocument();
     // publishDate 2026-03-05 wins over createdAt 2026-01-01
-    expect(screen.getAllByText(/March 5, 2026/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/March 5, 2026/)).toBeInTheDocument();
   });
 
   it('falls back to createdAt when an article has no publishDate', async () => {
@@ -109,7 +133,32 @@ describe('Articles landing page', () => {
     expect(screen.getByText(/February 2, 2026/)).toBeInTheDocument();
   });
 
-  it('resolves a ?category= slug to its id before querying', async () => {
+  it('shows the excerpt as the preview text', async () => {
+    await renderPage();
+
+    expect(screen.getByText('How the final unfolded')).toBeInTheDocument();
+  });
+
+  it('falls back to a snippet of the article body when there is no excerpt', async () => {
+    (nativeDB.findArticlesWithCategories as jest.Mock).mockResolvedValue([
+      { ...regularArticle, excerpt: null },
+    ]);
+
+    await renderPage();
+
+    expect(screen.getByText(/Concert body text/)).toBeInTheDocument();
+  });
+
+  it('renders the cover image alongside the preview text', async () => {
+    await renderPage();
+
+    expect(screen.getByAltText('Night at the Venue')).toHaveAttribute(
+      'src',
+      'https://cdn.example.com/cover.jpg'
+    );
+  });
+
+  it('still resolves a ?category= slug so links from an article keep working', async () => {
     await renderPage({ category: 'concerts' });
 
     expect(nativeDB.findArticlesWithCategories).toHaveBeenCalledWith(
@@ -125,19 +174,17 @@ describe('Articles landing page', () => {
     );
   });
 
-  it('renders category filter pills that link with the slug', async () => {
-    const { container } = await renderPage();
+  it('offers a way back to all articles when filtered', async () => {
+    const { container } = await renderPage({ category: 'concerts' });
 
-    const hrefs = Array.from(container.querySelectorAll('a')).map(a => a.getAttribute('href'));
-    expect(hrefs).toContain('/articles?category=rugby');
-    expect(hrefs).toContain('/articles?category=concerts');
+    const hrefs = Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href'));
     expect(hrefs).toContain('/articles');
   });
 
-  it('links each card to its article', async () => {
+  it('links each row to its article', async () => {
     const { container } = await renderPage();
 
-    const hrefs = Array.from(container.querySelectorAll('a')).map(a => a.getAttribute('href'));
+    const hrefs = Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href'));
     expect(hrefs).toContain('/articles/championship-final');
     expect(hrefs).toContain('/articles/night-at-the-venue');
   });
@@ -158,14 +205,12 @@ describe('Articles landing page', () => {
     expect(screen.getByText(/No articles found in Rugby/i)).toBeInTheDocument();
   });
 
-  it('still renders the empty state when every article is featured', async () => {
-    // Guards against the /events bug where the "all" section gates on the
-    // unfiltered list, yielding an empty grid instead of the empty state.
+  it('renders a list of only featured articles without falling into the empty state', async () => {
     (nativeDB.findArticlesWithCategories as jest.Mock).mockResolvedValue([featuredArticle]);
 
-    await renderPage();
+    const { container } = await renderPage();
 
-    expect(screen.getByText('Featured Articles')).toBeInTheDocument();
+    expect(renderedTitleOrder(container)).toEqual(['Championship Final']);
     expect(screen.queryByText(/No articles published yet/i)).not.toBeInTheDocument();
   });
 

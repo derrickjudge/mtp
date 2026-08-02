@@ -1124,6 +1124,8 @@ export class NativeDBService {
    *
    * Category order within an article is not meaningful, so json_agg(DISTINCT)
    * is safe here; the article ordering itself is applied by the outer query.
+   *
+   * Results are ordered featured-first, then newest by publish date.
    */
   async findArticlesWithCategories(options?: {
     take?: number;
@@ -1142,6 +1144,12 @@ export class NativeDBService {
         SELECT a.id, a.title, a.slug, a.excerpt, a."coverImage",
                a.published, a.featured, a."publishDate", a."createdAt", a."updatedAt",
                a."authorId", a."authorName",
+               -- Preview text for articles with no excerpt. Derived in SQL so
+               -- the full article body never crosses the wire for a listing.
+               LEFT(
+                 TRIM(regexp_replace(regexp_replace(a.content, '<[^>]*>', ' ', 'g'), '\\s+', ' ', 'g')),
+                 300
+               ) AS "contentSnippet",
                COALESCE(
                  json_agg(
                    DISTINCT jsonb_build_object(
@@ -1182,11 +1190,13 @@ export class NativeDBService {
         paramIndex++;
       }
 
+      // Featured articles are pinned above the rest, newest first within each
+      // group, so the listing order survives LIMIT/OFFSET.
       query += `
-        GROUP BY a.id, a.title, a.slug, a.excerpt, a."coverImage", a.published,
+        GROUP BY a.id, a.title, a.slug, a.content, a.excerpt, a."coverImage", a.published,
                  a.featured, a."publishDate", a."createdAt", a."updatedAt",
                  a."authorId", a."authorName"
-        ORDER BY COALESCE(a."publishDate", a."createdAt") DESC
+        ORDER BY a.featured DESC, COALESCE(a."publishDate", a."createdAt") DESC
       `;
 
       if (options?.take) {
