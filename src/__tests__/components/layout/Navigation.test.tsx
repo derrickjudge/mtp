@@ -2,7 +2,25 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Navigation from '@/components/layout/Navigation';
 
+// jest.setup.js mocks usePathname as a fixed function; override it here so the
+// active-link tests can vary the current route.
+const mockUsePathname = jest.fn(() => '');
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+  }),
+  usePathname: () => mockUsePathname(),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 describe('Navigation', () => {
+  beforeEach(() => {
+    mockUsePathname.mockReturnValue('');
+  });
+
   it('renders the text logo fallback when no logoUrl is provided', () => {
     render(<Navigation />);
     expect(screen.getByText('MTP COLLECTIVE')).toBeInTheDocument();
@@ -20,13 +38,43 @@ describe('Navigation', () => {
     const desktopNav = screen.getByRole('navigation').querySelector('.hidden.md\\:flex');
     
     expect(desktopNav).toBeInTheDocument();
-    // Home link is the logo text; Desktop menu shows About, Portfolio, Events, Contact (Articles removed)
+    // Home link is the logo text; desktop menu shows About, Portfolio, Events,
+    // Articles, Contact
     await waitFor(() => {
       expect(desktopNav).toHaveTextContent('Portfolio');
       expect(desktopNav).toHaveTextContent('Events');
       expect(desktopNav).toHaveTextContent('About Us');
+      expect(desktopNav).toHaveTextContent('Articles');
       expect(desktopNav).toHaveTextContent('Contact');
     });
+  });
+
+  it('links Articles to /articles in the desktop menu, after Events', () => {
+    render(<Navigation />);
+    const desktopNav = screen.getByRole('navigation').querySelector('.hidden.md\\:flex');
+
+    const hrefs = Array.from(desktopNav!.querySelectorAll('a')).map(a => a.getAttribute('href'));
+    expect(hrefs).toContain('/articles');
+    expect(hrefs.indexOf('/articles')).toBeGreaterThan(hrefs.indexOf('/events'));
+    expect(hrefs.indexOf('/articles')).toBeLessThan(hrefs.indexOf('/contact'));
+  });
+
+  it('marks Articles as the current page when on /articles', () => {
+    mockUsePathname.mockReturnValue('/articles');
+    render(<Navigation />);
+
+    const articlesLink = screen
+      .getByRole('navigation')
+      .querySelector('.hidden.md\\:flex a[href="/articles"]');
+    expect(articlesLink).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('includes an Articles link in the mobile menu', () => {
+    render(<Navigation />);
+    const mobileMenu = screen.getByRole('navigation').querySelector('.md\\:hidden.absolute');
+
+    const hrefs = Array.from(mobileMenu!.querySelectorAll('a')).map(a => a.getAttribute('href'));
+    expect(hrefs).toContain('/articles');
   });
 
   it('toggles mobile menu when button is clicked', () => {

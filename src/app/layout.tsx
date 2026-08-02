@@ -118,6 +118,16 @@ export default async function RootLayout({
                         </Link>
                       </li>
                       <li>
+                        <Link href="/events" className="text-gray-400 hover:text-white transition-colors">
+                          Events
+                        </Link>
+                      </li>
+                      <li>
+                        <Link href="/articles" className="text-gray-400 hover:text-white transition-colors">
+                          Articles
+                        </Link>
+                      </li>
+                      <li>
                         <Link href="/about" className="text-gray-400 hover:text-white transition-colors">
                           About
                         </Link>

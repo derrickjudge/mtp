@@ -67,6 +67,15 @@ const PAGE_HEADERS: PageHeader[] = [
     previewAspectClass: BANNER_ASPECT
   },
   {
+    key: 'header:articles',
+    pageName: 'Articles',
+    description: 'Header image on the Articles page',
+    value: null,
+    defaultImage: '/images/hero/hero.jpg',
+    recommendedSize: BANNER_HINT,
+    previewAspectClass: BANNER_ASPECT
+  },
+  {
     key: 'header:contact',
     pageName: 'Contact',
     description: 'Hero image on the Contact page',

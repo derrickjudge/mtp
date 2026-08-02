@@ -18,6 +18,7 @@ const HEADER_KEY_TO_PATH: Record<string, string> = {
   about: '/about',
   portfolio: '/portfolio',
   events: '/events',
+  articles: '/articles',
   contact: '/contact',
   services: '/services',
 };

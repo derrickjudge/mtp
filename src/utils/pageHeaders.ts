@@ -6,6 +6,7 @@ export const DEFAULT_HEADERS: Record<string, string> = {
   about: '/images/hero/about.jpg',
   portfolio: '/images/hero/portfolio.jpg',
   events: '/images/hero/hero.jpg',
+  articles: '/images/hero/hero.jpg',
   contact: '/images/hero/contact.jpg',
   services: '/images/hero/services.jpg'
 };

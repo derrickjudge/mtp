@@ -54,6 +54,8 @@ jest.mock('@/lib/db-native', () => ({
     findPhotoById: jest.fn().mockResolvedValue(null),
     createPhoto: jest.fn().mockResolvedValue({ id: '1' }),
     getPhotoWithRelations: jest.fn().mockResolvedValue(null),
+    findArticles: jest.fn().mockResolvedValue([]),
+    findArticlesWithCategories: jest.fn().mockResolvedValue([]),
   },
 }));
 
