@@ -33,7 +33,14 @@ The project uses **Prisma for schema definition only** (`prisma/schema.prisma`).
 
 - Always use `nativeDB` from `@/lib/db-native` for queries — never `PrismaClient` at runtime.
 - `nativeDB` lazily creates and closes a `pg.Client` per query.
-- Junction tables (`_CategoryToPhoto`, etc.) are created by `ensureJunctionTables()`, which runs once per process lifetime.
+- Junction tables (`_CategoryToPhoto`, etc.) are created by `ensureJunctionTables()`, which runs once per process lifetime. There are no `supabase/migrations/*.sql` files for them; that function is the only place they are defined.
+- Ordered relations (`_EventPhotos`, `_ArticleToPhoto`) carry a `position` column holding the curated display order. When reading them back, aggregate with an ordered subquery — `json_agg(DISTINCT ...)` sorts by the JSON value and silently discards `position`.
+
+### Articles
+
+- An article's photo set is a hand-picked, ordered list of existing `Photo` rows, stored in `_ArticleToPhoto` with `position` taken from the array index of the `photoIds` the client submits. It is independent of `Article.coverImage` (the header image) and of any linked `Event`.
+- Create/update routes take `photoIds` alongside `categoryIds`/`tagIds`/`eventIds`; `PUT` clears and relinks the whole set, so the submitted array is the source of truth for both membership and order.
+- `getArticleWithRelations` returns the set as `photos`, already in curated order.
 
 ### Image storage: R2 (server-side only)
 
@@ -41,7 +48,7 @@ The project uses **Prisma for schema definition only** (`prisma/schema.prisma`).
 - `src/services/photoService.ts` is the single entry point for all photo operations: upload, resize (via `sharp`), persist to DB, and delete from R2.
 - `src/lib/r2Client.ts` is a stub — client-side R2 access is disallowed.
 - Storage keys are generated server-side (`<timestamp>-<uuid>.<ext>` and `thumbnails/<timestamp>-<uuid>.<ext>`) via `randomUUID`; the client filename is never used in the key. The main image is resized to 1200x800 (fit inside) and the thumbnail to 300x200 (cover).
-- Upload routes require an `ADMIN` session and validate type/size via `validateImageUpload` in `src/lib/uploadValidation.ts` (images only, 10MB max).
+- Upload routes require an `ADMIN` session and validate type/size via `validateImageUpload` in `src/lib/uploadValidation.ts` (images only, 4MB max — kept under Vercel's 4.5MB serverless request body cap).
 
 ### Auth
 
@@ -85,6 +92,23 @@ Tests live in `src/__tests__/` mirroring the `src/` structure. `jest.setup.js` m
 - `nativeDB` entirely — tests never hit the real database
 
 To add a new API route test, follow the pattern in `src/__tests__/api/photos/route.test.ts`.
+
+### Integration tests
+
+Because `nativeDB` is mocked everywhere, raw SQL is otherwise unverified. Tests
+under `src/__tests__/integration/` run against a real PostgreSQL instance and
+skip unless `INTEGRATION_DATABASE_URL` is set. That variable is deliberately
+distinct from `POSTGRES_PRISMA_URL`/`DATABASE_URL` so a normal `npm test` can
+never point these destructive tests at the live database. Run them against a
+throwaway instance:
+
+```bash
+podman run -d --name mtp-sqlcheck -e POSTGRES_PASSWORD=test \
+  -e POSTGRES_DB=sqlcheck -p 55432:5432 docker.io/library/postgres:16-alpine
+INTEGRATION_DATABASE_URL='postgresql://postgres:test@localhost:55432/sqlcheck?sslmode=disable' \
+  npx jest src/__tests__/integration
+podman rm -f mtp-sqlcheck
+```
 
 ## Supabase Migrations
 

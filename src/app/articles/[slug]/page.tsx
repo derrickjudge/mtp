@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { nativeDB } from '@/lib/db-native';
 import { CalendarIcon, TagIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { ArticlePhotoGallery, type ArticleGalleryPhoto } from '@/components/photos/ArticlePhotoGallery';
 
 interface Article {
   id: string;
@@ -22,6 +23,7 @@ interface Article {
     name: string;
     slug: string;
   }>;
+  photos?: ArticleGalleryPhoto[];
 }
 
 async function getArticle(slug: string): Promise<Article | null> {
@@ -162,10 +164,18 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         )}
 
         {/* Article Content */}
-        <div 
+        <div
           className="prose prose-invert prose-lg max-w-none mb-12"
           dangerouslySetInnerHTML={{ __html: article.content }}
         />
+
+        {/* Photo Set */}
+        {article.photos && article.photos.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold text-white mb-6">Photos</h2>
+            <ArticlePhotoGallery photos={article.photos} />
+          </section>
+        )}
 
         {/* Article Footer */}
         <footer className="border-t border-gray-800 pt-8">

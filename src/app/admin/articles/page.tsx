@@ -22,6 +22,7 @@ interface Article {
   categories?: Category[];
   tags?: Tag[];
   events?: Event[];
+  photos?: ArticlePhoto[];
 }
 
 interface Category {
@@ -44,6 +45,11 @@ interface Photo {
   thumbnail?: string;
 }
 
+/** A photo already linked to an article, carrying its curated display order. */
+interface ArticlePhoto extends Photo {
+  position: number;
+}
+
 interface Event {
   id: string;
   name: string;
@@ -51,6 +57,88 @@ interface Event {
   description?: string;
   date?: string;
   location?: string;
+}
+
+const EMPTY_FORM = {
+  title: '',
+  content: '',
+  excerpt: '',
+  coverImage: '',
+  publishDate: '',
+  authorName: '',
+  published: false,
+  featured: false,
+  categoryIds: [] as string[],
+  tagIds: [] as string[],
+  eventIds: [] as string[],
+  photoIds: [] as string[],
+};
+
+/** Photo ids for an article's set, in curated display order. */
+function articlePhotoIds(article: Article): string[] {
+  return [...(article.photos || [])]
+    .sort((a, b) => a.position - b.position)
+    .map(photo => photo.id);
+}
+
+interface PhotoPickerModalProps {
+  title: string;
+  photos: Photo[];
+  isSelected: (photo: Photo) => boolean;
+  onSelect: (photo: Photo) => void;
+  onClose: () => void;
+}
+
+/**
+ * Thumbnail-grid picker used for both the single-select cover image and the
+ * multi-select photo set; the caller decides what selection means.
+ */
+function PhotoPickerModal({ title, photos, isSelected, onSelect, onClose }: PhotoPickerModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            ×
+          </button>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {photos.map((photo) => (
+            <div
+              key={photo.id}
+              className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
+                isSelected(photo)
+                  ? 'border-blue-500 ring-2 ring-blue-500'
+                  : 'border-transparent hover:border-gray-500'
+              }`}
+              onClick={() => onSelect(photo)}
+            >
+              <Image
+                src={photo.thumbnail || photo.url}
+                alt={photo.title}
+                fill
+                className="object-cover"
+              />
+              {isSelected(photo) && (
+                <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">
+                  &#10003;
+                </div>
+              )}
+              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-xs truncate">
+                {photo.title}
+              </div>
+            </div>
+          ))}
+        </div>
+        {photos.length === 0 && (
+          <div className="text-center py-8 text-gray-400">
+            No photos available. Upload some photos first.
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function AdminArticles() {
@@ -65,19 +153,8 @@ export default function AdminArticles() {
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showPhotoSelector, setShowPhotoSelector] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    excerpt: '',
-    coverImage: '',
-    publishDate: '',
-    authorName: '',
-    published: false,
-    featured: false,
-    categoryIds: [] as string[],
-    tagIds: [] as string[],
-    eventIds: [] as string[],
-  });
+  const [showPhotoSetSelector, setShowPhotoSetSelector] = useState(false);
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   useEffect(() => {
     fetchData();
@@ -162,19 +239,7 @@ export default function AdminArticles() {
         toast.success('Article created successfully');
       }
 
-      setFormData({ 
-        title: '', 
-        content: '', 
-        excerpt: '', 
-        coverImage: '',
-        publishDate: '',
-        authorName: '',
-        published: false,
-        featured: false,
-        categoryIds: [],
-        tagIds: [],
-        eventIds: []
-      });
+      setFormData(EMPTY_FORM);
       setShowForm(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save article');
@@ -197,6 +262,7 @@ export default function AdminArticles() {
       categoryIds: article.categories?.map(c => c.id) || [],
       tagIds: article.tags?.map(t => t.id) || [],
       eventIds: article.events?.map(e => e.id) || [],
+      photoIds: articlePhotoIds(article),
     });
     setShowForm(true);
   };
@@ -225,19 +291,7 @@ export default function AdminArticles() {
 
   const handleCancel = () => {
     setEditingArticle(null);
-    setFormData({ 
-      title: '', 
-      content: '', 
-      excerpt: '', 
-      coverImage: '',
-      publishDate: '',
-      authorName: '',
-      published: false,
-      featured: false,
-      categoryIds: [],
-      tagIds: [],
-      eventIds: []
-    });
+    setFormData(EMPTY_FORM);
     setShowForm(false);
   };
 
@@ -255,6 +309,7 @@ export default function AdminArticles() {
           categoryIds: article.categories?.map(c => c.id) || [],
           tagIds: article.tags?.map(t => t.id) || [],
           eventIds: article.events?.map(e => e.id) || [],
+          photoIds: articlePhotoIds(article),
         }),
       });
 
@@ -293,6 +348,45 @@ export default function AdminArticles() {
         : [...prev.eventIds, eventId]
     }));
   };
+
+  const handlePhotoSetToggle = (photo: Photo) => {
+    setFormData(prev => ({
+      ...prev,
+      photoIds: prev.photoIds.includes(photo.id)
+        ? prev.photoIds.filter(id => id !== photo.id)
+        : [...prev.photoIds, photo.id]
+    }));
+  };
+
+  // Reorders the photo set; array order is what the API persists as `position`
+  const movePhotoInSet = (index: number, direction: 'up' | 'down') => {
+    const target = direction === 'up' ? index - 1 : index + 1;
+
+    setFormData(prev => {
+      if (target < 0 || target >= prev.photoIds.length) return prev;
+
+      const photoIds = [...prev.photoIds];
+      [photoIds[index], photoIds[target]] = [photoIds[target], photoIds[index]];
+      return { ...prev, photoIds };
+    });
+  };
+
+  const removePhotoFromSet = (photoId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      photoIds: prev.photoIds.filter(id => id !== photoId)
+    }));
+  };
+
+  // The library dropdown only holds the 50 most recent photos, so an article
+  // can reference a photo that is not in `photos`. Fall back to the copy that
+  // came back with the article so older sets stay visible and reorderable.
+  const selectedSetPhotos = formData.photoIds.map(id => ({
+    id,
+    photo:
+      photos.find(photo => photo.id === id) ??
+      editingArticle?.photos?.find(photo => photo.id === id),
+  }));
 
   const getAuthorName = (authorName: string | undefined) => authorName || 'Anonymous Author';
 
@@ -492,12 +586,85 @@ export default function AdminArticles() {
               )}
             </div>
 
-            {/* Rich Text Editor */}
+            {/* Photo Set */}
             <div>
               <label className="block text-sm font-medium text-gray-200 mb-2">
+                Photo Set
+              </label>
+              <p className="text-xs text-gray-400 mb-3">
+                Photos shown as a gallery within the article. Drag order is set with the arrows below.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowPhotoSetSelector(true)}
+                className="inline-flex items-center px-3 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600"
+              >
+                <PhotoIcon className="w-4 h-4 mr-2" />
+                Select Photos
+              </button>
+
+              {selectedSetPhotos.length > 0 ? (
+                <ul className="mt-4 space-y-2">
+                  {selectedSetPhotos.map(({ id, photo }, index) => (
+                    <li
+                      key={id}
+                      className="flex items-center gap-3 bg-gray-700 rounded-md p-2"
+                    >
+                      <span className="text-xs text-gray-400 w-6 text-center">{index + 1}</span>
+                      <div className="relative w-16 h-12 rounded overflow-hidden flex-shrink-0 bg-gray-600">
+                        {photo && (
+                          <Image
+                            src={photo.thumbnail || photo.url}
+                            alt={photo.title}
+                            fill
+                            className="object-cover"
+                          />
+                        )}
+                      </div>
+                      <span className="flex-1 text-sm text-gray-200 truncate">
+                        {photo ? photo.title : 'Photo no longer available'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => movePhotoInSet(index, 'up')}
+                        disabled={index === 0}
+                        aria-label={`Move ${photo?.title || 'photo'} earlier`}
+                        className="px-2 py-1 text-sm text-gray-200 bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-40 disabled:hover:bg-gray-600"
+                      >
+                        &uarr;
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => movePhotoInSet(index, 'down')}
+                        disabled={index === selectedSetPhotos.length - 1}
+                        aria-label={`Move ${photo?.title || 'photo'} later`}
+                        className="px-2 py-1 text-sm text-gray-200 bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-40 disabled:hover:bg-gray-600"
+                      >
+                        &darr;
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removePhotoFromSet(id)}
+                        aria-label={`Remove ${photo?.title || 'photo'} from set`}
+                        className="px-2 py-1 text-sm text-red-300 bg-red-600/20 rounded hover:bg-red-600/30"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-gray-400">No photos linked to this article yet.</p>
+              )}
+            </div>
+
+            {/* Rich Text Editor */}
+            <div>
+              <label htmlFor="content" className="block text-sm font-medium text-gray-200 mb-2">
                 Content *
               </label>
               <textarea
+                id="content"
                 value={formData.content}
                 onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                 rows={15}
@@ -553,45 +720,26 @@ export default function AdminArticles() {
         </div>
       )}
 
-      {/* Photo Selector Modal */}
+      {/* Cover Image Selector Modal */}
       {showPhotoSelector && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">Select Cover Image</h3>
-              <button
-                onClick={() => setShowPhotoSelector(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {photos.map((photo) => (
-                <div
-                  key={photo.id}
-                  className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500"
-                  onClick={() => handlePhotoSelect(photo)}
-                >
-                  <Image
-                    src={photo.thumbnail || photo.url}
-                    alt={photo.title}
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-xs truncate">
-                    {photo.title}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {photos.length === 0 && (
-              <div className="text-center py-8 text-gray-400">
-                No photos available. Upload some photos first.
-              </div>
-            )}
-          </div>
-        </div>
+        <PhotoPickerModal
+          title="Select Cover Image"
+          photos={photos}
+          isSelected={(photo) => photo.url === formData.coverImage}
+          onSelect={handlePhotoSelect}
+          onClose={() => setShowPhotoSelector(false)}
+        />
+      )}
+
+      {/* Photo Set Selector Modal */}
+      {showPhotoSetSelector && (
+        <PhotoPickerModal
+          title="Select Photos for This Article"
+          photos={photos}
+          isSelected={(photo) => formData.photoIds.includes(photo.id)}
+          onSelect={handlePhotoSetToggle}
+          onClose={() => setShowPhotoSetSelector(false)}
+        />
       )}
 
       {/* Articles List */}
@@ -687,12 +835,14 @@ export default function AdminArticles() {
                     </button>
                     <button
                       onClick={() => handleEdit(article)}
+                      aria-label="Edit article"
                       className="px-3 py-1 text-sm text-blue-300 bg-blue-600/20 rounded hover:bg-blue-600/30"
                     >
                       <PencilIcon className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(article)}
+                      aria-label="Delete article"
                       className="px-3 py-1 text-sm text-red-300 bg-red-600/20 rounded hover:bg-red-600/30"
                     >
                       <TrashIcon className="w-4 h-4" />
