@@ -270,6 +270,75 @@ describeIntegration('Article photo set (live database)', () => {
     expect(article.photos.map((p: GalleryPhoto) => p.id)).toEqual(['photo-b']);
   });
 
+  describe('findArticlesWithCategories', () => {
+    /** Replaces the seeded article with a set that exercises the ordering. */
+    const seedForListing = async () => {
+      const client = await connect();
+      try {
+        await client.query(`
+          DELETE FROM "_ArticleToCategory";
+          DELETE FROM "Article";
+          INSERT INTO "Category" (id, name, slug) VALUES ('cat-1', 'Rugby', 'rugby')
+            ON CONFLICT DO NOTHING;
+          INSERT INTO "Article" (id, title, slug, content, excerpt, published, featured, "publishDate", "authorName", "authorId") VALUES
+            ('old-featured', 'Old Featured', 'old-featured', '<p>x</p>', 'e', TRUE,  TRUE,  '2026-01-01', 'A', 'user-1'),
+            ('new-plain',    'New Plain',    'new-plain',    '<p>x</p>', 'e', TRUE,  FALSE, '2026-06-01', 'B', 'user-1'),
+            ('mid-plain',    'Mid Plain',    'mid-plain',    '<p>x</p>', 'e', TRUE,  FALSE, '2026-03-01', 'C', 'user-1'),
+            ('draft',        'Draft',        'draft',        '<p>x</p>', 'e', FALSE, FALSE, '2026-07-01', 'D', 'user-1');
+          INSERT INTO "_ArticleToCategory" VALUES ('new-plain', 'cat-1');
+        `);
+      } finally {
+        await client.end();
+      }
+    };
+
+    it('puts featured first, then newest by date', async () => {
+      await seedForListing();
+
+      const rows = await nativeDB.findArticlesWithCategories({ published: true });
+
+      // Old Featured is the oldest but must still lead
+      expect(rows.map((r: { slug: string }) => r.slug)).toEqual([
+        'old-featured',
+        'new-plain',
+        'mid-plain',
+      ]);
+    });
+
+    it('excludes unpublished articles', async () => {
+      await seedForListing();
+
+      const rows = await nativeDB.findArticlesWithCategories({ published: true });
+
+      expect(rows.map((r: { slug: string }) => r.slug)).not.toContain('draft');
+    });
+
+    it('attaches categories and a plain-text snippet of the body', async () => {
+      await seedForListing();
+
+      const rows = await nativeDB.findArticlesWithCategories({ published: true });
+      const withCategory = rows.find((r: { slug: string }) => r.slug === 'new-plain');
+
+      expect(withCategory.categories).toEqual([
+        { id: 'cat-1', name: 'Rugby', slug: 'rugby' },
+      ]);
+      // Tags stripped, so the preview never leaks markup
+      expect(withCategory.contentSnippet).toBe('x');
+    });
+
+    it('filters by category while keeping the article\'s full category list', async () => {
+      await seedForListing();
+
+      const rows = await nativeDB.findArticlesWithCategories({
+        published: true,
+        categoryId: 'cat-1',
+      });
+
+      expect(rows.map((r: { slug: string }) => r.slug)).toEqual(['new-plain']);
+      expect(rows[0].categories).toHaveLength(1);
+    });
+  });
+
   it('deleting an article removes its photo links but keeps the photos', async () => {
     await nativeDB.linkArticleToPhotos('article-1', ['photo-a', 'photo-b']);
     await nativeDB.deleteArticle('article-1');

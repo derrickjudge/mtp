@@ -27,6 +27,8 @@ interface Article {
   title: string;
   slug: string;
   excerpt?: string | null;
+  /** Plain-text opening of the body, used when there is no excerpt. */
+  contentSnippet?: string | null;
   coverImage?: string | null;
   published: boolean;
   featured: boolean;
@@ -76,9 +78,6 @@ export default async function ArticlesPage({
     getPageHeader('articles'),
   ]);
 
-  const featuredArticles = articles.filter((article) => article.featured);
-  const regularArticles = articles.filter((article) => !article.featured);
-
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
@@ -105,67 +104,26 @@ export default async function ArticlesPage({
         </div>
       </section>
 
-      {/* Category filter — links so the selection lives in the URL and stays
-          shareable, matching the portfolio page */}
-      {categories.length > 0 && (
-        <section className="py-4 bg-black border-b border-gray-800">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-wrap gap-4 md:gap-6 text-sm">
-              <Link
-                href="/articles"
-                className={`uppercase tracking-wider py-1 transition-colors ${
-                  !selectedCategory
-                    ? 'text-white font-semibold border-b-2 border-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                All
-              </Link>
-              {categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/articles?category=${category.slug}`}
-                  className={`uppercase tracking-wider py-1 transition-colors ${
-                    selectedCategory?.id === category.id
-                      ? 'text-white font-semibold border-b-2 border-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {category.name}
-                </Link>
-              ))}
-            </div>
+      <div className="max-w-5xl mx-auto px-4 py-12">
+        {/* Shown only when arriving from a category link on an article, so the
+            filtered view is explained and escapable. There is no category
+            browse UI on this page. */}
+        {selectedCategory && (
+          <div className="flex items-center gap-3 text-sm text-gray-400 mb-8 pb-6 border-b border-gray-800">
+            <span>
+              Showing articles in{' '}
+              <span className="text-blue-300">{selectedCategory.name}</span>
+            </span>
+            <Link href="/articles" className="text-gray-400 hover:text-white underline">
+              View all articles
+            </Link>
           </div>
-        </section>
-      )}
-
-      <div className="container mx-auto px-4 py-12">
-        {/* Featured Articles */}
-        {featuredArticles.length > 0 && (
-          <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8 text-center">Featured Articles</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredArticles.map((article) => (
-                <ArticleCard key={article.id} article={article} featured />
-              ))}
-            </div>
-          </section>
         )}
 
-        {/* All Articles — gated on what this section actually renders, so a
-            list of only featured articles doesn't produce an empty grid */}
-        {regularArticles.length > 0 && (
-          <section>
-            <h2 className="text-3xl font-bold mb-8 text-center">
-              {featuredArticles.length > 0 ? 'All Articles' : 'Recent Articles'}
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {regularArticles.map((article) => (
-                <ArticleCard key={article.id} article={article} featured={false} />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* One flat list: the query returns featured first, then newest */}
+        {articles.map((article) => (
+          <ArticleRow key={article.id} article={article} />
+        ))}
 
         {articles.length === 0 && (
           <div className="text-center py-16">
@@ -206,62 +164,68 @@ function displayDate(article: Article): string {
   });
 }
 
-function ArticleCard({ article, featured }: { article: Article; featured: boolean }) {
+/** Preview text: the editorial excerpt, else the opening of the body. */
+function previewText(article: Article): string | null {
+  const excerpt = article.excerpt?.trim();
+  if (excerpt) return excerpt;
+
+  const snippet = article.contentSnippet?.trim();
+  if (!snippet) return null;
+  // The snippet is cut to a fixed length in SQL, so it may end mid-word
+  return snippet.length >= 300 ? `${snippet.replace(/\s+\S*$/, '')}...` : snippet;
+}
+
+function ArticleRow({ article }: { article: Article }) {
+  const href = `/articles/${article.slug}`;
+  const preview = previewText(article);
+
   return (
-    <div
-      className={`group bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors ${
-        featured ? 'ring-2 ring-purple-500' : ''
-      }`}
-    >
-      {article.coverImage && (
-        <div className="relative h-48 overflow-hidden">
-          <Image
-            src={article.coverImage}
-            alt={article.title}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
-        </div>
-      )}
-      <div className="p-6">
-        {/* Outside the cover block so it still shows on articles without one */}
+    <article className="group py-8 border-b border-gray-800 last:border-b-0">
+      <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+        <Link href={href} className="hover:text-blue-400 transition-colors">
+          {article.title}
+        </Link>
+      </h2>
+
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm uppercase tracking-wide text-gray-400 mb-6">
+        <span>{displayDate(article)}</span>
+        <span aria-hidden="true">by</span>
+        <span className="text-gray-200">{article.authorName || 'Anonymous Author'}</span>
         {article.featured && (
-          <span className="inline-block bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-medium mb-3">
-            Featured
-          </span>
+          <>
+            <span aria-hidden="true" className="text-gray-600">
+              |
+            </span>
+            <span className="text-purple-300 normal-case tracking-normal">Featured</span>
+          </>
         )}
-
-        <h3 className="text-lg font-bold text-white mb-3 group-hover:text-blue-400 transition-colors">
-          <Link href={`/articles/${article.slug}`}>{article.title}</Link>
-        </h3>
-
-        {article.excerpt && <p className="text-gray-300 mb-4 line-clamp-3">{article.excerpt}</p>}
-
-        {article.categories && article.categories.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {article.categories.map((category) => (
-              <span
-                key={category.id}
-                className="text-xs text-blue-300 bg-blue-600/20 px-2 py-1 rounded-full"
-              >
-                {category.name}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-400">
-          <span className="flex items-center">
-            <UserIcon className="w-4 h-4 mr-1" />
-            {article.authorName || 'Anonymous Author'}
-          </span>
-          <span className="flex items-center">
-            <CalendarIcon className="w-4 h-4 mr-1" />
-            {displayDate(article)}
-          </span>
-        </div>
       </div>
-    </div>
+
+      <div className="flex flex-col sm:flex-row gap-6">
+        {article.coverImage && (
+          <Link
+            href={href}
+            className="sm:w-2/5 flex-shrink-0 relative aspect-[4/3] overflow-hidden rounded"
+          >
+            <Image
+              src={article.coverImage}
+              alt={article.title}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 640px) 100vw, 40vw"
+            />
+          </Link>
+        )}
+
+        {preview && (
+          <p className="flex-1 text-lg leading-relaxed text-gray-300">
+            {preview}{' '}
+            <Link href={href} className="text-blue-400 hover:text-blue-300 whitespace-nowrap">
+              Read more
+            </Link>
+          </p>
+        )}
+      </div>
+    </article>
   );
 }
