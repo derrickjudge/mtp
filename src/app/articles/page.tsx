@@ -1,237 +1,184 @@
-'use client';
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { Metadata } from 'next';
+import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { CalendarIcon, TagIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, DocumentTextIcon, UserIcon } from '@heroicons/react/24/outline';
+import { nativeDB } from '@/lib/db-native';
+import { Image } from '@/components/common/Image';
+import { getPageHeader } from '@/utils/pageHeaders';
+import type { Metadata } from 'next';
 
-interface Article {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt?: string;
-  coverImage?: string;
-  published: boolean;
-  featured: boolean;
-  createdAt: string;
-  updatedAt: string;
-  categories?: Category[];
-  tags?: Tag[];
-}
+export const metadata: Metadata = {
+  title: 'Articles',
+  description:
+    'Behind-the-scenes stories, photography insights, and creative journeys from MTP Collective.',
+  openGraph: {
+    title: 'Articles | MTP Collective',
+    description: 'Behind-the-scenes stories and photography insights from MTP Collective.',
+  },
+};
 
 interface Category {
   id: string;
   name: string;
   slug: string;
-  description?: string;
 }
 
-interface Tag {
+interface Article {
   id: string;
-  name: string;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  coverImage?: string | null;
+  published: boolean;
+  featured: boolean;
+  authorName?: string | null;
+  publishDate?: string | null;
+  createdAt: string;
+  categories?: Category[];
 }
 
-// We'll use a client component instead of generating metadata server-side
-export default function ArticlesPage() {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [groupByCategory, setGroupByCategory] = useState(false);
+async function fetchArticles(categoryId?: string): Promise<Article[]> {
+  try {
+    return await nativeDB.findArticlesWithCategories({
+      published: true,
+      categoryId,
+    });
+  } catch (error) {
+    console.error('Error fetching articles:', error);
+    return [];
+  }
+}
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/categories');
-      if (response.ok) {
-        const data = await response.json();
-        setCategories(data);
-      }
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-    }
-  };
+async function fetchCategories(): Promise<Category[]> {
+  try {
+    return await nativeDB.findCategories();
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
+  }
+}
 
-  const fetchArticles = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const url = selectedCategory 
-        ? `/api/articles?published=true&category=${selectedCategory}`
-        : '/api/articles?published=true';
-      
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        setArticles(data);
-      } else {
-        setError('Failed to fetch articles');
-      }
-    } catch (err) {
-      console.error('Error fetching articles:', err);
-      setError('Failed to fetch articles');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedCategory]);
+export default async function ArticlesPage({
+  searchParams,
+}: {
+  searchParams?: { category?: string };
+}) {
+  const categorySlug = searchParams?.category || '';
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  // Categories are needed regardless, and the filter arrives as a slug (that is
+  // what the article detail page links with) while the query takes an id.
+  const categories = await fetchCategories();
+  const selectedCategory = categorySlug
+    ? categories.find((category) => category.slug === categorySlug)
+    : undefined;
 
-  useEffect(() => {
-    fetchArticles();
-  }, [selectedCategory, fetchArticles]);
+  const [articles, heroImage] = await Promise.all([
+    fetchArticles(selectedCategory?.id),
+    getPageHeader('articles'),
+  ]);
 
-  const handleCategoryChange = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setGroupByCategory(false); // Reset grouping when filtering
-  };
-
-  const selectedCategoryName = categories.find(cat => cat.id === selectedCategory)?.name || '';
-
-  // Group articles by category when groupByCategory is true
-  const groupedArticles = groupByCategory ? 
-    categories.reduce((acc, category) => {
-      const categoryArticles = articles.filter(article => 
-        article.categories?.some(cat => cat.id === category.id)
-      );
-      if (categoryArticles.length > 0) {
-        acc[category.name] = categoryArticles;
-      }
-      return acc;
-    }, {} as Record<string, Article[]>) : {};
-
-  const hasGroupedArticles = Object.keys(groupedArticles).length > 0;
+  const featuredArticles = articles.filter((article) => article.featured);
+  const regularArticles = articles.filter((article) => !article.featured);
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
-      <div className="bg-gradient-to-b from-gray-900 to-black py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
+      <section className="relative w-full" style={{ height: '40vh' }}>
+        <div className="absolute inset-0">
+          <Image
+            src={heroImage}
+            alt="MTP Collective Articles"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover brightness-75"
+          />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/30 flex items-center justify-center">
+          <div className="text-center px-4">
+            <h1 className="font-display text-5xl md:text-6xl text-white mb-6 tracking-wider uppercase">
               Articles
             </h1>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Behind-the-scenes stories, photography insights, and creative journeys from MTP Collective
+            <p className="text-xl md:text-lg text-gray-200 font-light">
+              Behind-the-scenes stories, photography insights, and creative journeys
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Filter Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-gray-800 rounded-lg p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <FunnelIcon className="w-5 h-5 text-gray-400" />
-              <h2 className="text-lg font-semibold text-white">Filter Articles</h2>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Category Filter */}
-              <div className="flex items-center gap-2">
-                <label htmlFor="category" className="text-sm font-medium text-gray-300 whitespace-nowrap">
-                  Category:
-                </label>
-                <select
-                  id="category"
-                  value={selectedCategory}
-                  onChange={(e) => handleCategoryChange(e.target.value)}
-                  className="rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 min-w-0"
+      {/* Category filter — links so the selection lives in the URL and stays
+          shareable, matching the portfolio page */}
+      {categories.length > 0 && (
+        <section className="py-4 bg-black border-b border-gray-800">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-wrap gap-4 md:gap-6 text-sm">
+              <Link
+                href="/articles"
+                className={`uppercase tracking-wider py-1 transition-colors ${
+                  !selectedCategory
+                    ? 'text-white font-semibold border-b-2 border-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                All
+              </Link>
+              {categories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/articles?category=${category.slug}`}
+                  className={`uppercase tracking-wider py-1 transition-colors ${
+                    selectedCategory?.id === category.id
+                      ? 'text-white font-semibold border-b-2 border-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
                 >
-                  <option value="">All Categories</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Group By Category Toggle */}
-              {!selectedCategory && (
-                <div className="flex items-center gap-2">
-                  <label htmlFor="groupBy" className="text-sm font-medium text-gray-300 whitespace-nowrap">
-                    Group by category:
-                  </label>
-                  <input
-                    id="groupBy"
-                    type="checkbox"
-                    checked={groupByCategory}
-                    onChange={(e) => setGroupByCategory(e.target.checked)}
-                    className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
-                  />
-                </div>
-              )}
+                  {category.name}
+                </Link>
+              ))}
             </div>
           </div>
+        </section>
+      )}
 
-          {/* Active Filter Display */}
-          {selectedCategory && (
-            <div className="mt-4 pt-4 border-t border-gray-700">
-              <div className="flex items-center gap-2 text-sm text-gray-300">
-                <span>Showing articles in:</span>
-                <span className="px-2 py-1 bg-blue-600/20 text-blue-300 rounded-full">
-                  {selectedCategoryName}
-                </span>
-                <button
-                  onClick={() => setSelectedCategory('')}
-                  className="text-gray-400 hover:text-white ml-2"
-                >
-                  Clear filter
-                </button>
-              </div>
+      <div className="container mx-auto px-4 py-12">
+        {/* Featured Articles */}
+        {featuredArticles.length > 0 && (
+          <section className="mb-16">
+            <h2 className="text-3xl font-bold mb-8 text-center">Featured Articles</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredArticles.map((article) => (
+                <ArticleCard key={article.id} article={article} featured />
+              ))}
             </div>
-          )}
-        </div>
-      </div>
+          </section>
+        )}
 
-      {/* Articles Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
-          </div>
-        ) : error ? (
+        {/* All Articles — gated on what this section actually renders, so a
+            list of only featured articles doesn't produce an empty grid */}
+        {regularArticles.length > 0 && (
+          <section>
+            <h2 className="text-3xl font-bold mb-8 text-center">
+              {featuredArticles.length > 0 ? 'All Articles' : 'Recent Articles'}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {regularArticles.map((article) => (
+                <ArticleCard key={article.id} article={article} featured={false} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {articles.length === 0 && (
           <div className="text-center py-16">
-            <div className="text-red-400 text-lg mb-4">Error loading articles</div>
-            <p className="text-gray-500">{error}</p>
-          </div>
-        ) : groupByCategory && hasGroupedArticles ? (
-          /* Grouped Articles Display */
-          <div className="space-y-12">
-            {Object.entries(groupedArticles).map(([categoryName, categoryArticles]) => (
-              <div key={categoryName} className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <TagIcon className="w-6 h-6 text-blue-400" />
-                  <h2 className="text-2xl font-bold text-white">{categoryName}</h2>
-                  <span className="text-sm text-gray-400">({categoryArticles.length} articles)</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {categoryArticles.map((article) => (
-                    <ArticleCard key={article.id} article={article} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : articles.length > 0 ? (
-          /* Regular Articles Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {articles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
-            ))}
-          </div>
-        ) : (
-          /* No Articles Message */
-          <div className="text-center py-16">
-            <div className="text-gray-400 text-lg mb-4">
-              {selectedCategory ? `No articles found in ${selectedCategoryName}` : 'No articles published yet'}
-            </div>
+            <DocumentTextIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <h3 className="text-2xl font-semibold text-gray-400 mb-2">
+              {selectedCategory
+                ? `No articles found in ${selectedCategory.name}`
+                : 'No articles published yet'}
+            </h3>
             <p className="text-gray-500">
-              {selectedCategory ? 'Try selecting a different category or clearing the filter.' : 'Check back soon for photography stories and insights!'}
+              {selectedCategory
+                ? 'Try another category, or view all articles.'
+                : 'Check back soon for photography stories and insights!'}
             </p>
           </div>
         )}
@@ -240,12 +187,31 @@ export default function ArticlesPage() {
   );
 }
 
-// Article Card Component
-function ArticleCard({ article }: { article: Article }) {
+/**
+ * The date an article should display: its editorial date, else when it was
+ * created.
+ *
+ * Formatted in UTC deliberately. `publishDate` is date-only — the admin picks
+ * it from a date input and it is stored at UTC midnight — so formatting in a
+ * timezone behind UTC would render the previous day (a March 5 article showing
+ * as March 4 in California). UTC also keeps the output identical wherever it
+ * is rendered.
+ */
+function displayDate(article: Article): string {
+  return new Date(article.publishDate || article.createdAt).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function ArticleCard({ article, featured }: { article: Article; featured: boolean }) {
   return (
-    <Link
-      href={`/articles/${article.slug}`}
-      className="group block bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors"
+    <div
+      className={`group bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors ${
+        featured ? 'ring-2 ring-purple-500' : ''
+      }`}
     >
       {article.coverImage && (
         <div className="relative h-48 overflow-hidden">
@@ -256,26 +222,22 @@ function ArticleCard({ article }: { article: Article }) {
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
-          {article.featured && (
-            <div className="absolute top-4 left-4">
-              <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                Featured
-              </span>
-            </div>
-          )}
         </div>
       )}
       <div className="p-6">
-        <h3 className="text-lg font-bold text-white mb-3 group-hover:text-blue-400 transition-colors">
-          {article.title}
-        </h3>
-        {article.excerpt && (
-          <p className="text-gray-300 mb-4 line-clamp-2">
-            {article.excerpt}
-          </p>
+        {/* Outside the cover block so it still shows on articles without one */}
+        {article.featured && (
+          <span className="inline-block bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-medium mb-3">
+            Featured
+          </span>
         )}
-        
-        {/* Article Categories */}
+
+        <h3 className="text-lg font-bold text-white mb-3 group-hover:text-blue-400 transition-colors">
+          <Link href={`/articles/${article.slug}`}>{article.title}</Link>
+        </h3>
+
+        {article.excerpt && <p className="text-gray-300 mb-4 line-clamp-3">{article.excerpt}</p>}
+
         {article.categories && article.categories.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {article.categories.map((category) => (
@@ -288,12 +250,18 @@ function ArticleCard({ article }: { article: Article }) {
             ))}
           </div>
         )}
-        
-        <div className="flex items-center text-sm text-gray-400">
-          <CalendarIcon className="w-4 h-4 mr-1" />
-          {new Date(article.createdAt).toLocaleDateString()}
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-400">
+          <span className="flex items-center">
+            <UserIcon className="w-4 h-4 mr-1" />
+            {article.authorName || 'Anonymous Author'}
+          </span>
+          <span className="flex items-center">
+            <CalendarIcon className="w-4 h-4 mr-1" />
+            {displayDate(article)}
+          </span>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

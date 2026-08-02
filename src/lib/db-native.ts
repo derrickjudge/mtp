@@ -1117,6 +1117,96 @@ export class NativeDBService {
     }
   }
 
+  /**
+   * Like findArticles, but attaches each article's categories in the same
+   * query. Listing pages need the category chips, and fetching them per
+   * article would open one pg.Client per row.
+   *
+   * Category order within an article is not meaningful, so json_agg(DISTINCT)
+   * is safe here; the article ordering itself is applied by the outer query.
+   */
+  async findArticlesWithCategories(options?: {
+    take?: number;
+    skip?: number;
+    published?: boolean;
+    featured?: boolean;
+    categoryId?: string;
+  }): Promise<any[]> {
+    await this.ensureJunctionTables();
+
+    const client = this.createClient();
+    try {
+      await client.connect();
+
+      let query = `
+        SELECT a.id, a.title, a.slug, a.excerpt, a."coverImage",
+               a.published, a.featured, a."publishDate", a."createdAt", a."updatedAt",
+               a."authorId", a."authorName",
+               COALESCE(
+                 json_agg(
+                   DISTINCT jsonb_build_object(
+                     'id', c.id,
+                     'name', c.name,
+                     'slug', c.slug
+                   )
+                 ) FILTER (WHERE c.id IS NOT NULL),
+                 '[]'
+               ) as categories
+        FROM "Article" a
+        LEFT JOIN "_ArticleToCategory" ac ON a.id = ac."A"
+        LEFT JOIN "Category" c ON ac."B" = c.id
+        WHERE 1=1
+      `;
+
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (options?.published !== undefined) {
+        query += ` AND a.published = $${paramIndex}`;
+        params.push(options.published);
+        paramIndex++;
+      }
+
+      if (options?.featured) {
+        query += ` AND a.featured = true`;
+      }
+
+      // Filter on a subquery rather than the joined category, so an article
+      // matching the filter still comes back with its full category list
+      if (options?.categoryId) {
+        query += ` AND EXISTS (
+          SELECT 1 FROM "_ArticleToCategory" f
+          WHERE f."A" = a.id AND f."B" = $${paramIndex}
+        )`;
+        params.push(options.categoryId);
+        paramIndex++;
+      }
+
+      query += `
+        GROUP BY a.id, a.title, a.slug, a.excerpt, a."coverImage", a.published,
+                 a.featured, a."publishDate", a."createdAt", a."updatedAt",
+                 a."authorId", a."authorName"
+        ORDER BY COALESCE(a."publishDate", a."createdAt") DESC
+      `;
+
+      if (options?.take) {
+        query += ` LIMIT $${paramIndex}`;
+        params.push(options.take);
+        paramIndex++;
+      }
+
+      if (options?.skip) {
+        query += ` OFFSET $${paramIndex}`;
+        params.push(options.skip);
+      }
+
+      const result = await client.query(query, params);
+      return result.rows;
+    } finally {
+      await client.end();
+    }
+  }
+
   async findArticleById(id: string): Promise<any> {
     const client = this.createClient();
     try {

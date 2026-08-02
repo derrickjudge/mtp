@@ -36,6 +36,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
+    {
+      url: `${baseUrl}/articles`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
   ];
 
   // Dynamic pages - Categories
@@ -66,6 +72,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Error fetching events for sitemap:', error);
   }
 
-  return [...staticPages, ...categoryPages, ...eventPages];
+  // Dynamic pages - Articles
+  let articlePages: MetadataRoute.Sitemap = [];
+  try {
+    const articles = await nativeDB.findArticles({ published: true });
+    articlePages = articles.map((article) => ({
+      url: `${baseUrl}/articles/${article.slug}`,
+      lastModified: article.updatedAt ? new Date(article.updatedAt) : new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    }));
+  } catch (error) {
+    console.error('Error fetching articles for sitemap:', error);
+  }
+
+  return [...staticPages, ...categoryPages, ...eventPages, ...articlePages];
 }
 

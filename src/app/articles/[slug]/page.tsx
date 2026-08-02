@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { nativeDB } from '@/lib/db-native';
-import { CalendarIcon, TagIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, TagIcon, ArrowLeftIcon, UserIcon } from '@heroicons/react/24/outline';
 import { ArticlePhotoGallery, type ArticleGalleryPhoto } from '@/components/photos/ArticlePhotoGallery';
 
 interface Article {
@@ -16,6 +16,8 @@ interface Article {
   coverImage?: string;
   published: boolean;
   featured: boolean;
+  authorName?: string | null;
+  publishDate?: string | null;
   createdAt: string;
   updatedAt: string;
   categories?: Array<{
@@ -134,11 +136,18 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           <div className="flex items-center justify-between border-b border-gray-800 pb-6">
             <div className="flex items-center space-x-6 text-sm text-gray-400">
               <span className="flex items-center">
+                <UserIcon className="w-5 h-5 mr-2" />
+                {article.authorName || 'Anonymous Author'}
+              </span>
+              {/* Same date and UTC formatting as the listing cards, so an
+                  article does not appear to change date when opened */}
+              <span className="flex items-center">
                 <CalendarIcon className="w-5 h-5 mr-2" />
-                {new Date(article.createdAt).toLocaleDateString('en-US', {
+                {new Date(article.publishDate || article.createdAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
+                  timeZone: 'UTC',
                 })}
               </span>
               {article.featured && (
