@@ -87,19 +87,32 @@ interface PhotoPickerModalProps {
   isSelected: (photo: Photo) => boolean;
   onSelect: (photo: Photo) => void;
   onClose: () => void;
+  /** Optional confirm/cancel footer. Without it, selecting acts immediately. */
+  footer?: React.ReactNode;
 }
 
 /**
  * Thumbnail-grid picker used for both the single-select cover image and the
  * multi-select photo set; the caller decides what selection means.
  */
-function PhotoPickerModal({ title, photos, isSelected, onSelect, onClose }: PhotoPickerModalProps) {
+function PhotoPickerModal({
+  title,
+  photos,
+  isSelected,
+  onSelect,
+  onClose,
+  footer,
+}: PhotoPickerModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-white">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
+          <button
+            onClick={onClose}
+            aria-label="Close photo picker"
+            className="text-gray-400 hover:text-white"
+          >
             ×
           </button>
         </div>
@@ -136,8 +149,60 @@ function PhotoPickerModal({ title, photos, isSelected, onSelect, onClose }: Phot
             No photos available. Upload some photos first.
           </div>
         )}
+        {footer}
       </div>
     </div>
+  );
+}
+
+interface PhotoSetPickerModalProps {
+  photos: Photo[];
+  /** The set as it stands; picks are staged against this copy. */
+  selectedIds: string[];
+  onConfirm: (photoIds: string[]) => void;
+  onClose: () => void;
+}
+
+/**
+ * Multi-select picker for an article's photo set. Picks are staged locally so
+ * dismissing the dialog discards them; only "Add Photos" commits. New picks are
+ * appended, which keeps the existing curated order intact.
+ */
+function PhotoSetPickerModal({ photos, selectedIds, onConfirm, onClose }: PhotoSetPickerModalProps) {
+  const [draftIds, setDraftIds] = useState<string[]>(selectedIds);
+
+  const toggle = (photo: Photo) => {
+    setDraftIds(prev =>
+      prev.includes(photo.id) ? prev.filter(id => id !== photo.id) : [...prev, photo.id]
+    );
+  };
+
+  return (
+    <PhotoPickerModal
+      title="Select Photos for This Article"
+      photos={photos}
+      isSelected={(photo) => draftIds.includes(photo.id)}
+      onSelect={toggle}
+      onClose={onClose}
+      footer={
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-700">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(draftIds)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Add Photos
+          </button>
+        </div>
+      }
+    />
   );
 }
 
@@ -349,13 +414,9 @@ export default function AdminArticles() {
     }));
   };
 
-  const handlePhotoSetToggle = (photo: Photo) => {
-    setFormData(prev => ({
-      ...prev,
-      photoIds: prev.photoIds.includes(photo.id)
-        ? prev.photoIds.filter(id => id !== photo.id)
-        : [...prev.photoIds, photo.id]
-    }));
+  const handlePhotoSetConfirm = (photoIds: string[]) => {
+    setFormData(prev => ({ ...prev, photoIds }));
+    setShowPhotoSetSelector(false);
   };
 
   // Reorders the photo set; array order is what the API persists as `position`
@@ -411,13 +472,17 @@ export default function AdminArticles() {
           <h1 className="text-2xl font-bold text-white">Article Management</h1>
           <p className="text-gray-400 mt-1">Write and manage your photography articles and stories</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        >
-          <PlusIcon className="w-5 h-5 mr-2" />
-          New Article
-        </button>
+        {/* Hidden while the editor is open: the form is already on screen, so
+            the button had nothing to do and read as broken. */}
+        {!showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            <PlusIcon className="w-5 h-5 mr-2" />
+            New Article
+          </button>
+        )}
       </div>
 
       {error && (
@@ -733,11 +798,10 @@ export default function AdminArticles() {
 
       {/* Photo Set Selector Modal */}
       {showPhotoSetSelector && (
-        <PhotoPickerModal
-          title="Select Photos for This Article"
+        <PhotoSetPickerModal
           photos={photos}
-          isSelected={(photo) => formData.photoIds.includes(photo.id)}
-          onSelect={handlePhotoSetToggle}
+          selectedIds={formData.photoIds}
+          onConfirm={handlePhotoSetConfirm}
           onClose={() => setShowPhotoSetSelector(false)}
         />
       )}
