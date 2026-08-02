@@ -73,6 +73,21 @@ function photoSetItems(): HTMLElement[] {
   return list ? Array.from(list.querySelectorAll('li')) : [];
 }
 
+/** The open photo-set picker dialog. */
+function photoPicker(): HTMLElement {
+  return screen.getByText('Select Photos for This Article').closest('div')!.parentElement!;
+}
+
+/** Clicks a photo tile inside the open photo-set picker. */
+function selectInModal(altText: string): void {
+  fireEvent.click(within(photoPicker()).getByAltText(altText).closest('div')!);
+}
+
+/** Clicks a button inside the picker (the form has its own Cancel). */
+function clickInModal(name: RegExp): void {
+  fireEvent.click(within(photoPicker()).getByRole('button', { name }));
+}
+
 /** Opens the editor for the first article in the list. */
 async function openEditor(): Promise<void> {
   const editButton = await screen.findByRole('button', { name: 'Edit article' });
@@ -94,15 +109,84 @@ describe('Admin articles - photo set', () => {
     fireEvent.change(screen.getByLabelText(/^content/i), { target: { value: '<p>Report</p>' } });
 
     fireEvent.click(screen.getByRole('button', { name: /select photos/i }));
-    const modal = screen.getByText('Select Photos for This Article').closest('div')!.parentElement!;
-    fireEvent.click(within(modal).getByAltText('Photo C').closest('div')!);
-    fireEvent.click(within(modal).getByAltText('Photo A').closest('div')!);
-    fireEvent.click(within(modal).getByRole('button', { name: '×' }));
+    selectInModal('Photo C');
+    selectInModal('Photo A');
+    clickInModal(/add photos/i);
 
     fireEvent.click(screen.getByRole('button', { name: /create article/i }));
 
     await waitFor(() => {
       expect(lastSavePayload(fetchMock).photoIds).toEqual(['photo-c', 'photo-a']);
+    });
+  });
+
+  it('discards staged picks when the picker is cancelled', async () => {
+    const fetchMock = mockFetch([existingArticle]);
+    render(<AdminArticles />);
+
+    await openEditor();
+    expect(photoSetItems()).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: /select photos/i }));
+    selectInModal('Photo A');
+    clickInModal(/^cancel$/i);
+
+    // Still the original two: staged picks must not leak into the set
+    expect(photoSetItems()).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: /update article/i }));
+
+    await waitFor(() => {
+      expect(lastSavePayload(fetchMock).photoIds).toEqual(['photo-c', 'photo-b']);
+    });
+  });
+
+  it('discards staged picks when the picker is dismissed with the close control', async () => {
+    mockFetch([existingArticle]);
+    render(<AdminArticles />);
+
+    await openEditor();
+    fireEvent.click(screen.getByRole('button', { name: /select photos/i }));
+    selectInModal('Photo A');
+    clickInModal(/close photo picker/i);
+
+    expect(photoSetItems()).toHaveLength(2);
+  });
+
+  it('adds to the existing set rather than replacing it', async () => {
+    const fetchMock = mockFetch([existingArticle]);
+    render(<AdminArticles />);
+
+    await openEditor();
+    fireEvent.click(screen.getByRole('button', { name: /select photos/i }));
+    selectInModal('Photo A');
+    clickInModal(/add photos/i);
+
+    expect(photoSetItems()).toHaveLength(3);
+
+    fireEvent.click(screen.getByRole('button', { name: /update article/i }));
+
+    await waitFor(() => {
+      expect(lastSavePayload(fetchMock).photoIds).toEqual(['photo-c', 'photo-b', 'photo-a']);
+    });
+  });
+
+  it('deselecting a staged photo removes it from the set on confirm', async () => {
+    const fetchMock = mockFetch([existingArticle]);
+    render(<AdminArticles />);
+
+    await openEditor();
+    fireEvent.click(screen.getByRole('button', { name: /select photos/i }));
+    // Photo C is already in the set, so clicking it stages a removal
+    selectInModal('Photo C');
+    clickInModal(/add photos/i);
+
+    expect(photoSetItems()).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: /update article/i }));
+
+    await waitFor(() => {
+      expect(lastSavePayload(fetchMock).photoIds).toEqual(['photo-b']);
     });
   });
 
@@ -148,6 +232,29 @@ describe('Admin articles - photo set', () => {
     await waitFor(() => {
       expect(lastSavePayload(fetchMock).photoIds).toEqual(['photo-b']);
     });
+  });
+
+  it('hides the New Article button while the editor is open', async () => {
+    mockFetch([existingArticle]);
+    render(<AdminArticles />);
+
+    expect(await screen.findByRole('button', { name: /new article/i })).toBeInTheDocument();
+
+    await openEditor();
+    // The button was a no-op while the form was open, which read as broken
+    expect(screen.queryByRole('button', { name: /new article/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    expect(screen.getByRole('button', { name: /new article/i })).toBeInTheDocument();
+  });
+
+  it('hides the New Article button while creating an article', async () => {
+    mockFetch([]);
+    render(<AdminArticles />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /new article/i }));
+
+    expect(screen.queryByRole('button', { name: /new article/i })).not.toBeInTheDocument();
   });
 
   it('preserves the photo set when toggling published from the list', async () => {
