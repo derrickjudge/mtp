@@ -44,6 +44,7 @@ const existingArticle = {
   slug: 'old-title',
   authorId: 'admin-1',
   authorName: 'Old Byline',
+  contentFormat: 'HTML',
 };
 
 describe('PUT /api/articles/[id]', () => {
@@ -63,6 +64,45 @@ describe('PUT /api/articles/[id]', () => {
     });
 
   const call = (body: unknown, id = 'article-1') => PUT(putRequest(body), { params: { id } });
+
+  it('leaves contentFormat unchanged when the field is omitted', async () => {
+    await call({ title: 'Old Title', content: '<p>Body</p>' });
+
+    expect(nativeDB.updateArticle).toHaveBeenCalledWith(
+      'article-1',
+      expect.objectContaining({ contentFormat: 'HTML' })
+    );
+  });
+
+  it('switches contentFormat when the field is supplied', async () => {
+    await call({ title: 'Old Title', content: 'Body', contentFormat: 'TEXT' });
+
+    expect(nativeDB.updateArticle).toHaveBeenCalledWith(
+      'article-1',
+      expect.objectContaining({ contentFormat: 'TEXT' })
+    );
+  });
+
+  it('falls back to the default when the stored article predates the column', async () => {
+    (nativeDB.findArticleById as jest.Mock).mockResolvedValue({
+      ...existingArticle,
+      contentFormat: undefined,
+    });
+
+    await call({ title: 'Old Title', content: 'Body' });
+
+    expect(nativeDB.updateArticle).toHaveBeenCalledWith(
+      'article-1',
+      expect.objectContaining({ contentFormat: 'TEXT' })
+    );
+  });
+
+  it('returns 400 for an unrecognized contentFormat', async () => {
+    const response = await call({ title: 'Old Title', content: 'Body', contentFormat: 'markdown' });
+
+    expect(response.status).toBe(400);
+    expect(nativeDB.updateArticle).not.toHaveBeenCalled();
+  });
 
   it('returns 401 when not an admin', async () => {
     (getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'u1', role: 'USER' } });

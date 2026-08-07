@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { DEFAULT_CONTENT_FORMAT, type ContentFormat } from '@/lib/articleContent';
 import { DocumentTextIcon, PlusIcon, PencilIcon, TrashIcon, PhotoIcon, TagIcon, UserIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
 // TinyMCE Editor removed - using textarea instead
 import Image from 'next/image';
@@ -11,6 +12,7 @@ interface Article {
   title: string;
   slug: string;
   content: string;
+  contentFormat?: ContentFormat;
   excerpt?: string;
   coverImage?: string;
   publishDate?: string;
@@ -62,6 +64,7 @@ interface Event {
 const EMPTY_FORM = {
   title: '',
   content: '',
+  contentFormat: DEFAULT_CONTENT_FORMAT as ContentFormat,
   excerpt: '',
   coverImage: '',
   publishDate: '',
@@ -318,6 +321,7 @@ export default function AdminArticles() {
     setFormData({
       title: article.title,
       content: article.content,
+      contentFormat: article.contentFormat || DEFAULT_CONTENT_FORMAT,
       excerpt: article.excerpt || '',
       coverImage: article.coverImage || '',
       publishDate: article.publishDate ? article.publishDate.split('T')[0] : '',
@@ -723,22 +727,55 @@ export default function AdminArticles() {
               )}
             </div>
 
-            {/* Rich Text Editor */}
+            {/* Content Editor */}
             <div>
-              <label htmlFor="content" className="block text-sm font-medium text-gray-200 mb-2">
-                Content *
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="content" className="block text-sm font-medium text-gray-200">
+                  Content *
+                </label>
+                <fieldset className="flex items-center gap-4">
+                  <legend className="sr-only">Content format</legend>
+                  <label className="flex items-center text-sm text-gray-300">
+                    <input
+                      type="radio"
+                      name="contentFormat"
+                      value="TEXT"
+                      checked={formData.contentFormat === 'TEXT'}
+                      onChange={() => setFormData(prev => ({ ...prev, contentFormat: 'TEXT' }))}
+                      className="mr-2 border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
+                    />
+                    Plain text
+                  </label>
+                  <label className="flex items-center text-sm text-gray-300">
+                    <input
+                      type="radio"
+                      name="contentFormat"
+                      value="HTML"
+                      checked={formData.contentFormat === 'HTML'}
+                      onChange={() => setFormData(prev => ({ ...prev, contentFormat: 'HTML' }))}
+                      className="mr-2 border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
+                    />
+                    HTML
+                  </label>
+                </fieldset>
+              </div>
               <textarea
                 id="content"
                 value={formData.content}
                 onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                 rows={15}
                 className="w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
-                placeholder="Write your article content here... You can use basic HTML tags like <p>, <h2>, <h3>, <strong>, <em>, <ul>, <li>, etc."
+                placeholder={
+                  formData.contentFormat === 'HTML'
+                    ? 'Write your article using HTML tags like <p>, <h2>, <strong>, <ul>, <li>.'
+                    : 'Write your article here. Leave a blank line between paragraphs.'
+                }
                 required
               />
               <p className="mt-2 text-xs text-gray-400">
-                You can use basic HTML tags for formatting: &lt;p&gt;, &lt;h2&gt;, &lt;h3&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;a&gt;, etc.
+                {formData.contentFormat === 'HTML'
+                  ? 'HTML mode: formatting tags are kept (<p>, <h2>, <strong>, <ul>, <a>). Scripts, iframes and inline styles are stripped before publishing.'
+                  : 'Plain text mode: a blank line starts a new paragraph and a single line break becomes a line break. Any tags you type will show as literal text.'}
               </p>
             </div>
 

@@ -6,12 +6,14 @@ import { notFound } from 'next/navigation';
 import { nativeDB } from '@/lib/db-native';
 import { CalendarIcon, TagIcon, ArrowLeftIcon, UserIcon } from '@heroicons/react/24/outline';
 import { ArticlePhotoGallery, type ArticleGalleryPhoto } from '@/components/photos/ArticlePhotoGallery';
+import { renderArticleContent, type ContentFormat } from '@/lib/articleContent';
 
 interface Article {
   id: string;
   title: string;
   slug: string;
   content: string;
+  contentFormat?: ContentFormat;
   excerpt?: string;
   coverImage?: string;
   published: boolean;
@@ -175,7 +177,9 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         {/* Article Content */}
         <div
           className="prose prose-invert prose-lg max-w-none mb-12"
-          dangerouslySetInnerHTML={{ __html: article.content }}
+          dangerouslySetInnerHTML={{
+            __html: renderArticleContent(article.content, article.contentFormat),
+          }}
         />
 
         {/* Photo Set */}

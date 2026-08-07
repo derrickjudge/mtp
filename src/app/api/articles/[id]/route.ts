@@ -3,6 +3,7 @@ import { nativeDB } from '@/lib/db-native';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { normalizeAuthorName, DEFAULT_AUTHOR_NAME } from '@/lib/articleValidation';
+import { normalizeContentFormat, DEFAULT_CONTENT_FORMAT } from '@/lib/articleContent';
 
 // GET /api/articles/[id] - Get single article
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -39,6 +40,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const {
       title,
       content,
+      contentFormat,
       excerpt,
       published,
       featured,
@@ -80,6 +82,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       );
     }
 
+    // Matches the byline handling above: omitting the format leaves the
+    // article in whichever mode it was authored in.
+    const contentFormatResult = contentFormat === undefined
+      ? { valid: true as const, contentFormat: existingArticle.contentFormat || DEFAULT_CONTENT_FORMAT }
+      : normalizeContentFormat(contentFormat);
+    if (!contentFormatResult.valid) {
+      return NextResponse.json(
+        { message: contentFormatResult.message },
+        { status: contentFormatResult.status }
+      );
+    }
+
     // Generate slug from title if title changed
     let slug = existingArticle.slug;
     if (title !== existingArticle.title) {
@@ -102,6 +116,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       title,
       slug,
       content,
+      contentFormat: contentFormatResult.contentFormat,
       excerpt,
       published: published ?? false,
       featured: featured ?? false,

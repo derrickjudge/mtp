@@ -4,6 +4,7 @@ import { rateLimit, getClientIp } from '@/lib/rateLimit';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { normalizeAuthorName } from '@/lib/articleValidation';
+import { normalizeContentFormat } from '@/lib/articleContent';
 
 // GET /api/articles - List all articles
 export async function GET(req: NextRequest) {
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
     const {
       title,
       content,
+      contentFormat,
       excerpt,
       published,
       featured,
@@ -95,6 +97,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { message: 'Title and content are required' },
         { status: 400 }
+      );
+    }
+
+    const contentFormatResult = normalizeContentFormat(contentFormat);
+    if (!contentFormatResult.valid) {
+      return NextResponse.json(
+        { message: contentFormatResult.message },
+        { status: contentFormatResult.status }
       );
     }
 
@@ -127,6 +137,7 @@ export async function POST(req: NextRequest) {
       title,
       slug,
       content,
+      contentFormat: contentFormatResult.contentFormat,
       excerpt,
       published: published ?? false,
       featured: featured ?? false,
