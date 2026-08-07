@@ -42,6 +42,13 @@ The project uses **Prisma for schema definition only** (`prisma/schema.prisma`).
 - Create/update routes take `photoIds` alongside `categoryIds`/`tagIds`/`eventIds`; `PUT` clears and relinks the whole set, so the submitted array is the source of truth for both membership and order.
 - `getArticleWithRelations` returns the set as `photos`, already in curated order.
 
+#### Content format
+
+- `Article.contentFormat` records how `content` was authored: `TEXT` (blank-line separated plain text, the default) or `HTML` (hand-written markup). The admin editor exposes this as a radio toggle above the content textarea.
+- Never render `content` directly. `renderArticleContent(content, contentFormat)` in `src/lib/articleContent.ts` is the only supported path to HTML: it escapes and paragraphs `TEXT`, and sanitizes `HTML` against a formatting-only allowlist (`sanitize-html`) that drops scripts, iframes, inline styles, event handlers and non-http(s)/mailto schemes.
+- `POST` defaults the format to `TEXT` when omitted; `PUT` leaves it unchanged when omitted, matching the `authorName` convention. Any value other than `TEXT`/`HTML` is a 400.
+- The article body relies on `@tailwindcss/typography` for its `prose` styles. Without that plugin registered in `tailwind.config.js`, Tailwind's preflight strips paragraph margins, heading sizes and list markers, and authored formatting renders as one flat block.
+
 ### Image storage: R2 (server-side only)
 
 - Config lives in `src/config/r2.ts`, populated from `R2_*` env vars (never `NEXT_PUBLIC_*`).

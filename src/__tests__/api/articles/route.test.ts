@@ -194,6 +194,37 @@ describe('POST /api/articles', () => {
     );
   });
 
+  it('defaults contentFormat to TEXT when omitted', async () => {
+    (nativeDB.createArticle as jest.Mock).mockResolvedValue({ id: 'a1' });
+    (nativeDB.getArticleWithRelations as jest.Mock).mockResolvedValue({ id: 'a1' });
+
+    await POST(postRequest({ title: 'Hello', content: 'World' }));
+
+    expect(nativeDB.createArticle).toHaveBeenCalledWith(
+      expect.objectContaining({ contentFormat: 'TEXT' })
+    );
+  });
+
+  it('persists an explicit HTML contentFormat', async () => {
+    (nativeDB.createArticle as jest.Mock).mockResolvedValue({ id: 'a1' });
+    (nativeDB.getArticleWithRelations as jest.Mock).mockResolvedValue({ id: 'a1' });
+
+    await POST(postRequest({ title: 'Hello', content: '<p>World</p>', contentFormat: 'HTML' }));
+
+    expect(nativeDB.createArticle).toHaveBeenCalledWith(
+      expect.objectContaining({ contentFormat: 'HTML' })
+    );
+  });
+
+  it('returns 400 for an unrecognized contentFormat', async () => {
+    const response = await POST(
+      postRequest({ title: 'Hello', content: 'World', contentFormat: 'markdown' })
+    );
+
+    expect(response.status).toBe(400);
+    expect(nativeDB.createArticle).not.toHaveBeenCalled();
+  });
+
   it('always sets authorId to the session user, ignoring any client-provided authorId', async () => {
     (nativeDB.createArticle as jest.Mock).mockResolvedValue({ id: 'a1' });
     (nativeDB.getArticleWithRelations as jest.Mock).mockResolvedValue({ id: 'a1' });

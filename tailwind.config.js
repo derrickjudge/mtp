@@ -28,5 +28,9 @@ module.exports = {
     'lg:row-span-1', 'lg:row-span-2', 'lg:row-span-3', 'lg:row-span-4',
     'xl:row-span-1', 'xl:row-span-2', 'xl:row-span-3', 'xl:row-span-4',
   ],
-  plugins: [],
+  // The article body renders authored HTML via dangerouslySetInnerHTML, so its
+  // paragraphs, headings and lists get no utility classes. The typography
+  // plugin supplies the `prose` styles that restore the spacing and list
+  // markers Tailwind's preflight strips.
+  plugins: [require('@tailwindcss/typography')],
 } 

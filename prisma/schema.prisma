@@ -44,6 +44,11 @@ model Article {
   title       String
   slug        String      @unique
   content     String
+  // How `content` was authored: "TEXT" (blank-line separated plain text, the
+  // default) or "HTML" (hand-written markup). Read by renderArticleContent in
+  // src/lib/articleContent.ts, which escapes the former and sanitizes the
+  // latter before rendering.
+  contentFormat String    @default("TEXT")
   excerpt     String?
   coverImage  String?
   publishDate DateTime?

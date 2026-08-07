@@ -22,5 +22,29 @@ const customJestConfig = {
   ],
 }
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(customJestConfig) 
+// Dependencies that publish ESM only and therefore must be transformed before
+// Jest (which runs CommonJS here) can require them. sanitize-html reaches
+// htmlparser2 v12 and its dom* helpers, none of which ship a CJS build.
+const ESM_ONLY_DEPENDENCIES = [
+  'sanitize-html',
+  'htmlparser2',
+  'domhandler',
+  'domutils',
+  'dom-serializer',
+  'domelementtype',
+  'entities',
+]
+
+// createJestConfig is exported this way to ensure that next/jest can load the
+// Next.js config which is async. next/jest only ever appends to
+// transformIgnorePatterns -- its own '/node_modules/' entry matches first and
+// wins -- so the resolved config is unwrapped here to replace that entry
+// outright. This is test-only; the Next build handles ESM dependencies itself.
+module.exports = async () => {
+  const config = await createJestConfig(customJestConfig)()
+  config.transformIgnorePatterns = [
+    `/node_modules/(?!(${ESM_ONLY_DEPENDENCIES.join('|')})/)`,
+    '^.+\\.module\\.(css|sass|scss)$',
+  ]
+  return config
+}
